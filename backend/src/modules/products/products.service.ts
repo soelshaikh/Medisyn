@@ -4,6 +4,7 @@ import fs from "fs";
 import { ProductModel } from "./products.schema";
 import { InventoryModel } from "@/modules/inventory/inventory.schema";
 import { AppError } from "@/common/middleware/error.middleware";
+import { logAction, type AuditActor } from "@/modules/audit/audit.service";
 
 function makeSlug(name: string) {
   return slugify(name, { lower: true, strict: true });
@@ -48,7 +49,6 @@ export async function listProducts(filters: ProductFilters = {}, adminView = fal
       .lean(),
   ]);
 
-  /* If inStock filter, join inventory */
   if (inStock !== undefined) {
     const productIds = products.map((p) => String(p._id));
     const inventories = await InventoryModel.find({ productId: { $in: productIds } }).lean();
@@ -89,7 +89,7 @@ export async function createProduct(data: {
   status?: string; tags?: string[]; weight?: number | null;
   metaTitle?: string; metaDescription?: string;
   initialStock?: number; lowStockThreshold?: number;
-}) {
+}, actor?: AuditActor) {
   const slug = makeSlug(data.name);
   const [slugExists, skuExists] = await Promise.all([
     ProductModel.findOne({ slug }),
@@ -107,6 +107,18 @@ export async function createProduct(data: {
     lowStockThreshold,
   });
 
+  await logAction({
+    userId:     actor?.id,
+    userEmail:  actor?.email,
+    actorName:  actor?.name,
+    action:     "product.create",
+    resource:   "product",
+    resourceId: String(product._id),
+    before:     null,
+    after:      product.toObject() as unknown as Record<string, unknown>,
+    ipAddress:  actor?.ip,
+  });
+
   return product;
 }
 
@@ -116,18 +128,50 @@ export async function updateProduct(id: string, data: Partial<{
   requiresPrescription: boolean; ageRestriction: number | null;
   status: string; tags: string[]; weight: number | null;
   metaTitle: string; metaDescription: string;
-}>) {
+}>, actor?: AuditActor) {
+  const before = await ProductModel.findById(id).lean();
+  if (!before) throw new AppError("Product not found", 404);
+
   const update: Record<string, unknown> = { ...data };
   if (data.name) update.slug = makeSlug(data.name);
 
   const product = await ProductModel.findByIdAndUpdate(id, update, { new: true });
   if (!product) throw new AppError("Product not found", 404);
+
+  await logAction({
+    userId:     actor?.id,
+    userEmail:  actor?.email,
+    actorName:  actor?.name,
+    action:     "product.update",
+    resource:   "product",
+    resourceId: id,
+    before:     before as Record<string, unknown>,
+    after:      product.toObject() as unknown as Record<string, unknown>,
+    ipAddress:  actor?.ip,
+  });
+
   return product;
 }
 
-export async function archiveProduct(id: string) {
+export async function archiveProduct(id: string, actor?: AuditActor) {
+  const before = await ProductModel.findById(id).lean();
+  if (!before) throw new AppError("Product not found", 404);
+
   const product = await ProductModel.findByIdAndUpdate(id, { status: "archived" }, { new: true });
   if (!product) throw new AppError("Product not found", 404);
+
+  await logAction({
+    userId:     actor?.id,
+    userEmail:  actor?.email,
+    actorName:  actor?.name,
+    action:     "product.archive",
+    resource:   "product",
+    resourceId: id,
+    before:     before as Record<string, unknown>,
+    after:      { status: "archived" },
+    ipAddress:  actor?.ip,
+  });
+
   return product;
 }
 
@@ -135,7 +179,6 @@ export async function addProductImage(id: string, image: { url: string; alt?: st
   const product = await ProductModel.findById(id);
   if (!product) throw new AppError("Product not found", 404);
 
-  /* If isPrimary, unset all others */
   if (image.isPrimary) product.images.forEach((img) => { img.isPrimary = false; });
   product.images.push({ url: image.url, alt: image.alt ?? "", isPrimary: image.isPrimary ?? false });
   return product.save();
@@ -148,7 +191,6 @@ export async function removeProductImage(productId: string, imageUrl: string) {
   const idx = product.images.findIndex((i) => i.url === imageUrl);
   if (idx === -1) throw new AppError("Image not found", 404);
 
-  /* Delete file from disk */
   const filePath = path.join(process.cwd(), "uploads", path.basename(imageUrl));
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 

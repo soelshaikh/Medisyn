@@ -6,6 +6,7 @@ import { sendSuccess, sendList } from "@/common/utils/response";
 import { AppError } from "@/common/middleware/error.middleware";
 import { UserModel } from "./users.schema";
 import { RoleModel } from "@/modules/roles/roles.schema";
+import { logAction } from "@/modules/audit/audit.service";
 
 const router = Router();
 router.use(authenticate);
@@ -73,17 +74,44 @@ router.patch("/:id/status", requirePermission("users.suspend"), asyncHandler(asy
     status: z.enum(["active", "suspended", "deactivated"]),
   }).parse(req.body);
 
+  const before = await UserModel.findById(req.params.id).lean();
+  if (!before) throw new AppError("User not found", 404);
+
   const user = await UserModel.findByIdAndUpdate(req.params.id, { status }, { new: true }).lean();
   if (!user) throw new AppError("User not found", 404);
+
+  await logAction({
+    userId:     req.user!._id,
+    userEmail:  req.user!.email,
+    actorName:  req.user!.fullName,
+    action:     `user.status.${status}`,
+    resource:   "user",
+    resourceId: String(req.params.id),
+    before:     { status: before.status },
+    after:      { status },
+    ipAddress:  req.ip ?? "",
+  });
+
   sendSuccess(res, { id: String(user._id), status: user.status }, "Status updated");
+}));
+
+router.get("/:id", requirePermission("users.read"), asyncHandler(async (req, res) => {
+  const user = await UserModel.findById(req.params.id)
+    .populate("roles", "slug name permissions")
+    .lean();
+  if (!user) throw new AppError("User not found", 404);
+  const { passwordHash: _pw, verificationToken: _vt, resetToken: _rt, ...safe } = user as Record<string, unknown>;
+  sendSuccess(res, { ...safe, _id: String((safe as { _id: unknown })._id) });
 }));
 
 router.patch("/:id/roles", requirePermission("roles.assign"), asyncHandler(async (req, res) => {
   const { roleIds } = z.object({ roleIds: z.array(z.string()) }).parse(req.body);
 
-  /* Validate all role IDs exist */
   const roles = await RoleModel.find({ _id: { $in: roleIds } }).lean();
   if (roles.length !== roleIds.length) throw new AppError("One or more role IDs are invalid", 400);
+
+  const before = await UserModel.findById(req.params.id).lean();
+  if (!before) throw new AppError("User not found", 404);
 
   const user = await UserModel.findByIdAndUpdate(
     req.params.id,
@@ -91,6 +119,19 @@ router.patch("/:id/roles", requirePermission("roles.assign"), asyncHandler(async
     { new: true },
   ).lean();
   if (!user) throw new AppError("User not found", 404);
+
+  await logAction({
+    userId:     req.user!._id,
+    userEmail:  req.user!.email,
+    actorName:  req.user!.fullName,
+    action:     "user.roles_updated",
+    resource:   "user",
+    resourceId: String(req.params.id),
+    before:     { roles: before.roles },
+    after:      { roles: roleIds },
+    ipAddress:  req.ip ?? "",
+  });
+
   sendSuccess(res, { id: String(user._id), roles: user.roles }, "Roles updated");
 }));
 

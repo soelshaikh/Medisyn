@@ -1,6 +1,7 @@
 import { CouponModel } from "./coupons.schema";
 import { OrderModel } from "@/modules/orders/orders.schema";
 import { AppError } from "@/common/middleware/error.middleware";
+import { logAction, type AuditActor } from "@/modules/audit/audit.service";
 
 export async function listCoupons(filters: { isActive?: boolean; page?: number; limit?: number } = {}) {
   const { isActive, page = 1, limit = 20 } = filters;
@@ -19,10 +20,25 @@ export async function createCoupon(data: {
   usageLimit?: number | null; perUserLimit?: number | null;
   applicableProductIds?: string[]; applicableCategoryIds?: string[];
   firstOrderOnly?: boolean; startDate?: Date | null; expiresAt?: Date | null;
-}) {
+}, actor?: AuditActor) {
   const exists = await CouponModel.findOne({ code: data.code.toUpperCase() });
   if (exists) throw new AppError("Coupon code already exists", 409);
-  return CouponModel.create(data);
+
+  const coupon = await CouponModel.create(data);
+
+  await logAction({
+    userId:     actor?.id,
+    userEmail:  actor?.email,
+    actorName:  actor?.name,
+    action:     "coupon.create",
+    resource:   "coupon",
+    resourceId: String(coupon._id),
+    before:     null,
+    after:      coupon.toObject() as unknown as Record<string, unknown>,
+    ipAddress:  actor?.ip,
+  });
+
+  return coupon;
 }
 
 export async function updateCoupon(id: string, data: Partial<{
@@ -31,15 +47,45 @@ export async function updateCoupon(id: string, data: Partial<{
   perUserLimit: number | null; applicableProductIds: string[];
   applicableCategoryIds: string[]; firstOrderOnly: boolean;
   startDate: Date | null; expiresAt: Date | null; isActive: boolean;
-}>) {
+}>, actor?: AuditActor) {
+  const before = await CouponModel.findById(id).lean();
+  if (!before) throw new AppError("Coupon not found", 404);
+
   const coupon = await CouponModel.findByIdAndUpdate(id, data, { new: true });
   if (!coupon) throw new AppError("Coupon not found", 404);
+
+  await logAction({
+    userId:     actor?.id,
+    userEmail:  actor?.email,
+    actorName:  actor?.name,
+    action:     "coupon.update",
+    resource:   "coupon",
+    resourceId: id,
+    before:     before as Record<string, unknown>,
+    after:      coupon.toObject() as unknown as Record<string, unknown>,
+    ipAddress:  actor?.ip,
+  });
+
   return coupon;
 }
 
-export async function deleteCoupon(id: string) {
-  const coupon = await CouponModel.findByIdAndDelete(id);
-  if (!coupon) throw new AppError("Coupon not found", 404);
+export async function deleteCoupon(id: string, actor?: AuditActor) {
+  const before = await CouponModel.findById(id).lean();
+  if (!before) throw new AppError("Coupon not found", 404);
+
+  await CouponModel.findByIdAndDelete(id);
+
+  await logAction({
+    userId:     actor?.id,
+    userEmail:  actor?.email,
+    actorName:  actor?.name,
+    action:     "coupon.delete",
+    resource:   "coupon",
+    resourceId: id,
+    before:     before as Record<string, unknown>,
+    after:      null,
+    ipAddress:  actor?.ip,
+  });
 }
 
 export interface ValidateResult {
@@ -68,26 +114,22 @@ export async function validateCoupon(
     return { valid: false, error: `Minimum order amount not met` };
   }
 
-  /* Per-user limit check */
   if (coupon.perUserLimit && userId) {
     const userUsage = await OrderModel.countDocuments({ userId, couponCode: code.toUpperCase() });
     if (userUsage >= coupon.perUserLimit) return { valid: false, error: "You have already used this coupon" };
   }
 
-  /* First-order-only check */
   if (coupon.firstOrderOnly && userId) {
     const priorOrders = await OrderModel.countDocuments({ userId });
     if (priorOrders > 0) return { valid: false, error: "Coupon only valid on first order" };
   }
 
-  /* Product/category applicability */
   if (coupon.applicableProductIds.length > 0 && cartProductIds?.length) {
     const applicable = coupon.applicableProductIds.map(String);
     const hasApplicable = cartProductIds.some((id) => applicable.includes(id));
     if (!hasApplicable) return { valid: false, error: "Coupon not applicable to cart items" };
   }
 
-  /* Calculate discount */
   let discountCents = 0;
   if (coupon.type === "percentage") {
     discountCents = Math.round(subtotalCents * (coupon.value / 100));
@@ -95,7 +137,7 @@ export async function validateCoupon(
   } else if (coupon.type === "fixed_amount") {
     discountCents = Math.min(coupon.value, subtotalCents);
   } else if (coupon.type === "free_shipping") {
-    discountCents = 0; // shipping not in scope, treat as 0
+    discountCents = 0;
   }
 
   return { valid: true, coupon, discountCents };

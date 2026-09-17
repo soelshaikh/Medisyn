@@ -6,6 +6,7 @@ import { validateCoupon, incrementUsage } from "@/modules/coupons/coupons.servic
 import { calculateTax } from "@/modules/tax/tax.service";
 import { AppError } from "@/common/middleware/error.middleware";
 import { EmailService } from "@/modules/email/email.service";
+import { logAction, type AuditActor } from "@/modules/audit/audit.service";
 
 async function generateOrderNumber(): Promise<string> {
   const year  = new Date().getFullYear();
@@ -26,11 +27,9 @@ export interface CheckoutInput {
 export async function checkout(input: CheckoutInput) {
   const { userId, sessionId, shippingAddress, paymentMethod, notes, guestInfo } = input;
 
-  /* Get cart */
   const cart = await CartModel.findOne(userId ? { userId } : { sessionId });
   if (!cart || cart.items.length === 0) throw new AppError("Cart is empty", 400);
 
-  /* Verify products still active + get current prices */
   const productIds = cart.items.map((i) => i.productId);
   const products   = await ProductModel.find({ _id: { $in: productIds }, status: "active" });
   const productMap = new Map(products.map((p) => [String(p._id), p]));
@@ -42,7 +41,7 @@ export async function checkout(input: CheckoutInput) {
       productId: cartItem.productId,
       name:      product.name,
       sku:       product.sku,
-      price:     product.price,  // always use current price, not snapshot
+      price:     product.price,
       quantity:  cartItem.quantity,
       lineTotal: product.price * cartItem.quantity,
     };
@@ -50,7 +49,6 @@ export async function checkout(input: CheckoutInput) {
 
   const subtotal = items.reduce((sum, i) => sum + i.lineTotal, 0);
 
-  /* Coupon */
   let discountAmount = 0;
   let couponCode: string | null = null;
   if (cart.appliedCouponCode) {
@@ -62,15 +60,12 @@ export async function checkout(input: CheckoutInput) {
     }
   }
 
-  /* Tax (server-side, always — never trust frontend) */
   const taxableAmount = subtotal - discountAmount;
   const tax           = calculateTax(taxableAmount, shippingAddress.province);
   const total         = taxableAmount + tax.total;
 
-  /* Deduct stock */
   await deductStock(items.map((i) => ({ productId: String(i.productId), quantity: i.quantity })));
 
-  /* Create order */
   const orderNumber = await generateOrderNumber();
   const order = await OrderModel.create({
     orderNumber,
@@ -90,13 +85,10 @@ export async function checkout(input: CheckoutInput) {
     statusHistory: [{ status: "pending", changedAt: new Date(), changedBy: null, note: "Order placed" }],
   });
 
-  /* Increment coupon usage */
   if (couponCode) await incrementUsage(couponCode);
 
-  /* Clear cart */
   await CartModel.findByIdAndDelete(cart._id);
 
-  /* Send confirmation email */
   const email     = userId ? undefined : guestInfo?.email;
   const fullName  = userId ? undefined : guestInfo?.fullName;
   const totalStr  = `$${(total / 100).toFixed(2)} CAD`;
@@ -108,6 +100,17 @@ export async function checkout(input: CheckoutInput) {
       totalStr,
     ).catch(() => null);
   }
+
+  await logAction({
+    userId:     userId ?? null,
+    userEmail:  userId ? undefined : guestInfo?.email,
+    actorName:  userId ? undefined : (guestInfo?.fullName ?? "guest"),
+    action:     "order.create",
+    resource:   "order",
+    resourceId: String(order._id),
+    before:     null,
+    after:      { orderNumber, total, status: "pending", itemCount: items.length },
+  });
 
   return order;
 }
@@ -154,10 +157,12 @@ export async function listAdminOrders(filters: {
 }
 
 export async function updateOrderStatus(
-  id: string, status: OrderStatus, note: string, changedBy: string,
+  id: string, status: OrderStatus, note: string, changedBy: string, actor?: AuditActor,
 ) {
   const order = await OrderModel.findById(id);
   if (!order) throw new AppError("Order not found", 404);
+
+  const oldStatus = order.status;
 
   order.status = status;
   order.statusHistory.push({
@@ -167,14 +172,44 @@ export async function updateOrderStatus(
     note,
   });
 
-  return order.save();
+  const saved = await order.save();
+
+  await logAction({
+    userId:     actor?.id,
+    userEmail:  actor?.email,
+    actorName:  actor?.name,
+    action:     `order.status.${status}`,
+    resource:   "order",
+    resourceId: id,
+    before:     { status: oldStatus },
+    after:      { status },
+    details:    { note },
+    ipAddress:  actor?.ip,
+  });
+
+  return saved;
 }
 
-export async function addAdminNote(id: string, note: string) {
+export async function addAdminNote(id: string, note: string, actor?: AuditActor) {
   const order = await OrderModel.findById(id);
   if (!order) throw new AppError("Order not found", 404);
-  order.adminNotes = order.adminNotes
-    ? `${order.adminNotes}\n\n${new Date().toISOString()}: ${note}`
+
+  const oldNotes = order.adminNotes ?? "";
+  order.adminNotes = oldNotes
+    ? `${oldNotes}\n\n${new Date().toISOString()}: ${note}`
     : `${new Date().toISOString()}: ${note}`;
-  return order.save();
+  const saved = await order.save();
+
+  await logAction({
+    userId:     actor?.id,
+    userEmail:  actor?.email,
+    actorName:  actor?.name,
+    action:     "order.note.added",
+    resource:   "order",
+    resourceId: id,
+    details:    { note },
+    ipAddress:  actor?.ip,
+  });
+
+  return saved;
 }

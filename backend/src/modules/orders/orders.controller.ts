@@ -31,7 +31,11 @@ const CheckoutDto = z.object({
   }).optional(),
 });
 
-/* Customer checkout */
+function actor(req: Request) {
+  if (!req.user) return undefined;
+  return { id: req.user._id, email: req.user.email, name: req.user.fullName, ip: req.ip };
+}
+
 export const checkout = asyncHandler(async (req: Request, res: Response) => {
   const dto    = CheckoutDto.parse(req.body);
   const userId = req.user?._id;
@@ -47,7 +51,6 @@ export const checkout = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, order, "Order placed successfully", 201);
 });
 
-/* Customer — my orders */
 export const myOrders = asyncHandler(async (req: Request, res: Response) => {
   const { page, limit } = z.object({
     page:  z.coerce.number().int().min(1).optional(),
@@ -60,7 +63,6 @@ export const myOrder = asyncHandler(async (req: Request, res: Response) =>
   sendSuccess(res, await svc.getOrder(String(req.params.id), req.user!._id))
 );
 
-/* Admin */
 export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const filters = z.object({
     status:   z.string().optional(),
@@ -83,11 +85,11 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
     note:   z.string().max(500).optional().default(""),
   }).parse(req.body);
   sendSuccess(res, await svc.updateOrderStatus(
-    String(req.params.id), status, note, req.user!._id,
+    String(req.params.id), status, note, req.user!._id, actor(req),
   ), "Order status updated");
 });
 
 export const addNote = asyncHandler(async (req: Request, res: Response) => {
   const { note } = z.object({ note: z.string().min(1).max(2000) }).parse(req.body);
-  sendSuccess(res, await svc.addAdminNote(String(req.params.id), note), "Note added");
+  sendSuccess(res, await svc.addAdminNote(String(req.params.id), note, actor(req)), "Note added");
 });

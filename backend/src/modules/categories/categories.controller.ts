@@ -14,20 +14,25 @@ const CreateDto = z.object({
 
 const UpdateDto = CreateDto.partial().extend({ isActive: z.boolean().optional() });
 
+function actor(req: Request) {
+  if (!req.user) return undefined;
+  return { id: req.user._id, email: req.user.email, name: req.user.fullName, ip: req.ip };
+}
+
 export const list      = asyncHandler(async (_req, res) => sendSuccess(res, await svc.listCategories()));
 export const listAdmin = asyncHandler(async (_req, res) => sendSuccess(res, await svc.listAllCategories()));
 
 export const create = asyncHandler(async (req: Request, res: Response) => {
   const dto = CreateDto.parse(req.body);
-  sendSuccess(res, await svc.createCategory(dto), "Category created", 201);
+  sendSuccess(res, await svc.createCategory(dto, actor(req)), "Category created", 201);
 });
 
 export const update = asyncHandler(async (req: Request, res: Response) => {
   const dto = UpdateDto.parse(req.body);
-  sendSuccess(res, await svc.updateCategory(String(req.params.id), dto), "Category updated");
+  sendSuccess(res, await svc.updateCategory(String(req.params.id), dto, actor(req)), "Category updated");
 });
 
 export const remove = asyncHandler(async (req: Request, res: Response) => {
-  await svc.deleteCategory(String(req.params.id));
+  await svc.deleteCategory(String(req.params.id), actor(req));
   sendSuccess(res, null, "Category deleted");
 });

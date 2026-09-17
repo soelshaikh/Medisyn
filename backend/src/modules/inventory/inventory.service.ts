@@ -1,6 +1,7 @@
 import type { PipelineStage } from "mongoose";
 import { InventoryModel } from "./inventory.schema";
 import { AppError } from "@/common/middleware/error.middleware";
+import { logAction, type AuditActor } from "@/modules/audit/audit.service";
 
 export async function getInventory(productId: string) {
   const inv = await InventoryModel.findOne({ productId }).lean();
@@ -47,19 +48,53 @@ export async function updateInventory(productId: string, data: Partial<{
   lowStockThreshold: number;
   trackInventory: boolean;
   allowBackorder: boolean;
-}>) {
+}>, actor?: AuditActor) {
+  const before = await InventoryModel.findOne({ productId }).lean();
+  if (!before) throw new AppError("Inventory record not found", 404);
+
   const inv = await InventoryModel.findOneAndUpdate({ productId }, data, { new: true });
   if (!inv) throw new AppError("Inventory record not found", 404);
+
+  await logAction({
+    userId:     actor?.id,
+    userEmail:  actor?.email,
+    actorName:  actor?.name,
+    action:     "inventory.update",
+    resource:   "inventory",
+    resourceId: String(productId),
+    before:     before as Record<string, unknown>,
+    after:      inv.toObject() as unknown as Record<string, unknown>,
+    ipAddress:  actor?.ip,
+  });
+
   return inv;
 }
 
-export async function adjustStock(productId: string, delta: number) {
+export async function adjustStock(productId: string, delta: number, actor?: AuditActor) {
   const inv = await InventoryModel.findOne({ productId });
   if (!inv) throw new AppError("Inventory record not found", 404);
-  const newQty = inv.quantity + delta;
+
+  const oldQty = inv.quantity;
+  const newQty = oldQty + delta;
   if (newQty < 0) throw new AppError("Insufficient stock", 409);
+
   inv.quantity = newQty;
-  return inv.save();
+  const saved = await inv.save();
+
+  await logAction({
+    userId:     actor?.id,
+    userEmail:  actor?.email,
+    actorName:  actor?.name,
+    action:     delta > 0 ? "inventory.stock_added" : "inventory.stock_removed",
+    resource:   "inventory",
+    resourceId: String(productId),
+    before:     { quantity: oldQty },
+    after:      { quantity: newQty },
+    details:    { delta },
+    ipAddress:  actor?.ip,
+  });
+
+  return saved;
 }
 
 /* Called during checkout — reduces stock, throws if insufficient */

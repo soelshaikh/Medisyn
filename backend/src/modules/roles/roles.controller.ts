@@ -19,6 +19,11 @@ const SetPermissionsDto = z.object({
   permissions: z.array(z.string()),
 });
 
+function actor(req: Request) {
+  if (!req.user) return undefined;
+  return { id: req.user._id, email: req.user.email, name: req.user.fullName, ip: req.ip };
+}
+
 export const list      = asyncHandler(async (_req: Request, res: Response) => {
   sendSuccess(res, await rolesService.listRoles());
 });
@@ -29,20 +34,20 @@ export const getById   = asyncHandler(async (req: Request, res: Response) => {
 
 export const create    = asyncHandler(async (req: Request, res: Response) => {
   const dto = CreateRoleDto.parse(req.body);
-  sendSuccess(res, await rolesService.createRole(dto), "Role created", 201);
+  sendSuccess(res, await rolesService.createRole(dto, actor(req)), "Role created", 201);
 });
 
 export const update    = asyncHandler(async (req: Request, res: Response) => {
   const dto = UpdateRoleDto.parse(req.body);
-  sendSuccess(res, await rolesService.updateRole(String(req.params.id), dto), "Role updated");
+  sendSuccess(res, await rolesService.updateRole(String(req.params.id), dto, actor(req)), "Role updated");
 });
 
 export const remove    = asyncHandler(async (req: Request, res: Response) => {
-  await rolesService.deleteRole(String(req.params.id));
+  await rolesService.deleteRole(String(req.params.id), actor(req));
   sendSuccess(res, null, "Role deleted");
 });
 
 export const setPermissions = asyncHandler(async (req: Request, res: Response) => {
   const { permissions } = SetPermissionsDto.parse(req.body);
-  sendSuccess(res, await rolesService.setRolePermissions(String(req.params.id), permissions), "Permissions updated");
+  sendSuccess(res, await rolesService.setRolePermissions(String(req.params.id), permissions, actor(req)), "Permissions updated");
 });

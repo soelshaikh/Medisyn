@@ -19,6 +19,11 @@ const CouponDto = z.object({
   expiresAt:             z.coerce.date().nullable().optional(),
 });
 
+function actor(req: Request) {
+  if (!req.user) return undefined;
+  return { id: req.user._id, email: req.user.email, name: req.user.fullName, ip: req.ip };
+}
+
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const { isActive, page, limit } = z.object({
     isActive: z.coerce.boolean().optional(),
@@ -30,16 +35,16 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
 
 export const create = asyncHandler(async (req: Request, res: Response) => {
   const dto = CouponDto.parse(req.body);
-  sendSuccess(res, await svc.createCoupon(dto), "Coupon created", 201);
+  sendSuccess(res, await svc.createCoupon(dto, actor(req)), "Coupon created", 201);
 });
 
 export const update = asyncHandler(async (req: Request, res: Response) => {
   const dto = CouponDto.partial().extend({ isActive: z.boolean().optional() }).parse(req.body);
-  sendSuccess(res, await svc.updateCoupon(String(req.params.id), dto), "Coupon updated");
+  sendSuccess(res, await svc.updateCoupon(String(req.params.id), dto, actor(req)), "Coupon updated");
 });
 
 export const remove = asyncHandler(async (req: Request, res: Response) => {
-  await svc.deleteCoupon(String(req.params.id));
+  await svc.deleteCoupon(String(req.params.id), actor(req));
   sendSuccess(res, null, "Coupon deleted");
 });
 

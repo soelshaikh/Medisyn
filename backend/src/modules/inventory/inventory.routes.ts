@@ -3,7 +3,13 @@ import { z } from "zod";
 import { authenticate, requirePermission } from "@/common/middleware/auth.middleware";
 import { asyncHandler } from "@/common/utils/asyncHandler";
 import { sendSuccess } from "@/common/utils/response";
+import type { Request } from "express";
 import * as svc from "./inventory.service";
+
+function actor(req: Request) {
+  if (!req.user) return undefined;
+  return { id: req.user._id, email: req.user.email, name: req.user.fullName, ip: req.ip };
+}
 
 const router = Router();
 
@@ -31,12 +37,12 @@ router.patch("/:productId", authenticate, requirePermission("inventory.adjust"),
     trackInventory:    z.boolean().optional(),
     allowBackorder:    z.boolean().optional(),
   }).parse(req.body);
-  sendSuccess(res, await svc.updateInventory(String(req.params.productId), dto), "Inventory updated");
+  sendSuccess(res, await svc.updateInventory(String(req.params.productId), dto, actor(req)), "Inventory updated");
 }));
 
 router.post("/:productId/adjust", authenticate, requirePermission("inventory.adjust"), asyncHandler(async (req, res) => {
   const { delta } = z.object({ delta: z.number().int() }).parse(req.body);
-  sendSuccess(res, await svc.adjustStock(String(req.params.productId), delta), "Stock adjusted");
+  sendSuccess(res, await svc.adjustStock(String(req.params.productId), delta, actor(req)), "Stock adjusted");
 }));
 
 export default router;

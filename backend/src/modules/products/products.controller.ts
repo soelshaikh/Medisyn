@@ -37,16 +37,19 @@ const FiltersDto = z.object({
   limit:                z.coerce.number().int().min(1).max(100).optional(),
 });
 
+function actor(req: Request) {
+  if (!req.user) return undefined;
+  return { id: req.user._id, email: req.user.email, name: req.user.fullName, ip: req.ip };
+}
+
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const filters = FiltersDto.parse(req.query);
-  const result  = await svc.listProducts(filters, false);
-  sendSuccess(res, result);
+  sendSuccess(res, await svc.listProducts(filters, false));
 });
 
 export const listAdmin = asyncHandler(async (req: Request, res: Response) => {
   const filters = FiltersDto.parse(req.query);
-  const result  = await svc.listProducts(filters, true);
-  sendSuccess(res, result);
+  sendSuccess(res, await svc.listProducts(filters, true));
 });
 
 export const getBySlug = asyncHandler(async (req: Request, res: Response) =>
@@ -59,16 +62,16 @@ export const getById = asyncHandler(async (req: Request, res: Response) =>
 
 export const create = asyncHandler(async (req: Request, res: Response) => {
   const dto = CreateDto.parse(req.body);
-  sendSuccess(res, await svc.createProduct(dto), "Product created", 201);
+  sendSuccess(res, await svc.createProduct(dto, actor(req)), "Product created", 201);
 });
 
 export const update = asyncHandler(async (req: Request, res: Response) => {
   const dto = UpdateDto.parse(req.body);
-  sendSuccess(res, await svc.updateProduct(String(req.params.id), dto), "Product updated");
+  sendSuccess(res, await svc.updateProduct(String(req.params.id), dto, actor(req)), "Product updated");
 });
 
 export const archive = asyncHandler(async (req: Request, res: Response) =>
-  sendSuccess(res, await svc.archiveProduct(String(req.params.id)), "Product archived")
+  sendSuccess(res, await svc.archiveProduct(String(req.params.id), actor(req)), "Product archived")
 );
 
 export const addImage = asyncHandler(async (req: Request, res: Response) => {
