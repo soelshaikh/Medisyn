@@ -16,7 +16,22 @@ const schema = z.object({
   ADMIN_URL:    z.string().url().default("http://localhost:3001"),
 
   EMAIL_FROM:      z.string().email().default("noreply@medisyn.ca"),
-  EMAIL_PROVIDER:  z.string().default("smtp"),
+  EMAIL_FROM_NAME: z.string().default("MediSyn"),
+
+  /* Brevo (primary) */
+  BREVO_API_KEY: z.string().optional(),
+
+  /* Resend (fallback) */
+  RESEND_API_KEY: z.string().optional(),
+
+  /* SendGrid (fallback) */
+  SENDGRID_API_KEY: z.string().optional(),
+
+  /* Custom SMTP (last resort) */
+  EMAIL_HOST:     z.string().optional(),
+  EMAIL_PORT:     z.string().optional(),
+  EMAIL_USER:     z.string().optional(),
+  EMAIL_PASSWORD: z.string().optional(),
 
   FILE_STORAGE_PROVIDER: z.string().default("local"),
 

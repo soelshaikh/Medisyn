@@ -24,7 +24,7 @@ export const list      = asyncHandler(async (_req: Request, res: Response) => {
 });
 
 export const getById   = asyncHandler(async (req: Request, res: Response) => {
-  sendSuccess(res, await rolesService.getRoleById(req.params.id));
+  sendSuccess(res, await rolesService.getRoleById(String(req.params.id)));
 });
 
 export const create    = asyncHandler(async (req: Request, res: Response) => {
@@ -34,15 +34,15 @@ export const create    = asyncHandler(async (req: Request, res: Response) => {
 
 export const update    = asyncHandler(async (req: Request, res: Response) => {
   const dto = UpdateRoleDto.parse(req.body);
-  sendSuccess(res, await rolesService.updateRole(req.params.id, dto), "Role updated");
+  sendSuccess(res, await rolesService.updateRole(String(req.params.id), dto), "Role updated");
 });
 
 export const remove    = asyncHandler(async (req: Request, res: Response) => {
-  await rolesService.deleteRole(req.params.id);
+  await rolesService.deleteRole(String(req.params.id));
   sendSuccess(res, null, "Role deleted");
 });
 
 export const setPermissions = asyncHandler(async (req: Request, res: Response) => {
   const { permissions } = SetPermissionsDto.parse(req.body);
-  sendSuccess(res, await rolesService.setRolePermissions(req.params.id, permissions), "Permissions updated");
+  sendSuccess(res, await rolesService.setRolePermissions(String(req.params.id), permissions), "Permissions updated");
 });

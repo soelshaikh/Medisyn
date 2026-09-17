@@ -6,6 +6,7 @@ import { AppError } from "@/common/middleware/error.middleware";
 import { UserModel } from "@/modules/users/users.schema";
 import { RefreshTokenModel } from "./auth.schema";
 import type { RegisterDtoType, LoginDtoType, ResetPasswordDtoType } from "./auth.dto";
+import { EmailService } from "@/modules/email/email.service";
 
 /* ── Token helpers ── */
 function generateAccessToken(userId: string, email: string, role: string) {
@@ -54,8 +55,7 @@ export async function register(data: RegisterDtoType) {
     verificationTokenExpires,
   });
 
-  // TODO Phase 7: queue verification email instead of direct send
-  // emailQueue.add({ template: 'verify-email', to: user.email, token: verificationToken })
+  EmailService.sendVerificationEmail(user, verificationToken).catch(() => null);
 
   return { user: mapUser(user), verificationToken };
 }
@@ -115,6 +115,8 @@ export async function verifyEmail(token: string) {
     verificationToken: undefined,
     verificationTokenExpires: undefined,
   });
+
+  EmailService.sendWelcomeEmail(user).catch(() => null);
 }
 
 /* ── Forgot password ── */
@@ -128,8 +130,7 @@ export async function forgotPassword(email: string) {
 
   await UserModel.findByIdAndUpdate(user._id, { resetToken, resetTokenExpires });
 
-  // TODO Phase 7: queue reset email
-  // emailQueue.add({ template: 'reset-password', to: user.email, token: resetToken })
+  EmailService.sendPasswordResetEmail(user, resetToken).catch(() => null);
 }
 
 /* ── Reset password ── */

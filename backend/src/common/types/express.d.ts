@@ -1,10 +1,17 @@
-import type { IUser } from "@/modules/users/users.schema";
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: IUser & { _id: string; effectivePermissions: string[] };
-      requestId?: string;
-    }
+declare namespace Express {
+  interface Request {
+    user?: {
+      _id:                  string;
+      email:                string;
+      fullName:             string;
+      phone?:               string;
+      role:                 string;
+      roles:                unknown[];
+      directPermissions:    string[];
+      status:               string;
+      emailVerified:        boolean;
+      effectivePermissions: string[];
+    };
+    requestId?: string;
   }
 }
