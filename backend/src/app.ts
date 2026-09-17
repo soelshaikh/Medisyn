@@ -11,6 +11,12 @@ import authRoutes        from "./modules/auth/auth.routes";
 import usersRoutes       from "./modules/users/users.routes";
 import rolesRoutes       from "./modules/roles/roles.routes";
 import permissionsRoutes from "./modules/permissions/permissions.routes";
+import categoriesRoutes  from "./modules/categories/categories.routes";
+import productsRoutes    from "./modules/products/products.routes";
+import inventoryRoutes   from "./modules/inventory/inventory.routes";
+import couponsRoutes     from "./modules/coupons/coupons.routes";
+import cartRoutes        from "./modules/cart/cart.routes";
+import ordersRoutes      from "./modules/orders/orders.routes";
 
 export const app = express();
 
@@ -41,10 +47,23 @@ app.get("/health", (_req, res) => {
 });
 
 /* ── API Routes ── */
-app.use("/api/v1/auth",        authRoutes);
-app.use("/api/v1/users",       usersRoutes);
-app.use("/api/v1/admin/roles",       rolesRoutes);
-app.use("/api/v1/admin/permissions", permissionsRoutes);
+app.use("/api/v1/auth",              authRoutes);
+app.use("/api/v1/users",            usersRoutes);
+app.use("/api/v1/admin/roles",      rolesRoutes);
+app.use("/api/v1/admin/permissions",permissionsRoutes);
+
+/* Phase 3 — Ecommerce Catalogue */
+app.use("/api/v1/categories", categoriesRoutes);
+app.use("/api/v1/products",   productsRoutes);
+app.use("/api/v1/admin/inventory", inventoryRoutes);
+app.use("/api/v1/coupons",    couponsRoutes);
+
+/* Phase 4 — Ecommerce Commerce */
+app.use("/api/v1/cart",   cartRoutes);
+app.use("/api/v1/orders", ordersRoutes);
+
+/* Serve product images */
+app.use("/uploads", express.static("uploads"));
 
 /* ── 404 ── */
 app.use((_req, res) => {

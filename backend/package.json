@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@types/cookie-parser": "^1.4.10",
+    "@types/multer": "^2.2.0",
     "@types/nodemailer": "^8.0.2",
+    "@types/uuid": "^10.0.0",
     "argon2": "^0.41.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -20,7 +22,10 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.8.3",
+    "multer": "^2.4.0",
     "nodemailer": "^10.0.10",
+    "slugify": "^1.6.9",
+    "uuid": "^14.0.2",
     "winston": "^3.17.0",
     "zod": "^3.23.8"
   },
