@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+dist/
+
+# Environment files (NEVER commit)
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
