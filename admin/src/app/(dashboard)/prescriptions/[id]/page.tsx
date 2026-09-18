@@ -1,0 +1,148 @@
+"use client";
+
+import { use, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { prescriptionsApi } from "@/api/prescriptions.api";
+import { DetailCard } from "@/components/common/DetailCard";
+import { StatusHistory } from "@/components/common/StatusHistory";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { Spinner } from "@/components/ui/Spinner";
+import { ArrowLeft } from "lucide-react";
+
+const RX_STATUSES = ["active", "expired", "cancelled"];
+
+export default function PrescriptionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const qc     = useQueryClient();
+  const router = useRouter();
+  const [statusModal, setStatusModal] = useState(false);
+  const [noteModal,   setNoteModal]   = useState(false);
+  const [newStatus,   setNewStatus]   = useState("");
+  const [statusNote,  setStatusNote]  = useState("");
+  const [noteText,    setNoteText]    = useState("");
+
+  const { data: rx, isLoading } = useQuery({
+    queryKey: ["admin-prescription", id],
+    queryFn:  () => prescriptionsApi.getById(id),
+  });
+
+  const statusMut = useMutation({
+    mutationFn: () => prescriptionsApi.updateStatus(id, newStatus, statusNote),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ["admin-prescription", id] }); setStatusModal(false); setStatusNote(""); },
+  });
+
+  const noteMut = useMutation({
+    mutationFn: () => prescriptionsApi.addNote(id, noteText),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ["admin-prescription", id] }); setNoteModal(false); setNoteText(""); },
+  });
+
+  if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
+  if (!rx)       return <p className="text-[var(--color-text-muted)]">Prescription not found.</p>;
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <div className="flex items-start gap-3">
+        <button onClick={() => router.back()} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mt-1">
+          <ArrowLeft size={18} />
+        </button>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">{rx.medicationName}</h1>
+            <StatusBadge status={rx.status} />
+          </div>
+          <p className="text-[var(--font-size-sm)] text-[var(--color-text-muted)] mt-1 font-mono">{rx.prescriptionNumber}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => { setNewStatus(rx.status); setStatusModal(true); }}>
+            Update Status
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
+            Add Note
+          </Button>
+        </div>
+      </div>
+
+      <DetailCard
+        title="Prescription Details"
+        cols={2}
+        fields={[
+          { label: "Rx Number",          value: rx.prescriptionNumber },
+          { label: "Medication",         value: rx.medicationName },
+          { label: "Dosage",             value: rx.dosage || "—" },
+          { label: "Refills Remaining",  value: rx.refillsRemaining },
+          { label: "Expires",            value: rx.expiresAt ? new Date(rx.expiresAt).toLocaleDateString("en-CA") : "No expiry" },
+          { label: "Added",              value: new Date(rx.createdAt).toLocaleDateString("en-CA") },
+        ]}
+      />
+
+      <DetailCard
+        title="Prescriber"
+        fields={[
+          { label: "Name",          value: rx.prescriberName },
+          { label: "License #",     value: rx.prescriberLicense || "—" },
+          { label: "Phone",         value: rx.prescriberPhone || "—" },
+        ]}
+      />
+
+      {rx.notes && (
+        <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] px-5 py-4">
+          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Patient Notes</p>
+          <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{rx.notes}</p>
+        </div>
+      )}
+
+      <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] p-6">
+        <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)] mb-4">Status History</h2>
+        <StatusHistory history={rx.statusHistory} />
+      </div>
+
+      <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Update Prescription Status">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] mb-1.5">New Status</label>
+            <select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)]"
+            >
+              {RX_STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] mb-1.5">Note (optional)</label>
+            <textarea
+              value={statusNote}
+              onChange={(e) => setStatusNote(e.target.value)}
+              rows={3}
+              placeholder="Reason for status change…"
+              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)] resize-none"
+            />
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="ghost" onClick={() => setStatusModal(false)}>Cancel</Button>
+            <Button loading={statusMut.isPending} onClick={() => statusMut.mutate()}>Save</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={noteModal} onClose={() => setNoteModal(false)} title="Add Internal Note">
+        <div className="space-y-4">
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            rows={4}
+            placeholder="Internal note (not visible to patient)…"
+            className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)] resize-none"
+          />
+          <div className="flex gap-3 justify-end">
+            <Button variant="ghost" onClick={() => setNoteModal(false)}>Cancel</Button>
+            <Button loading={noteMut.isPending} disabled={!noteText.trim()} onClick={() => noteMut.mutate()}>Add Note</Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}

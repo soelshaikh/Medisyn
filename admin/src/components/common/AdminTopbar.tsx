@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { LogOut } from "lucide-react";
-import { apiClient } from "@/lib/apiClient";
+import apiClient from "@/lib/apiClient";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
 import { Button } from "@/components/ui/Button";
 
