@@ -12,6 +12,8 @@ export interface IOrderItem {
   productId: Types.ObjectId;
   name:      string;
   sku:       string;
+  slug:      string;
+  imageUrl:  string;
   price:     number; // cents snapshot
   quantity:  number;
   lineTotal: number; // cents
@@ -47,6 +49,7 @@ export interface IOrder extends Document {
   guestInfo:       { email: string; fullName: string; phone: string } | null;
   items:           IOrderItem[];
   shippingAddress: IShippingAddress;
+  billingAddress:  IShippingAddress;
   subtotal:        number; // cents
   taxBreakdown:    ITaxLine[];
   taxTotal:        number; // cents
@@ -74,11 +77,22 @@ const OrderSchema = new Schema<IOrder>(
       productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
       name:      { type: String, required: true },
       sku:       { type: String, required: true },
+      slug:      { type: String, default: "" },
+      imageUrl:  { type: String, default: "" },
       price:     { type: Number, required: true },
       quantity:  { type: Number, required: true, min: 1 },
       lineTotal: { type: Number, required: true },
     }],
     shippingAddress: {
+      type: new Schema({
+        fullName:   String, phone: String,
+        address1:   String, address2: { type: String, default: "" },
+        city:       String, province: String,
+        postalCode: String, country:  { type: String, default: "CA" },
+      }, { _id: false }),
+      required: true,
+    },
+    billingAddress: {
       type: new Schema({
         fullName:   String, phone: String,
         address1:   String, address2: { type: String, default: "" },

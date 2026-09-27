@@ -16,6 +16,8 @@ interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
+  setHasHydrated: (v: boolean) => void;
   setAuth: (user: AuthUser, accessToken: string) => void;
   setUser: (user: AuthUser) => void;
   setAccessToken: (token: string) => void;
@@ -29,6 +31,9 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       isAuthenticated: false,
+      _hasHydrated: false,
+
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
 
       setAuth: (user, accessToken) => {
         if (typeof window !== "undefined") {
@@ -61,8 +66,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "medisyn-auth",
-      /* only persist user identity — not the token (stored in sessionStorage) */
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     },
   ),
 );

@@ -108,6 +108,62 @@ export const emailTemplates = {
     `),
   }),
 
+  orderStatusChanged: (name: string, orderNumber: string, status: string) => ({
+    subject: `Order update — #${orderNumber}`,
+    html: base(`
+      <h2 style="color:#0284C7;margin-top:0;">Order Update</h2>
+      <p>Hi ${name},</p>
+      <p>Your order status has been updated:</p>
+      <div style="background:#F7F9FB;padding:16px;border-radius:6px;margin:20px 0;">
+        <p style="margin:4px 0;"><strong>Order:</strong> #${orderNumber}</p>
+        <p style="margin:4px 0;"><strong>New status:</strong> ${status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+      </div>
+      <p>Log in to your account to view full details.</p>
+    `),
+  }),
+
+  compoundingStatusChanged: (name: string, refId: string, status: string) => ({
+    subject: `Compounding request update — Ref #${refId}`,
+    html: base(`
+      <h2 style="color:#0284C7;margin-top:0;">Compounding Request Update</h2>
+      <p>Hi ${name},</p>
+      <p>Your compounding request status has been updated:</p>
+      <div style="background:#F7F9FB;padding:16px;border-radius:6px;margin:20px 0;">
+        <p style="margin:4px 0;"><strong>Reference:</strong> #${refId}</p>
+        <p style="margin:4px 0;"><strong>New status:</strong> ${status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+      </div>
+      <p>Our pharmacist team will follow up if any additional information is required.</p>
+    `),
+  }),
+
+  appointmentStatusChanged: (name: string, service: string, dateTime: string, status: string) => ({
+    subject: `Appointment update — ${service}`,
+    html: base(`
+      <h2 style="color:#0284C7;margin-top:0;">Appointment Update</h2>
+      <p>Hi ${name},</p>
+      <p>Your appointment status has been updated:</p>
+      <div style="background:#F7F9FB;padding:16px;border-radius:6px;margin:20px 0;">
+        <p style="margin:4px 0;"><strong>Service:</strong> ${service}</p>
+        <p style="margin:4px 0;"><strong>Date & Time:</strong> ${dateTime}</p>
+        <p style="margin:4px 0;"><strong>Status:</strong> ${status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+      </div>
+      <p>Contact us if you have any questions.</p>
+    `),
+  }),
+
+  askPharmacistResponded: (name: string, subject: string, responseText: string) => ({
+    subject: `Pharmacist response — ${subject}`,
+    html: base(`
+      <h2 style="color:#0284C7;margin-top:0;">Pharmacist Response</h2>
+      <p>Hi ${name},</p>
+      <p>Our pharmacist has responded to your question: <strong>${subject}</strong></p>
+      <div style="background:#F0F9FF;border-left:4px solid #0284C7;padding:16px;margin:20px 0;border-radius:4px;">
+        <p style="margin:0;line-height:1.6;">${responseText}</p>
+      </div>
+      <p>If you have further questions, please submit a new question through your patient portal.</p>
+    `),
+  }),
+
   accountSuspended: (name: string, reason?: string) => ({
     subject: "Your MediSyn account has been suspended",
     html: base(`

@@ -8,8 +8,10 @@ import { rolesApi } from "@/api/roles.api";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { ArrowLeft } from "lucide-react";
+import { fmtDate } from "@/lib/format";
 
 const USER_STATUSES = ["active", "suspended", "deactivated"];
 
@@ -68,7 +70,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             ["Status",         user.status],
             ["Email Verified", user.emailVerified ? "Yes" : "No"],
             ["Phone",          user.phone || "—"],
-            ["Joined",         new Date(user.createdAt).toLocaleDateString("en-CA")],
+            ["Joined",         fmtDate(user.createdAt)],
           ].map(([k, v]) => (
             <div key={k as string}>
               <dt className="text-[var(--color-text-muted)]">{k}</dt>
@@ -111,13 +113,11 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Change User Status">
         <div className="space-y-4">
-          <select
+          <Select
             value={newStatus}
-            onChange={(e) => setNewStatus(e.target.value)}
-            className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)]"
-          >
-            {USER_STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-          </select>
+            onChange={setNewStatus}
+            options={USER_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }))}
+          />
           <div className="flex gap-3 justify-end">
             <Button variant="ghost" onClick={() => setStatusModal(false)}>Cancel</Button>
             <Button loading={statusMut.isPending} onClick={() => statusMut.mutate()}>Save</Button>

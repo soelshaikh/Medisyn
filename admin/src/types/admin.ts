@@ -68,18 +68,24 @@ export interface AuditLog {
 }
 
 export interface DashboardMetrics {
-  users:     { total: number; newToday: number };
-  approvals: { pendingClinics: number; pendingPartners: number };
-  orders:    { total: number; today: number; pending: number; byStatus: Array<{ _id: string; count: number }> };
-  products:  { active: number; lowStock: number };
-  revenue:   { totalCents: number; totalCAD: string };
-  charts:    { dailyOrders: Array<{ _id: string; count: number; revenue: number }> };
+  users:      { total: number; newToday: number };
+  approvals:  { pendingClinics: number; pendingPartners: number };
+  orders:     { total: number; today: number; pending: number; byStatus: Array<{ _id: string; count: number }> };
+  products:   { active: number; lowStock: number };
+  revenue:    { totalCents: number; totalCAD: string };
+  charts:     { dailyOrders: Array<{ _id: string; count: number; revenue: number }> };
+  healthcare: {
+    pendingCompounding: number;
+    openAskPharmacist:  number;
+    pendingAppointments: number;
+    activePrescriptions: number;
+  };
 }
 
 export interface AdminOrder {
   _id:             string;
   orderNumber:     string;
-  userId:          string | null;
+  userId:          { _id: string; email: string; fullName: string; phone?: string } | string | null;
   guestInfo:       { email: string; fullName: string; phone: string } | null;
   items:           Array<{ name: string; sku: string; price: number; quantity: number; lineTotal: number }>;
   shippingAddress: { fullName: string; city: string; province: string; postalCode: string };
@@ -95,20 +101,43 @@ export interface AdminOrder {
   createdAt:       string;
 }
 
+export interface AdminBrand {
+  _id:         string;
+  name:        string;
+  slug:        string;
+  description: string;
+  logoUrl:     string;
+  website:     string;
+  isActive:    boolean;
+  createdAt:   string;
+  updatedAt:   string;
+}
+
 export interface AdminProduct {
   _id:                 string;
   name:                string;
   slug:                string;
   sku:                 string;
+  description:         string;
   shortDescription:    string;
   categoryId:          { _id: string; name: string; slug: string } | string;
+  brandId:             { _id: string; name: string; slug: string } | string | null;
+  din:                 string;
+  upc:                 string;
   images:              Array<{ url: string; alt: string; isPrimary: boolean }>;
+  videoUrls:           string[];
   price:               number;
   compareAtPrice:      number | null;
   requiresPrescription: boolean;
+  ageRestriction:      number | null;
   status:              string;
+  tags:                string[];
+  weight:              number | null;
+  metaTitle:           string;
+  metaDescription:     string;
   inventory?:          { quantity: number; lowStockThreshold: number; trackInventory: boolean };
   createdAt:           string;
+  updatedAt:           string;
 }
 
 export interface AdminCoupon {
@@ -179,6 +208,62 @@ export interface AdminAskPharmacist {
   respondedAt:   string | null;
   statusHistory: StatusEntry[];
   createdAt:     string;
+}
+
+export interface VaccineService {
+  _id:             string;
+  name:            string;
+  slug:            string;
+  description:     string;
+  eligibilityNotes:string;
+  durationMinutes: number;
+  status:          "active" | "inactive";
+  sortOrder:       number;
+  createdAt:       string;
+}
+
+export interface AppointmentSlot {
+  _id:              string;
+  vaccineServiceId: VaccineService | string;
+  date:             string;
+  startTime:        string;
+  endTime:          string;
+  capacity:         number;
+  bookedCount:      number;
+  capacityType:     "strict" | "open";
+  status:           "active" | "cancelled";
+  createdAt:        string;
+}
+
+export interface AppointmentBooking {
+  _id:              string;
+  slotId:           AppointmentSlot | string;
+  patientId:        { _id: string; fullName: string; email: string; phone?: string } | string;
+  vaccineServiceId: VaccineService | string;
+  status:           string;
+  statusHistory:    StatusEntry[];
+  patientNotes:     string;
+  adminNotes?:      string;
+  adminReply?:      string;
+  cancelledAt:      string | null;
+  cancelledBy:      "patient" | "admin" | null;
+  cancellationReason: string;
+  createdAt:        string;
+}
+
+export interface AdminAilmentRequest {
+  _id:          string;
+  patientId:    string | { _id: string; fullName: string; email: string; phone?: string };
+  ailmentId:    string;
+  ailmentName:  string;
+  formData:     Record<string, unknown>;
+  notes:        string;
+  status:       string;
+  responseText: string;
+  respondedAt:  string | null;
+  statusHistory: StatusEntry[];
+  adminNotes:   string;
+  createdAt:    string;
 }
 
 export interface ListResponse<T> {

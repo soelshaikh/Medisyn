@@ -4,29 +4,42 @@ export const inputClass =
 export const labelClass = "text-sm font-medium text-ink-900";
 
 export const STATUS_STYLES: Record<string, string> = {
+  /* User / account */
   pending_verification: "bg-slate-100 text-slate-600",
-  pending_approval: "bg-amber-100 text-amber-700",
-  active: "bg-brand-100 text-brand-700",
-  approved: "bg-brand-100 text-brand-700",
-  rejected: "bg-red-100 text-red-700",
-  suspended: "bg-orange-100 text-orange-700",
-  deactivated: "bg-slate-200 text-slate-500",
-  submitted: "bg-slate-100 text-slate-600",
-  received: "bg-sky-100 text-sky-700",
-  under_review: "bg-amber-100 text-amber-700",
-  more_info_required: "bg-orange-100 text-orange-700",
-  processing: "bg-indigo-100 text-indigo-700",
-  ready_pickup: "bg-teal-100 text-teal-700",
-  ready_delivery: "bg-teal-100 text-teal-700",
-  completed: "bg-brand-100 text-brand-700",
-  declined: "bg-red-100 text-red-700",
-  responded: "bg-brand-100 text-brand-700",
-  closed: "bg-slate-200 text-slate-500",
-  confirmed: "bg-brand-100 text-brand-700",
-  cancelled: "bg-slate-200 text-slate-500",
+  pending_approval:     "bg-amber-100 text-amber-700",
+  active:               "bg-brand-100 text-brand-700",
+  approved:             "bg-brand-100 text-brand-700",
+  rejected:             "bg-red-100 text-red-700",
+  suspended:            "bg-orange-100 text-orange-700",
+  deactivated:          "bg-slate-200 text-slate-500",
+  /* Healthcare requests */
+  submitted:            "bg-slate-100 text-slate-600",
+  open:                 "bg-sky-100 text-sky-700",
+  received:             "bg-sky-100 text-sky-700",
+  under_review:         "bg-amber-100 text-amber-700",
+  reviewing:            "bg-amber-100 text-amber-700",
+  more_info_required:   "bg-orange-100 text-orange-700",
+  processing:           "bg-indigo-100 text-indigo-700",
+  answered:             "bg-brand-100 text-brand-700",
+  responded:            "bg-brand-100 text-brand-700",
+  ready_pickup:         "bg-teal-100 text-teal-700",
+  ready_delivery:       "bg-teal-100 text-teal-700",
+  completed:            "bg-brand-100 text-brand-700",
+  declined:             "bg-red-100 text-red-700",
+  closed:               "bg-slate-200 text-slate-500",
+  /* Orders / appointments */
+  confirmed:            "bg-brand-100 text-brand-700",
+  cancelled:            "bg-slate-200 text-slate-500",
+  no_show:              "bg-red-100 text-red-600",
+  /* Prescriptions */
+  expired:              "bg-slate-200 text-slate-500",
+  /* Products */
+  draft:                "bg-slate-100 text-slate-600",
+  archived:             "bg-slate-200 text-slate-400",
 };
 
-export function statusLabel(status: string): string {
+export function statusLabel(status: string | undefined | null): string {
+  if (!status) return "—";
   return status
     .split("_")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))

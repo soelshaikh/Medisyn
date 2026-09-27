@@ -1,9 +1,8 @@
 import slugify from "slugify";
-import path from "path";
-import fs from "fs";
 import { ProductModel } from "./products.schema";
 import { InventoryModel } from "@/modules/inventory/inventory.schema";
 import { AppError } from "@/common/middleware/error.middleware";
+import { storageService } from "@/modules/files/file-storage.service";
 import { logAction, type AuditActor } from "@/modules/audit/audit.service";
 
 function makeSlug(name: string) {
@@ -12,6 +11,7 @@ function makeSlug(name: string) {
 
 export interface ProductFilters {
   categoryId?:          string;
+  brandId?:             string;
   search?:              string;
   status?:              string;
   requiresPrescription?: boolean;
@@ -23,7 +23,7 @@ export interface ProductFilters {
 }
 
 export async function listProducts(filters: ProductFilters = {}, adminView = false) {
-  const { categoryId, search, requiresPrescription, inStock, priceMin, priceMax,
+  const { categoryId, brandId, search, requiresPrescription, inStock, priceMin, priceMax,
           page = 1, limit = 24 } = filters;
 
   const query: Record<string, unknown> = {};
@@ -31,6 +31,7 @@ export async function listProducts(filters: ProductFilters = {}, adminView = fal
   else if (filters.status) query.status = filters.status;
 
   if (categoryId) query.categoryId = categoryId;
+  if (brandId)    query.brandId    = brandId;
   if (requiresPrescription !== undefined) query.requiresPrescription = requiresPrescription;
   if (priceMin !== undefined || priceMax !== undefined) {
     query.price = {};
@@ -43,6 +44,7 @@ export async function listProducts(filters: ProductFilters = {}, adminView = fal
     ProductModel.countDocuments(query),
     ProductModel.find(query)
       .populate("categoryId", "name slug")
+      .populate("brandId", "name slug")
       .sort(search ? { score: { $meta: "textScore" } } : { createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -66,6 +68,7 @@ export async function listProducts(filters: ProductFilters = {}, adminView = fal
 export async function getProductBySlug(slug: string): Promise<Record<string, unknown>> {
   const product = await ProductModel.findOne({ slug, status: "active" })
     .populate("categoryId", "name slug")
+    .populate("brandId", "name slug")
     .lean<Record<string, unknown>>();
   if (!product) throw new AppError("Product not found", 404);
 
@@ -76,6 +79,7 @@ export async function getProductBySlug(slug: string): Promise<Record<string, unk
 export async function getProductById(id: string): Promise<Record<string, unknown>> {
   const product = await ProductModel.findById(id)
     .populate("categoryId", "name slug")
+    .populate("brandId", "name slug")
     .lean<Record<string, unknown>>();
   if (!product) throw new AppError("Product not found", 404);
   const inventory = await InventoryModel.findOne({ productId: id }).lean();
@@ -84,7 +88,8 @@ export async function getProductById(id: string): Promise<Record<string, unknown
 
 export async function createProduct(data: {
   name: string; sku: string; description?: string; shortDescription?: string;
-  categoryId: string; price: number; compareAtPrice?: number | null;
+  categoryId: string; brandId?: string | null; price: number; compareAtPrice?: number | null;
+  din?: string; upc?: string;
   requiresPrescription?: boolean; ageRestriction?: number | null;
   status?: string; tags?: string[]; weight?: number | null;
   metaTitle?: string; metaDescription?: string;
@@ -124,7 +129,8 @@ export async function createProduct(data: {
 
 export async function updateProduct(id: string, data: Partial<{
   name: string; description: string; shortDescription: string;
-  categoryId: string; price: number; compareAtPrice: number | null;
+  categoryId: string; brandId: string | null; price: number; compareAtPrice: number | null;
+  din: string; upc: string;
   requiresPrescription: boolean; ageRestriction: number | null;
   status: string; tags: string[]; weight: number | null;
   metaTitle: string; metaDescription: string;
@@ -184,6 +190,36 @@ export async function addProductImage(id: string, image: { url: string; alt?: st
   return product.save();
 }
 
+export async function setPrimaryImage(productId: string, imageUrl: string) {
+  const product = await ProductModel.findById(productId);
+  if (!product) throw new AppError("Product not found", 404);
+
+  const target = product.images.find((i) => i.url === imageUrl);
+  if (!target) throw new AppError("Image not found", 404);
+
+  product.images.forEach((img) => { img.isPrimary = img.url === imageUrl; });
+  return product.save();
+}
+
+export async function reorderImages(productId: string, orderedUrls: string[]) {
+  const product = await ProductModel.findById(productId);
+  if (!product) throw new AppError("Product not found", 404);
+
+  const imgMap = new Map(product.images.map((i) => [i.url, i]));
+  const reordered = orderedUrls
+    .map((url) => imgMap.get(url))
+    .filter((i): i is (typeof product.images)[0] => !!i);
+
+  /* Preserve any images not included in the new order at the end */
+  const missing = product.images.filter((i) => !orderedUrls.includes(i.url));
+  product.images = [...reordered, ...missing] as typeof product.images;
+
+  /* First image becomes primary */
+  product.images.forEach((img, idx) => { img.isPrimary = idx === 0; });
+
+  return product.save();
+}
+
 export async function removeProductImage(productId: string, imageUrl: string) {
   const product = await ProductModel.findById(productId);
   if (!product) throw new AppError("Product not found", 404);
@@ -191,8 +227,7 @@ export async function removeProductImage(productId: string, imageUrl: string) {
   const idx = product.images.findIndex((i) => i.url === imageUrl);
   if (idx === -1) throw new AppError("Image not found", 404);
 
-  const filePath = path.join(process.cwd(), "uploads", path.basename(imageUrl));
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  await storageService.delete(imageUrl).catch(() => { /* ignore if already gone */ });
 
   product.images.splice(idx, 1);
   return product.save();

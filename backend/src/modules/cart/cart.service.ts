@@ -25,18 +25,35 @@ export async function getCartSummary(userId?: string, sessionId?: string) {
     return { items: [], subtotal: 0, discountAmount: 0, couponCode: null, total: 0 };
   }
 
-  const subtotal = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  /* Refresh imageUrl snapshots from current product data */
+  const productIds = cart.items.map((i) => i.productId);
+  const products   = await ProductModel.find({ _id: { $in: productIds } }, { images: 1 }).lean();
+  const imageMap   = new Map(products.map((p) => {
+    const primary = (p.images ?? []).find((img: { isPrimary: boolean }) => img.isPrimary) ?? (p.images ?? [])[0];
+    return [String(p._id), (primary as { url?: string } | undefined)?.url ?? ""];
+  }));
+
+  const items = cart.items.map((i) => ({
+    productId: i.productId,
+    name:      i.name,
+    sku:       i.sku,
+    price:     i.price,
+    quantity:  i.quantity,
+    imageUrl:  imageMap.get(String(i.productId)) ?? i.imageUrl ?? "",
+  }));
+
+  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   let discountAmount = 0;
 
   if (cart.appliedCouponCode) {
-    const cartProductIds = cart.items.map((i) => String(i.productId));
+    const cartProductIds = items.map((i) => String(i.productId));
     const result = await validateCoupon(cart.appliedCouponCode, subtotal, userId, cartProductIds);
     if (result.valid) discountAmount = result.discountCents ?? 0;
-    else cart.appliedCouponCode = null; // coupon no longer valid — clear it
+    else cart.appliedCouponCode = null;
   }
 
   return {
-    items:          cart.items,
+    items,
     subtotal,
     discountAmount,
     couponCode:     cart.appliedCouponCode,
@@ -72,11 +89,13 @@ export async function addItem(
   if (existing) {
     existing.quantity += quantity;
   } else {
+    const primaryImage = product.images?.find((img) => img.isPrimary) ?? product.images?.[0];
     cart.items.push({
       productId:  product._id,
       name:       product.name,
       sku:        product.sku,
       price:      product.price,
+      imageUrl:   primaryImage?.url ?? "",
       quantity,
     });
   }

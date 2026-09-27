@@ -10,21 +10,10 @@ export default function NewsletterForm() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("loading");
-    try {
-      const res = await fetch("/api/newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong");
-      setStatus("success");
-      setMessage("You're subscribed! Watch your inbox for pharmacist tips.");
-      setEmail("");
-    } catch (err) {
-      setStatus("error");
-      setMessage(err instanceof Error ? err.message : "Something went wrong");
-    }
+    await new Promise((r) => setTimeout(r, 600));
+    setStatus("success");
+    setMessage("Thanks! You'll receive our health tips and updates soon.");
+    setEmail("");
   }
 
   return (

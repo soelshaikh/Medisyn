@@ -8,10 +8,10 @@
   /* ----------------------------------------------------------
      Brand Colors
      ---------------------------------------------------------- */
-  --color-primary:        #1677A8;
-  --color-primary-dark:   #0B6FA4;
-  --color-primary-light:  #E8F4FB;
-  --color-primary-hover:  #12608E;
+  --color-primary:        #0284C7;
+  --color-primary-dark:   #0369A1;
+  --color-primary-light:  #E0F2FE;
+  --color-primary-hover:  #0277B5;
 
   --color-accent:         #F2C14E;
   --color-accent-dark:    #D4A832;
@@ -21,10 +21,10 @@
      Neutrals
      ---------------------------------------------------------- */
   --color-white:          #FFFFFF;
-  --color-surface:        #F7F9FB;
-  --color-surface-alt:    #EEF2F7;
-  --color-border:         #E2E8F0;
-  --color-border-strong:  #CBD5E1;
+  --color-surface:        #EDF2F7;
+  --color-surface-alt:    #DDE5EE;
+  --color-border:         #B8C4CE;
+  --color-border-strong:  #8FA1B3;
 
   --color-text-primary:   #1A202C;
   --color-text-secondary: #4A5568;
@@ -118,11 +118,11 @@
   /* ----------------------------------------------------------
      Shadows
      ---------------------------------------------------------- */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.06), 0 4px 6px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.07), 0 10px 10px rgba(0, 0, 0, 0.03);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.07);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.09), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.10), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 20px 30px rgba(0, 0, 0, 0.12), 0 10px 12px rgba(0, 0, 0, 0.05);
   --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
 
   /* ----------------------------------------------------------

@@ -1,33 +1,30 @@
-import { eq } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/db";
-import { clinicProfiles } from "@/db/schema";
-import ClinicProfileForm from "@/components/clinic/ClinicProfileForm";
+"use client";
 
-export const metadata = { title: "Clinic Profile | MediSyn Compounding" };
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { usersApi } from "@/api/users.api";
+import ProfileForm from "@/components/patient/ProfileForm";
 
-export default async function ClinicProfilePage() {
-  const user = await getCurrentUser();
-  if (!user) return null;
-
-  const [profile] = await db.select().from(clinicProfiles).where(eq(clinicProfiles.userId, user.id)).limit(1);
+export default function ClinicProfilePage() {
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: usersApi.getMe,
+    staleTime: 5 * 60 * 1000,
+  });
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold text-ink-900">Clinic Profile</h1>
-        <p className="mt-1 text-sm text-slate-600">Keep your clinic&rsquo;s details current.</p>
+        <p className="mt-1 text-sm text-slate-600">Keep your contact details current.</p>
       </div>
-      <ClinicProfileForm
-        profile={{
-          clinicName: profile?.clinicName ?? "",
-          contactName: profile?.contactName ?? user.fullName,
-          email: user.email,
-          clinicPhone: profile?.clinicPhone ?? user.phone ?? "",
-          clinicAddress: profile?.clinicAddress ?? "",
-          licenseNumber: profile?.licenseNumber ?? "",
-        }}
-      />
+      {isLoading ? (
+        <div className="flex justify-center rounded-2xl border border-slate-200 bg-white p-12">
+          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        </div>
+      ) : user ? (
+        <ProfileForm user={user} />
+      ) : null}
     </div>
   );
 }

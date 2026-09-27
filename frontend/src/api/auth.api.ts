@@ -12,6 +12,40 @@ export const authApi = {
   register: (data: RegisterRequest) =>
     apiClient.post<ApiResponse<{ user: User }>>("/auth/register", data),
 
+  registerClinic: (data: {
+    email: string;
+    password: string;
+    fullName: string;
+    phone: string;
+    clinicName: string;
+    clinicAddress: string;
+    licenseNumber?: string;
+  }) =>
+    apiClient.post<ApiResponse<{ user: User }>>("/auth/register", {
+      email:    data.email,
+      password: data.password,
+      fullName: data.fullName,
+      phone:    data.phone || undefined,
+      role:     "clinic",
+    }),
+
+  registerPartner: (data: {
+    email: string;
+    password: string;
+    fullName: string;
+    phone: string;
+    pharmacyName: string;
+    pharmacyAddress: string;
+    licenseNumber?: string;
+  }) =>
+    apiClient.post<ApiResponse<{ user: User }>>("/auth/register", {
+      email:    data.email,
+      password: data.password,
+      fullName: data.fullName,
+      phone:    data.phone || undefined,
+      role:     "pharmacy_partner",
+    }),
+
   logout: () => apiClient.post<ApiResponse<null>>("/auth/logout"),
 
   refresh: () =>

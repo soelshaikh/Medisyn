@@ -1,114 +1,93 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { FilePlus2, RefreshCcw, ArrowRightLeft, UploadCloud, FlaskConical } from "lucide-react";
-import { submitPrescriptionRequest } from "@/actions/patient";
-import { INITIAL_ACTION_STATE } from "@/lib/action-state";
-import ActionMessage from "@/components/forms/ActionMessage";
-import SubmitButton from "@/components/forms/SubmitButton";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { prescriptionsApi } from "@/api/prescriptions.api";
 import { inputClass, labelClass } from "@/lib/ui";
 
-const TABS = [
-  { key: "new_rx", label: "New Rx", icon: FilePlus2 },
-  { key: "refill", label: "Refill", icon: RefreshCcw },
-  { key: "transfer", label: "Transfer", icon: ArrowRightLeft },
-  { key: "upload", label: "Upload", icon: UploadCloud },
-  { key: "custom_formulation", label: "Custom Formulation", icon: FlaskConical },
-] as const;
+export default function PrescriptionForm() {
+  const qc = useQueryClient();
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
-type RequestType = (typeof TABS)[number]["key"];
+  const mutation = useMutation({
+    mutationFn: prescriptionsApi.create,
+    onSuccess: () => {
+      setSuccess(true);
+      void qc.invalidateQueries({ queryKey: ["prescriptions", "my"] });
+      setTimeout(() => setSuccess(false), 4000);
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg ?? "Failed to submit. Please try again.");
+    },
+  });
 
-export default function PrescriptionForm({ initialType }: { initialType: RequestType }) {
-  const [type, setType] = useState<RequestType>(initialType);
-  const [state, formAction] = useActionState(submitPrescriptionRequest, INITIAL_ACTION_STATE);
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    const fd = new FormData(e.currentTarget);
+    mutation.mutate({
+      prescriptionNumber: fd.get("prescriptionNumber") as string,
+      prescriberName:     fd.get("prescriberName") as string,
+      prescriberPhone:    (fd.get("prescriberPhone") as string) || undefined,
+      medicationName:     fd.get("medicationName") as string,
+      dosage:             (fd.get("dosage") as string) || undefined,
+      notes:              (fd.get("notes") as string) || undefined,
+    });
+    (e.target as HTMLFormElement).reset();
+  }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-wrap gap-1 rounded-t-2xl bg-brand-50 p-1.5">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setType(tab.key)}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition ${
-              type === tab.key ? "bg-white text-brand-700 shadow-sm" : "text-brand-600/70 hover:text-brand-700"
-            }`}
-          >
-            <tab.icon className="h-3.5 w-3.5" />
-            {tab.label}
-          </button>
-        ))}
+      <div className="border-b border-slate-100 px-6 py-4">
+        <h2 className="font-display text-lg font-semibold text-ink-900">Add a Prescription</h2>
+        <p className="mt-0.5 text-sm text-slate-500">Enter your prescription details to have it managed by MediSyn.</p>
       </div>
-
-      <form action={formAction} encType="multipart/form-data" className="space-y-5 p-6">
-        <input type="hidden" name="requestType" value={type} />
-
+      <form onSubmit={handleSubmit} className="space-y-5 p-6">
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label className={labelClass}>Full name</label>
-            <input required name="fullName" className={inputClass} placeholder="Jane Doe" />
+            <label className={labelClass}>Prescription number</label>
+            <input required name="prescriptionNumber" className={inputClass} placeholder="RX-123456" />
           </div>
           <div>
-            <label className={labelClass}>Phone</label>
-            <input required name="phone" className={inputClass} placeholder="(647) 555-0134" />
+            <label className={labelClass}>Prescriber name</label>
+            <input required name="prescriberName" className={inputClass} placeholder="Dr. Sarah Kim" />
           </div>
         </div>
-
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label className={labelClass}>Email</label>
-            <input required name="email" type="email" className={inputClass} placeholder="jane@email.com" />
+            <label className={labelClass}>Medication name</label>
+            <input required name="medicationName" className={inputClass} placeholder="e.g. Progesterone cream 50mg" />
           </div>
           <div>
-            <label className={labelClass}>Province</label>
-            <select name="province" className={inputClass} defaultValue="Ontario">
-              {["Ontario","Alberta","British Columbia","Manitoba","New Brunswick","Newfoundland and Labrador","Nova Scotia","Prince Edward Island","Quebec","Saskatchewan","Northwest Territories","Nunavut","Yukon"].map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
+            <label className={labelClass}>Dosage / instructions</label>
+            <input name="dosage" className={inputClass} placeholder="e.g. Apply 2mg daily" />
           </div>
         </div>
-
-        {type === "transfer" ? (
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <label className={labelClass}>Current pharmacy name</label>
-              <input name="currentPharmacyName" className={inputClass} placeholder="Shoppers Drug Mart" />
-            </div>
-            <div>
-              <label className={labelClass}>Current pharmacy phone</label>
-              <input name="currentPharmacyPhone" className={inputClass} placeholder="(416) 555-0100" />
-            </div>
-          </div>
-        ) : null}
-
-        <div>
-          <label className={labelClass}>
-            {type === "custom_formulation" ? "Requested formulation details" : "Medication name(s) / condition"}
-          </label>
-          <textarea
-            rows={3}
-            name="medicationDetails"
-            className={inputClass}
-            placeholder={type === "custom_formulation" ? "Dosage, allergies, format preference..." : "e.g. Progesterone cream 50mg, dye-free"}
-          />
-        </div>
-
-        {(type === "upload" || type === "new_rx" || type === "custom_formulation") ? (
+        <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label className={labelClass}>Attach a file (prescription photo, doctor's note)</label>
-            <input type="file" name="file" accept="image/*,.pdf" className={`${inputClass} py-2`} />
-            <p className="mt-1 text-xs text-slate-500">JPG, PNG or PDF, up to 5MB.</p>
+            <label className={labelClass}>Prescriber phone (optional)</label>
+            <input name="prescriberPhone" className={inputClass} placeholder="(416) 555-0100" />
           </div>
-        ) : null}
-
+        </div>
         <div>
           <label className={labelClass}>Additional notes (optional)</label>
-          <textarea rows={2} name="notes" className={inputClass} placeholder="Allergies, preferred flavor, delivery instructions..." />
+          <textarea rows={2} name="notes" className={inputClass} placeholder="Allergies, preferred flavor, delivery instructions…" />
         </div>
-
-        <ActionMessage state={state} />
-        <SubmitButton pendingText="Submitting...">Submit Request</SubmitButton>
+        {success && (
+          <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+            Prescription submitted successfully!
+          </p>
+        )}
+        {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="rounded-full bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+        >
+          {mutation.isPending ? "Submitting…" : "Submit Prescription"}
+        </button>
       </form>
     </div>
   );

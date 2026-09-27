@@ -1,11 +1,25 @@
 import apiClient from "@/lib/apiClient";
-import type { AdminUser, ListResponse } from "@/types/admin";
+import type { AdminUser } from "@/types/admin";
 
 const BASE = "/users";
 
+interface UserListResponse {
+  data:  AdminUser[];
+  total: number;
+  page:  number;
+  limit: number;
+}
+
 export const usersApi = {
   list: (params?: Record<string, unknown>) =>
-    apiClient.get<{ data: ListResponse<AdminUser> }>(BASE, { params }).then((r) => r.data.data),
+    apiClient
+      .get<{ data: AdminUser[]; meta: { page: number; limit: number; total: number; totalPages: number } }>(BASE, { params })
+      .then((r): UserListResponse => ({
+        data:  r.data.data,
+        total: r.data.meta.total,
+        page:  r.data.meta.page,
+        limit: r.data.meta.limit,
+      })),
 
   getById: (id: string) =>
     apiClient.get<{ data: AdminUser }>(`${BASE}/${id}`).then((r) => r.data.data),

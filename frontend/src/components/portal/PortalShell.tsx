@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { LogOut } from "lucide-react";
-import { logoutUser } from "@/actions/auth";
+import { useLogout } from "@/hooks/useAuth";
 
 export type PortalNavItem = {
   href: string;
@@ -23,6 +26,15 @@ export default function PortalShell({
   userSubtitle: string;
   children: ReactNode;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const logout = useLogout();
+
+  async function handleLogout() {
+    await logout.mutateAsync();
+    router.replace("/login");
+  }
+
   return (
     <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-7xl flex-col gap-6 px-4 py-8 lg:flex-row lg:px-6">
       <aside className="shrink-0 lg:w-64">
@@ -33,26 +45,35 @@ export default function PortalShell({
             <p className="truncate text-xs text-slate-500">{userSubtitle}</p>
           </div>
           <nav className="space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-ink-800 transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            ))}
+            {navItems.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                    active
+                      ? "bg-brand-50 text-brand-700"
+                      : "text-ink-800 hover:bg-brand-50 hover:text-brand-700"
+                  }`}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
-          <form action={logoutUser} className="mt-4 border-t border-slate-100 pt-4">
+          <div className="mt-4 border-t border-slate-100 pt-4">
             <button
-              type="submit"
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+              type="button"
+              onClick={handleLogout}
+              disabled={logout.isPending}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-60"
             >
               <LogOut className="h-4 w-4" />
-              Log out
+              {logout.isPending ? "Signing out…" : "Log out"}
             </button>
-          </form>
+          </div>
         </div>
       </aside>
       <main className="min-w-0 flex-1">{children}</main>

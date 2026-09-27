@@ -13,6 +13,9 @@ export interface IProduct extends Document {
   description:         string;
   shortDescription:    string;
   categoryId:          Types.ObjectId;
+  brandId:             Types.ObjectId | null;
+  din:                 string; // Health Canada Drug Identification Number
+  upc:                 string; // Universal Product Code
   images:              IProductImage[];
   price:               number; // cents
   compareAtPrice:      number | null; // cents
@@ -20,6 +23,7 @@ export interface IProduct extends Document {
   ageRestriction:      number | null;
   status:              "draft" | "active" | "archived";
   tags:                string[];
+  videoUrls:           string[];
   weight:              number | null; // grams
   metaTitle:           string;
   metaDescription:     string;
@@ -35,6 +39,9 @@ const ProductSchema = new Schema<IProduct>(
     description:      { type: String, default: "" },
     shortDescription: { type: String, default: "" },
     categoryId:       { type: Schema.Types.ObjectId, ref: "Category", required: true },
+    brandId:          { type: Schema.Types.ObjectId, ref: "Brand", default: null },
+    din:              { type: String, default: "" },
+    upc:              { type: String, default: "" },
     images: [{
       url:       { type: String, required: true },
       alt:       { type: String, default: "" },
@@ -46,6 +53,7 @@ const ProductSchema = new Schema<IProduct>(
     ageRestriction:      { type: Number, default: null },
     status:              { type: String, enum: ["draft", "active", "archived"], default: "draft" },
     tags:                [{ type: String }],
+    videoUrls:           [{ type: String }],
     weight:              { type: Number, default: null },
     metaTitle:           { type: String, default: "" },
     metaDescription:     { type: String, default: "" },

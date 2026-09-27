@@ -1,5 +1,4 @@
-import Image from "next/image";
-import { Check, X } from "lucide-react";
+import { Check, FlaskConical, X } from "lucide-react";
 
 const ROWS = [
   { feature: "Medications tailored to your exact dose & allergies", medisyn: true, chain: false },
@@ -16,13 +15,15 @@ export default function WhyChooseUs() {
       <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 py-20 lg:grid-cols-2">
         <div className="relative order-2 lg:order-1">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl shadow-xl ring-1 ring-black/5">
-            <Image
-              src="/images/lab-compounding.jpg"
-              alt="Compounding pharmacy lab bench with precision tools"
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 90vw, 560px"
-            />
+            <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-gradient-to-br from-brand-100 via-brand-200 to-brand-300">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg shadow-brand-600/20">
+                <FlaskConical className="h-10 w-10 text-brand-600" />
+              </div>
+              <div className="text-center">
+                <p className="font-display text-lg font-semibold text-brand-800">Precision Compounding</p>
+                <p className="mt-1 text-sm text-brand-600">Custom formulations, every time</p>
+              </div>
+            </div>
           </div>
         </div>
 

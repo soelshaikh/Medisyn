@@ -63,15 +63,18 @@ export const PERMISSION_CATALOG: Array<{ key: string; group: string; description
   { key: "compounding.notes",         group: "compounding", description: "Add internal notes to compounding" },
 
   /* Ask Pharmacist */
-  { key: "ask-pharmacist.read",          group: "ask-pharmacist", description: "View pharmacist questions" },
-  { key: "ask-pharmacist.respond",       group: "ask-pharmacist", description: "Respond to pharmacist questions" },
-  { key: "ask-pharmacist.status.update", group: "ask-pharmacist", description: "Update ask-pharmacist status" },
-  { key: "ask-pharmacist.assign",        group: "ask-pharmacist", description: "Assign question to pharmacist" },
-  { key: "ask-pharmacist.notes",         group: "ask-pharmacist", description: "Add internal notes" },
+  { key: "ask-pharmacist.read",           group: "ask-pharmacist", description: "View pharmacist questions" },
+  { key: "ask-pharmacist.respond",        group: "ask-pharmacist", description: "Respond to pharmacist questions" },
+  { key: "ask-pharmacist.status.update",  group: "ask-pharmacist", description: "Update ask-pharmacist status" },
+  { key: "ask-pharmacist.assign",         group: "ask-pharmacist", description: "Assign question to pharmacist" },
+  { key: "ask-pharmacist.notes",          group: "ask-pharmacist", description: "Add internal notes" },
+  { key: "ask-pharmacist.topics.manage",  group: "ask-pharmacist", description: "Manage ask-pharmacist topic catalog" },
 
   /* Minor Ailments */
   { key: "minor-ailments.read",            group: "minor-ailments", description: "View minor ailment requests" },
   { key: "minor-ailments.manage",          group: "minor-ailments", description: "Manage minor ailment service catalog" },
+  { key: "minor-ailments.catalog.read",    group: "minor-ailments", description: "View minor ailment service catalog" },
+  { key: "minor-ailments.catalog.manage",  group: "minor-ailments", description: "Manage minor ailment service catalog" },
   { key: "minor-ailments.requests.read",   group: "minor-ailments", description: "View minor ailment requests" },
   { key: "minor-ailments.requests.update", group: "minor-ailments", description: "Update minor ailment requests" },
 
@@ -83,6 +86,8 @@ export const PERMISSION_CATALOG: Array<{ key: string; group: string; description
   { key: "appointments.availability.read",  group: "appointments", description: "View availability slots" },
   { key: "appointments.availability.manage",group: "appointments", description: "Create/edit/delete availability" },
   { key: "appointments.cancel",             group: "appointments", description: "Cancel appointments" },
+  { key: "appointments.interest.read",      group: "appointments", description: "View appointment interest requests (no-slot submissions)" },
+  { key: "appointments.interest.manage",    group: "appointments", description: "Update status of appointment interest requests" },
 
   /* Vaccines */
   { key: "vaccines.read",    group: "vaccines", description: "View vaccine services" },
@@ -118,6 +123,7 @@ export const PERMISSION_CATALOG: Array<{ key: string; group: string; description
   /* Settings */
   { key: "settings.read",   group: "settings", description: "View platform settings" },
   { key: "settings.update", group: "settings", description: "Update platform settings" },
+  { key: "settings.manage", group: "settings", description: "Manage pharmacy settings, hours, holidays" },
 ];
 
 /* All permission keys for the ADMIN role */

@@ -9,14 +9,20 @@ export interface Column<T> {
 }
 
 interface DataTableProps<T> {
-  columns:   Column<T>[];
-  data:      T[];
-  loading?:  boolean;
-  emptyText?: string;
-  keyFn:     (row: T) => string;
+  columns:          Column<T>[];
+  data:             T[];
+  loading?:         boolean;
+  emptyTitle?:      string;
+  emptyDescription?: string;
+  keyFn:            (row: T) => string;
 }
 
-export function DataTable<T>({ columns, data, loading, emptyText = "No records found.", keyFn }: DataTableProps<T>) {
+export function DataTable<T>({
+  columns, data, loading,
+  emptyTitle       = "No records found",
+  emptyDescription = "Nothing to show here yet.",
+  keyFn,
+}: DataTableProps<T>) {
   return (
     <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white shadow-[var(--shadow-sm)]">
       <table className="w-full min-w-[600px] text-[var(--font-size-sm)]">
@@ -36,14 +42,17 @@ export function DataTable<T>({ columns, data, loading, emptyText = "No records f
         <tbody className="divide-y divide-[var(--color-border)]">
           {loading ? (
             <tr>
-              <td colSpan={columns.length} className="px-5 py-12 text-center">
-                <Spinner size="md" />
+              <td colSpan={columns.length} className="py-16">
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <Spinner size="md" />
+                  <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">Loading…</p>
+                </div>
               </td>
             </tr>
           ) : data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-5 py-12 text-center text-[var(--color-text-muted)]">
-                {emptyText}
+              <td colSpan={columns.length}>
+                <EmptyState title={emptyTitle} description={emptyDescription} />
               </td>
             </tr>
           ) : (

@@ -1,34 +1,72 @@
 @import "tailwindcss";
+@source "../**/*.{ts,tsx,js,jsx}";
 @import "../styles/tokens.css";
 
 /* ============================================================
-   Tailwind Theme — maps utility classes to design tokens
+   Tailwind Theme — direct values required (no var() in @theme)
    ============================================================ */
 @theme {
-  /* Colors */
-  --color-primary:        var(--color-primary);
-  --color-primary-dark:   var(--color-primary-dark);
-  --color-primary-light:  var(--color-primary-light);
-  --color-accent:         var(--color-accent);
-  --color-surface:        var(--color-surface);
-  --color-border:         var(--color-border);
-  --color-text:           var(--color-text-primary);
+  /* Brand blue scale */
+  --color-brand-50:  #E8F4FB;
+  --color-brand-100: #D1E9F7;
+  --color-brand-200: #A3D3EF;
+  --color-brand-300: #75BDE7;
+  --color-brand-400: #47A7DF;
+  --color-brand-500: #2291D3;
+  --color-brand-600: #1677A8;
+  --color-brand-700: #0B6FA4;
+  --color-brand-800: #0A5A85;
+  --color-brand-900: #083F5E;
 
-  --color-success:        var(--color-success);
-  --color-warning:        var(--color-warning);
-  --color-error:          var(--color-error);
-  --color-info:           var(--color-info);
+  /* Ink (dark neutrals) */
+  --color-ink-50:  #F8FAFC;
+  --color-ink-100: #F1F5F9;
+  --color-ink-200: #E2E8F0;
+  --color-ink-300: #CBD5E1;
+  --color-ink-400: #94A3B8;
+  --color-ink-500: #64748B;
+  --color-ink-600: #475569;
+  --color-ink-700: #334155;
+  --color-ink-800: #1E293B;
+  --color-ink-900: #1A202C;
+
+  /* Gold accent scale */
+  --color-gold-50:  #FFFBEB;
+  --color-gold-100: #FEF3C7;
+  --color-gold-200: #FDE68A;
+  --color-gold-300: #FCD34D;
+  --color-gold-400: #FBBF24;
+  --color-gold-500: #F2C14E;
+  --color-gold-600: #D4A832;
+  --color-gold-700: #B45309;
+  --color-gold-800: #92400E;
+  --color-gold-900: #78350F;
+
+  /* Semantic aliases */
+  --color-primary:       #1677A8;
+  --color-primary-dark:  #0B6FA4;
+  --color-primary-light: #E8F4FB;
+  --color-accent:        #F2C14E;
+  --color-surface:       #F7F9FB;
+  --color-border:        #E2E8F0;
+  --color-text:          #1A202C;
+  --color-success:       #22C55E;
+  --color-warning:       #F59E0B;
+  --color-error:         #EF4444;
+  --color-info:          #3B82F6;
 
   /* Typography */
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  --font-sans:    'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
 
   /* Border radius */
-  --radius-sm:   var(--radius-sm);
-  --radius-md:   var(--radius-md);
-  --radius-lg:   var(--radius-lg);
-  --radius-xl:   var(--radius-xl);
-  --radius-full: var(--radius-full);
+  --radius-sm:   0.25rem;
+  --radius-md:   0.5rem;
+  --radius-lg:   0.75rem;
+  --radius-xl:   1rem;
+  --radius-2xl:  1.5rem;
+  --radius-full: 9999px;
 }
 
 /* ============================================================
@@ -36,6 +74,44 @@
    ============================================================ */
 *, *::before, *::after {
   box-sizing: border-box;
+}
+
+/* ── Cursor behaviour ── */
+a,
+button,
+[role="button"],
+[role="tab"],
+[role="option"],
+[role="menuitem"],
+[role="checkbox"],
+[role="radio"],
+label,
+select,
+summary,
+[tabindex]:not([tabindex="-1"]) {
+  cursor: pointer;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+textarea {
+  cursor: text;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: pointer;
+}
+
+[disabled],
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 html {
@@ -86,3 +162,17 @@ body {
 .animate-fade-in       { animation: fade-in 0.3s ease both; }
 .animate-slide-in-right{ animation: slide-in-right 0.3s ease both; }
 .animate-spin          { animation: spin 0.8s linear infinite; }
+
+/* Aceternity — Spotlight */
+@keyframes spotlight {
+  0%   { opacity: 0; transform: translate(-72%, -62%) scale(0.5); }
+  100% { opacity: 1; transform: translate(-50%, -40%) scale(1); }
+}
+.animate-spotlight { animation: spotlight 2s ease 0.75s 1 forwards; }
+
+/* VengenceUI — Marquee (Logo Slider) */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee var(--marquee-duration, 28s) linear infinite; }

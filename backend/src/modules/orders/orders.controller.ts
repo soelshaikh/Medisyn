@@ -21,6 +21,7 @@ const ShippingAddressDto = z.object({
 
 const CheckoutDto = z.object({
   shippingAddress: ShippingAddressDto,
+  billingAddress:  ShippingAddressDto.optional(),
   paymentMethod:   z.enum(["pickup", "delivery"]),
   notes:           z.string().max(500).optional(),
   sessionId:       z.string().optional(),
@@ -42,11 +43,14 @@ export const checkout = asyncHandler(async (req: Request, res: Response) => {
   if (!userId && !dto.guestInfo) {
     throw { statusCode: 400, message: "Guest checkout requires guestInfo (email, fullName, phone)" };
   }
+  /* Fall back to cartSession cookie so guest frontend never needs to manage sessionId manually */
+  const sessionId = dto.sessionId ?? (req.cookies?.cartSession as string | undefined);
   const order = await svc.checkout({
     ...dto,
     shippingAddress: { ...dto.shippingAddress, country: "CA" },
+    billingAddress:  dto.billingAddress ? { ...dto.billingAddress, country: "CA" } : undefined,
     userId,
-    sessionId: dto.sessionId,
+    sessionId,
   });
   sendSuccess(res, order, "Order placed successfully", 201);
 });
@@ -62,6 +66,14 @@ export const myOrders = asyncHandler(async (req: Request, res: Response) => {
 export const myOrder = asyncHandler(async (req: Request, res: Response) =>
   sendSuccess(res, await svc.getOrder(String(req.params.id), req.user!._id))
 );
+
+export const trackOrder = asyncHandler(async (req: Request, res: Response) => {
+  const { orderNumber, email } = z.object({
+    orderNumber: z.string().min(1),
+    email:       z.string().email(),
+  }).parse(req.query);
+  sendSuccess(res, await svc.trackOrder(orderNumber, email));
+});
 
 export const adminList = asyncHandler(async (req: Request, res: Response) => {
   const filters = z.object({
@@ -92,4 +104,13 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
 export const addNote = asyncHandler(async (req: Request, res: Response) => {
   const { note } = z.object({ note: z.string().min(1).max(2000) }).parse(req.body);
   sendSuccess(res, await svc.addAdminNote(String(req.params.id), note, actor(req)), "Note added");
+});
+
+export const cancelMyOrder = asyncHandler(async (req: Request, res: Response) => {
+  const { reason } = z.object({ reason: z.string().max(500).optional().default("") }).parse(req.body);
+  sendSuccess(
+    res,
+    await svc.cancelMyOrder(String(req.params.id), req.user!._id, reason),
+    "Order cancelled",
+  );
 });

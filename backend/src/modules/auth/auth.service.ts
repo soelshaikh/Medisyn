@@ -22,13 +22,26 @@ async function generateRefreshToken(userId: string) {
   return token;
 }
 
-function mapUser(user: InstanceType<typeof UserModel>) {
+import { RoleModel } from "@/modules/roles/roles.schema";
+
+function mapUser(
+  user: InstanceType<typeof UserModel>,
+  roles: Array<{ _id: unknown; name: string; slug: string; permissions: string[] }> = [],
+) {
+  const allPermissions = [
+    ...new Set([
+      ...roles.flatMap((r) => r.permissions),
+      ...(user.directPermissions ?? []),
+    ]),
+  ];
   return {
     id:            String(user._id),
     email:         user.email,
     fullName:      user.fullName,
     phone:         user.phone,
     role:          user.role,
+    roles:         roles.map((r) => ({ id: String(r._id), name: r.name, slug: r.slug })),
+    permissions:   allPermissions,
     status:        user.status,
     emailVerified: user.emailVerified,
     createdAt:     user.createdAt,
@@ -49,7 +62,7 @@ export async function register(data: RegisterDtoType) {
     passwordHash,
     fullName: data.fullName,
     phone:    data.phone,
-    role:     "patient",
+    role:     data.role ?? "patient",
     status:   "pending_verification",
     verificationToken,
     verificationTokenExpires,
@@ -72,10 +85,14 @@ export async function login(data: LoginDtoType) {
   if (user.status === "suspended") throw new AppError("Account suspended", 403);
   if (user.status === "deactivated") throw new AppError("Account deactivated", 403);
 
+  const roles = user.roles?.length
+    ? await RoleModel.find({ _id: { $in: user.roles } }).select("name slug permissions")
+    : [];
+
   const accessToken  = generateAccessToken(String(user._id), user.email, user.role);
   const refreshToken = await generateRefreshToken(String(user._id));
 
-  return { user: mapUser(user), accessToken, refreshToken };
+  return { user: mapUser(user, roles as Array<{ _id: unknown; name: string; slug: string; permissions: string[] }>), accessToken, refreshToken };
 }
 
 /* ── Refresh ── */

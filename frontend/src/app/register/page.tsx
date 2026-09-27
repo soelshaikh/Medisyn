@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
 import RegisterPatientForm from "@/components/auth/RegisterPatientForm";
 
 export const metadata: Metadata = { title: "Create a Patient Account | MediSyn Compounding" };
 
-export default async function RegisterPage() {
-  const user = await getCurrentUser();
-  if (user) redirect("/patient");
-
+export default function RegisterPage() {
   return (
     <section className="bg-gradient-to-b from-brand-50 to-white px-6 py-16">
       <div className="mx-auto max-w-lg">

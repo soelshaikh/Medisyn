@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import { ShieldCheck, GraduationCap, HeartHandshake, Leaf } from "lucide-react";
+import { ShieldCheck, GraduationCap, HeartHandshake, Leaf, Users } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "About Us | Medisyn Compounding",
@@ -53,13 +52,15 @@ export default function AboutPage() {
             </p>
           </div>
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl shadow-xl ring-1 ring-black/5">
-            <Image
-              src="/images/about-team.jpg"
-              alt="The Medisyn Compounding pharmacist team"
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 90vw, 560px"
-            />
+            <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-gradient-to-br from-brand-50 via-brand-100 to-brand-200">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg shadow-brand-600/20">
+                <Users className="h-10 w-10 text-brand-600" />
+              </div>
+              <div className="text-center px-8">
+                <p className="font-display text-lg font-semibold text-brand-800">Our Pharmacist Team</p>
+                <p className="mt-1 text-sm text-brand-600">Dedicated to personalized care</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

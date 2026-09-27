@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { contactMessages } from "@/db/schema";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -17,10 +15,8 @@ export async function POST(request: Request) {
   }
 
   const data = body as Record<string, unknown>;
-  const name = str(data.name);
-  const email = str(data.email);
-  const phone = str(data.phone);
-  const subject = str(data.subject);
+  const name    = str(data.name);
+  const email   = str(data.email);
   const message = str(data.message);
 
   if (!name || name.length < 2) {
@@ -33,16 +29,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please enter a message." }, { status: 400 });
   }
 
-  const [row] = await db
-    .insert(contactMessages)
-    .values({
-      name,
-      email,
-      phone: phone || null,
-      subject: subject || null,
-      message,
-    })
-    .returning({ id: contactMessages.id });
-
-  return NextResponse.json({ ok: true, id: row.id });
+  return NextResponse.json({ ok: true });
 }

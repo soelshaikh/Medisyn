@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -54,7 +55,9 @@ apiClient.interceptors.response.use(
         return apiClient(original);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        sessionStorage.removeItem("access_token");
+        // Clear the auth store so isAuthenticated = false is written to localStorage
+        // before redirecting — prevents login ↔ dashboard redirect loop
+        useAdminAuthStore.getState().clearAuth();
         window.location.href = "/login";
         return Promise.reject(refreshError);
       } finally {

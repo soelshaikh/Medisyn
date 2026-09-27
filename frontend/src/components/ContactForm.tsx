@@ -12,24 +12,17 @@ export default function ContactForm() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setStatus("loading");
-    setError("");
-    try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong. Please try again.");
-      setStatus("success");
-      setForm({ name: "", email: "", phone: "", subject: "", message: "" });
-    } catch (err) {
-      setStatus("error");
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-    }
+    const subject = encodeURIComponent(
+      `[MediSyn] ${form.subject || "Contact Form"}`,
+    );
+    const body = encodeURIComponent(
+      `Name: ${form.name}\nEmail: ${form.email}\nPhone: ${form.phone || "N/A"}\n\nMessage:\n${form.message}`,
+    );
+    window.location.href = `mailto:care@medisyncompounding.ca?subject=${subject}&body=${body}`;
+    setStatus("success");
+    setForm({ name: "", email: "", phone: "", subject: "", message: "" });
   }
 
   if (status === "success") {

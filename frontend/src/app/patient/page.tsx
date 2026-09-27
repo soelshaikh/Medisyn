@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
+import { useQuery } from "@tanstack/react-query";
 import {
   FileText,
   RefreshCcw,
@@ -9,38 +11,61 @@ import {
   CalendarHeart,
   Bell,
   ShoppingBag,
+  Loader2,
 } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/db";
-import { prescriptionRequests, appointmentRequests, askPharmacistRequests, notifications } from "@/db/schema";
+import { useAuthStore } from "@/stores/authStore";
+import { prescriptionsApi } from "@/api/prescriptions.api";
+import { askPharmacistApi } from "@/api/ask-pharmacist.api";
+import { appointmentsApi } from "@/api/appointments.api";
+import { notificationsApi } from "@/api/notifications.api";
 import StatusBadge from "@/components/StatusBadge";
 
-export const metadata = { title: "Patient Dashboard | MediSyn Compounding" };
-
 const QUICK_ACTIONS = [
-  { href: "/patient/prescriptions?type=transfer", label: "Transfer Prescription", icon: ArrowRightLeft },
-  { href: "/patient/prescriptions?type=refill", label: "Request Refill", icon: RefreshCcw },
-  { href: "/patient/prescriptions?type=upload", label: "Upload Prescription", icon: UploadCloud },
+  { href: "/patient/prescriptions", label: "Add Prescription", icon: ArrowRightLeft },
+  { href: "/patient/prescriptions", label: "View Prescriptions", icon: RefreshCcw },
+  { href: "/patient/prescriptions", label: "Prescription Services", icon: UploadCloud },
   { href: "/patient/ask-a-pharmacist", label: "Ask a Pharmacist", icon: MessageCircleQuestion },
   { href: "/patient/appointments", label: "Book Vaccine Appointment", icon: CalendarHeart },
   { href: "/shop", label: "Shop Products", icon: ShoppingBag },
 ];
 
-export default async function PatientDashboard() {
-  const user = await getCurrentUser();
-  if (!user) return null;
+export default function PatientDashboard() {
+  const { user } = useAuthStore();
 
-  const [rxList, apptList, askList, notifList] = await Promise.all([
-    db.select().from(prescriptionRequests).where(eq(prescriptionRequests.patientId, user.id)).orderBy(desc(prescriptionRequests.createdAt)).limit(5),
-    db.select().from(appointmentRequests).where(eq(appointmentRequests.patientId, user.id)).orderBy(desc(appointmentRequests.createdAt)).limit(5),
-    db.select().from(askPharmacistRequests).where(eq(askPharmacistRequests.patientId, user.id)).orderBy(desc(askPharmacistRequests.createdAt)).limit(5),
-    db.select().from(notifications).where(eq(notifications.userId, user.id)).orderBy(desc(notifications.createdAt)).limit(6),
-  ]);
+  const { data: rxData, isLoading: rxLoading } = useQuery({
+    queryKey: ["prescriptions", "my"],
+    queryFn: () => prescriptionsApi.list(1, 5),
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: askData, isLoading: askLoading } = useQuery({
+    queryKey: ["ask-pharmacist", "my"],
+    queryFn: () => askPharmacistApi.list(1, 5),
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: apptData, isLoading: apptLoading } = useQuery({
+    queryKey: ["appointments", "my"],
+    queryFn: () => appointmentsApi.listMyBookings(1, 5),
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: notifData, isLoading: notifLoading } = useQuery({
+    queryKey: ["notifications", "my"],
+    queryFn: () => notificationsApi.list(1, 6),
+    enabled: !!user,
+    staleTime: 60 * 1000,
+  });
+
+  const firstName = user?.fullName.split(" ")[0] ?? "there";
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-2xl font-bold text-ink-900">Welcome back, {user.fullName.split(" ")[0]}</h1>
+        <h1 className="font-display text-2xl font-bold text-ink-900">Welcome back, {firstName}</h1>
         <p className="mt-1 text-sm text-slate-600">Here&rsquo;s what&rsquo;s happening with your MediSyn account.</p>
       </div>
 
@@ -60,23 +85,24 @@ export default async function PatientDashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Prescriptions */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-ink-900">
-              <FileText className="h-5 w-5 text-brand-600" /> Recent Prescription Requests
+              <FileText className="h-5 w-5 text-brand-600" /> Recent Prescriptions
             </h2>
-            <Link href="/patient/prescriptions" className="text-xs font-semibold text-brand-700 hover:text-brand-800">
-              View all
-            </Link>
+            <Link href="/patient/prescriptions" className="text-xs font-semibold text-brand-700 hover:text-brand-800">View all</Link>
           </div>
           <div className="mt-4 space-y-3">
-            {rxList.length === 0 ? (
-              <p className="text-sm text-slate-500">No prescription requests yet.</p>
+            {rxLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            ) : !rxData?.docs?.length ? (
+              <p className="text-sm text-slate-500">No prescriptions yet.</p>
             ) : (
-              rxList.map((rx) => (
-                <div key={rx.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
+              rxData.docs.map((rx) => (
+                <div key={rx._id} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-ink-900 capitalize">{rx.requestType.replace("_", " ")}</p>
+                    <p className="text-sm font-medium text-ink-900">{rx.medicationName}</p>
                     <p className="text-xs text-slate-500">{new Date(rx.createdAt).toLocaleDateString()}</p>
                   </div>
                   <StatusBadge status={rx.status} />
@@ -86,24 +112,29 @@ export default async function PatientDashboard() {
           </div>
         </div>
 
+        {/* Appointments */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-ink-900">
-              <CalendarHeart className="h-5 w-5 text-brand-600" /> Appointment Requests
+              <CalendarHeart className="h-5 w-5 text-brand-600" /> Appointment Bookings
             </h2>
-            <Link href="/patient/appointments" className="text-xs font-semibold text-brand-700 hover:text-brand-800">
-              View all
-            </Link>
+            <Link href="/patient/appointments" className="text-xs font-semibold text-brand-700 hover:text-brand-800">View all</Link>
           </div>
           <div className="mt-4 space-y-3">
-            {apptList.length === 0 ? (
-              <p className="text-sm text-slate-500">No appointment requests yet.</p>
+            {apptLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            ) : !apptData?.docs?.length ? (
+              <p className="text-sm text-slate-500">No appointment bookings yet.</p>
             ) : (
-              apptList.map((appt) => (
-                <div key={appt.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
+              apptData.docs.map((appt) => (
+                <div key={appt._id} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-ink-900">{appt.service}</p>
-                    <p className="text-xs text-slate-500">{appt.preferredDate}</p>
+                    <p className="text-sm font-medium text-ink-900">
+                      {appt.vaccineService?.name ?? "Appointment"}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {appt.slot ? new Date(appt.slot.date).toLocaleDateString() : new Date(appt.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
                   <StatusBadge status={appt.status} />
                 </div>
@@ -112,24 +143,25 @@ export default async function PatientDashboard() {
           </div>
         </div>
 
+        {/* Ask a Pharmacist */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-ink-900">
               <MessageCircleQuestion className="h-5 w-5 text-brand-600" /> Ask a Pharmacist
             </h2>
-            <Link href="/patient/ask-a-pharmacist" className="text-xs font-semibold text-brand-700 hover:text-brand-800">
-              View all
-            </Link>
+            <Link href="/patient/ask-a-pharmacist" className="text-xs font-semibold text-brand-700 hover:text-brand-800">View all</Link>
           </div>
           <div className="mt-4 space-y-3">
-            {askList.length === 0 ? (
+            {askLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            ) : !askData?.docs?.length ? (
               <p className="text-sm text-slate-500">No questions submitted yet.</p>
             ) : (
-              askList.map((ask) => (
-                <div key={ask.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
+              askData.docs.map((ask) => (
+                <div key={ask._id} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-ink-900">{ask.category}</p>
-                    <p className="truncate text-xs text-slate-500">{ask.message}</p>
+                    <p className="truncate text-sm font-medium text-ink-900">{ask.subject}</p>
+                    <p className="truncate text-xs text-slate-500">{ask.question}</p>
                   </div>
                   <StatusBadge status={ask.status} />
                 </div>
@@ -138,16 +170,19 @@ export default async function PatientDashboard() {
           </div>
         </div>
 
+        {/* Notifications */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-ink-900">
             <Bell className="h-5 w-5 text-brand-600" /> Notifications
           </h2>
           <div className="mt-4 space-y-3">
-            {notifList.length === 0 ? (
+            {notifLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            ) : !notifData?.docs?.length ? (
               <p className="text-sm text-slate-500">You&rsquo;re all caught up.</p>
             ) : (
-              notifList.map((n) => (
-                <div key={n.id} className="rounded-lg bg-slate-50 px-4 py-3">
+              notifData.docs.map((n) => (
+                <div key={n._id} className={`rounded-lg px-4 py-3 ${n.read ? "bg-slate-50" : "bg-brand-50"}`}>
                   <p className="text-sm font-medium text-ink-900">{n.title}</p>
                   <p className="text-xs text-slate-500">{n.message}</p>
                 </div>

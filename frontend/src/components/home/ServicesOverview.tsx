@@ -7,38 +7,44 @@ import {
   PawPrint,
   Syringe,
 } from "lucide-react";
+import { CardHoverEffect } from "@/components/ui/card-hover-effect";
 
 const SERVICES = [
   {
-    icon: FlaskConical,
+    icon: <FlaskConical className="h-6 w-6" />,
     title: "Custom Compounding",
     description:
       "Precision-dosed medications made from base ingredients — flavored liquids, capsules, topicals and more.",
   },
   {
-    icon: RefreshCcw,
+    icon: <RefreshCcw className="h-6 w-6" />,
     title: "Refills & Transfers",
-    description: "Move your prescriptions to Medisyn in minutes, or refill existing ones online in a few clicks.",
+    description:
+      "Move your prescriptions to Medisyn in minutes, or refill existing ones online in a few clicks.",
   },
   {
-    icon: ClipboardCheck,
+    icon: <ClipboardCheck className="h-6 w-6" />,
     title: "MedsCheck Reviews",
-    description: "One-on-one medication reviews with a pharmacist to catch interactions and optimize your regimen.",
+    description:
+      "One-on-one medication reviews with a pharmacist to catch interactions and optimize your regimen.",
   },
   {
-    icon: PackageCheck,
+    icon: <PackageCheck className="h-6 w-6" />,
     title: "Compliance Packaging",
-    description: "Blister packs sorted by date and time at no extra cost, built for complex medication schedules.",
+    description:
+      "Blister packs sorted by date and time at no extra cost, built for complex medication schedules.",
   },
   {
-    icon: PawPrint,
+    icon: <PawPrint className="h-6 w-6" />,
     title: "Veterinary Compounding",
-    description: "Palatable, correctly dosed medications for pets, made in partnership with your veterinarian.",
+    description:
+      "Palatable, correctly dosed medications for pets, made in partnership with your veterinarian.",
   },
   {
-    icon: Syringe,
+    icon: <Syringe className="h-6 w-6" />,
     title: "Vaccinations & Minor Ailments",
-    description: "Flu shots, travel vaccines, and pharmacist prescribing for common ailments like UTIs and pink eye.",
+    description:
+      "Flu shots, travel vaccines, and pharmacist prescribing for common ailments like UTIs and pink eye.",
   },
 ];
 
@@ -56,22 +62,9 @@ export default function ServicesOverview() {
         </p>
       </div>
 
-      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {SERVICES.map((service) => (
-          <div
-            key={service.title}
-            className="group rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
-              <service.icon className="h-6 w-6" />
-            </div>
-            <h3 className="mt-5 font-display text-lg font-semibold text-ink-900">{service.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">{service.description}</p>
-          </div>
-        ))}
-      </div>
+      <CardHoverEffect items={SERVICES} className="mt-4" />
 
-      <div className="mt-12 text-center">
+      <div className="mt-4 text-center">
         <Link
           href="/services"
           className="inline-flex rounded-full bg-ink-900 px-7 py-3 text-sm font-semibold text-white transition hover:bg-brand-700"

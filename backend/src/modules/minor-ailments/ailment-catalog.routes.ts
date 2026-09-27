@@ -40,18 +40,28 @@ router.get("/:slug/public", asyncHandler(async (req, res) => {
 }));
 
 /* Admin */
-router.get("/admin/all", authenticate, requirePermission("content.ailments.read"),
+router.get("/admin/all", authenticate, requirePermission("minor-ailments.catalog.read"),
   asyncHandler(async (_req, res) => sendSuccess(res, await svc.listAllAilments()))
 );
 
-router.post("/", authenticate, requirePermission("content.ailments.manage"),
+router.patch("/sort-order", authenticate, requirePermission("minor-ailments.catalog.manage"),
+  asyncHandler(async (req, res) => {
+    const { items } = z.object({
+      items: z.array(z.object({ id: z.string(), sortOrder: z.number().int() })),
+    }).parse(req.body);
+    await svc.batchSortOrder(items);
+    sendSuccess(res, null, "Order saved");
+  })
+);
+
+router.post("/", authenticate, requirePermission("minor-ailments.catalog.manage"),
   asyncHandler(async (req, res) => {
     const dto = CreateDto.parse(req.body);
     sendSuccess(res, await svc.createAilment(dto, actor(req)), "Ailment created", 201);
   })
 );
 
-router.patch("/:id", authenticate, requirePermission("content.ailments.manage"),
+router.patch("/:id", authenticate, requirePermission("minor-ailments.catalog.manage"),
   asyncHandler(async (req, res) => {
     const dto = CreateDto.partial().parse(req.body);
     sendSuccess(res, await svc.updateAilment(String(req.params.id), dto, actor(req)), "Ailment updated");
@@ -59,14 +69,14 @@ router.patch("/:id", authenticate, requirePermission("content.ailments.manage"),
 );
 
 /* Dedicated endpoint for updating form fields + sequence */
-router.put("/:id/fields", authenticate, requirePermission("content.ailments.manage"),
+router.put("/:id/fields", authenticate, requirePermission("minor-ailments.catalog.manage"),
   asyncHandler(async (req, res) => {
     const { fields } = z.object({ fields: z.array(IntakeFieldDto) }).parse(req.body);
     sendSuccess(res, await svc.updateAilmentFields(String(req.params.id), fields as IIntakeField[], actor(req)), "Fields updated");
   })
 );
 
-router.delete("/:id", authenticate, requirePermission("content.ailments.manage"),
+router.delete("/:id", authenticate, requirePermission("minor-ailments.catalog.manage"),
   asyncHandler(async (req, res) => {
     await svc.deleteAilment(String(req.params.id), actor(req));
     sendSuccess(res, null, "Ailment deleted");

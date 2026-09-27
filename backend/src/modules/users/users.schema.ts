@@ -3,6 +3,20 @@ import mongoose, { type Document, type Model } from "mongoose";
 export type UserRole   = "patient" | "clinic" | "pharmacy_partner";
 export type UserStatus = "pending_verification" | "active" | "pending_approval" | "approved" | "rejected" | "suspended" | "deactivated";
 
+export interface ISavedAddress {
+  _id:        mongoose.Types.ObjectId;
+  label:      string;
+  fullName:   string;
+  phone:      string;
+  address1:   string;
+  address2:   string;
+  city:       string;
+  province:   string;
+  postalCode: string;
+  country:    string;
+  isDefault:  boolean;
+}
+
 export interface IUser extends Document {
   email: string;
   passwordHash: string;
@@ -17,6 +31,7 @@ export interface IUser extends Document {
   verificationTokenExpires?: Date;
   resetToken?: string;
   resetTokenExpires?: Date;
+  savedAddresses: mongoose.Types.DocumentArray<ISavedAddress>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,6 +57,21 @@ const schema = new mongoose.Schema<IUser>(
     verificationTokenExpires: { type: Date,   select: false },
     resetToken:               { type: String, select: false },
     resetTokenExpires:        { type: Date,   select: false },
+    savedAddresses: {
+      type: [{
+        label:      { type: String, default: "Home" },
+        fullName:   { type: String, required: true },
+        phone:      { type: String, required: true },
+        address1:   { type: String, required: true },
+        address2:   { type: String, default: "" },
+        city:       { type: String, required: true },
+        province:   { type: String, required: true },
+        postalCode: { type: String, required: true },
+        country:    { type: String, default: "CA" },
+        isDefault:  { type: Boolean, default: false },
+      }],
+      default: [],
+    },
   },
   { timestamps: true },
 );

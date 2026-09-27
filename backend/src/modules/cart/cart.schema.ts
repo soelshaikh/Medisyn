@@ -6,6 +6,7 @@ export interface ICartItem {
   sku:        string; // snapshot
   price:      number; // cents snapshot at time of add
   quantity:   number;
+  imageUrl:   string; // primary image snapshot
 }
 
 export interface ICart extends Document {
@@ -27,6 +28,7 @@ const CartSchema = new Schema<ICart>(
       sku:        { type: String, required: true },
       price:      { type: Number, required: true },
       quantity:   { type: Number, required: true, min: 1 },
+      imageUrl:   { type: String, default: "" },
     }],
     appliedCouponCode: { type: String, default: null },
     expiresAt:         { type: Date, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },

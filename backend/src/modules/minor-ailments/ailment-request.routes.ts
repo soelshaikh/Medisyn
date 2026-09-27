@@ -41,7 +41,7 @@ router.get("/my/:id", asyncHandler(async (req, res) => {
 }));
 
 /* ── Admin routes ── */
-router.get("/admin", requirePermission("healthcare.ailments.read"), asyncHandler(async (req, res) => {
+router.get("/admin", requirePermission("minor-ailments.requests.read"), asyncHandler(async (req, res) => {
   const filters = z.object({
     status: z.string().optional(),
     search: z.string().optional(),
@@ -51,11 +51,11 @@ router.get("/admin", requirePermission("healthcare.ailments.read"), asyncHandler
   sendSuccess(res, await svc.listAdminAilmentRequests(filters));
 }));
 
-router.get("/admin/:id", requirePermission("healthcare.ailments.read"), asyncHandler(async (req, res) => {
+router.get("/admin/:id", requirePermission("minor-ailments.requests.read"), asyncHandler(async (req, res) => {
   sendSuccess(res, await svc.getAdminAilmentRequest(String(req.params.id)));
 }));
 
-router.patch("/admin/:id/status", requirePermission("healthcare.ailments.manage"), asyncHandler(async (req, res) => {
+router.patch("/admin/:id/status", requirePermission("minor-ailments.requests.update"), asyncHandler(async (req, res) => {
   const { status, note } = z.object({
     status: z.enum(["submitted","reviewing","responded","closed"] as [AilmentRequestStatus, ...AilmentRequestStatus[]]),
     note:   z.string().max(500).optional().default(""),
@@ -63,12 +63,12 @@ router.patch("/admin/:id/status", requirePermission("healthcare.ailments.manage"
   sendSuccess(res, await svc.updateAilmentRequestStatus(String(req.params.id), status, note, actor(req)), "Status updated");
 }));
 
-router.post("/admin/:id/respond", requirePermission("healthcare.ailments.manage"), asyncHandler(async (req, res) => {
+router.post("/admin/:id/respond", requirePermission("minor-ailments.requests.update"), asyncHandler(async (req, res) => {
   const { responseText } = z.object({ responseText: z.string().min(1).max(5000) }).parse(req.body);
   sendSuccess(res, await svc.respondToAilmentRequest(String(req.params.id), responseText, actor(req)), "Response sent");
 }));
 
-router.post("/admin/:id/notes", requirePermission("healthcare.ailments.manage"), asyncHandler(async (req, res) => {
+router.post("/admin/:id/notes", requirePermission("minor-ailments.requests.update"), asyncHandler(async (req, res) => {
   const { note } = z.object({ note: z.string().min(1).max(2000) }).parse(req.body);
   sendSuccess(res, await svc.addAilmentRequestAdminNote(String(req.params.id), note, actor(req)), "Note added");
 }));

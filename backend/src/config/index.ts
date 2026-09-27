@@ -33,7 +33,16 @@ const schema = z.object({
   EMAIL_USER:     z.string().optional(),
   EMAIL_PASSWORD: z.string().optional(),
 
-  FILE_STORAGE_PROVIDER: z.string().default("local"),
+  FILE_STORAGE_PROVIDER: z.enum(["local", "s3"]).default("local"),
+
+  /* S3-compatible storage (AWS S3, Cloudflare R2, Backblaze B2, MinIO) */
+  S3_ENDPOINT:          z.string().url().optional(),   /* required for non-AWS providers */
+  S3_REGION:            z.string().default("auto"),
+  S3_BUCKET:            z.string().optional(),
+  S3_ACCESS_KEY_ID:     z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  /* Public CDN/bucket URL for public objects — e.g. https://pub-xxx.r2.dev */
+  S3_PUBLIC_URL:        z.string().url().optional(),
 
   SEED_ADMIN_EMAIL:    z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().optional(),

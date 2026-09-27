@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { GlassDock } from "@/components/ui/glass-dock";
+import { Providers } from "./providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -41,9 +43,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
       <body className="flex min-h-screen flex-col bg-white text-ink-900 antialiased">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <Providers>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          <GlassDock />
+        </Providers>
       </body>
     </html>
   );

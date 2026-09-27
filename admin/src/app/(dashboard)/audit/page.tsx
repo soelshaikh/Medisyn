@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { auditApi } from "@/api/audit.api";
+import { fmtDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/common/PageHeader";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
@@ -59,7 +60,7 @@ export default function AuditLogPage() {
       key: "time", header: "Time", width: "160px",
       render: (a) => (
         <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">
-          {new Date(a.createdAt).toLocaleString("en-CA")}
+          {fmtDateTime(a.createdAt)}
         </span>
       ),
     },

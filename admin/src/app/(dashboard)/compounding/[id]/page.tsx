@@ -2,16 +2,18 @@
 
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { compoundingApi } from "@/api/compounding.api";
 import { DetailCard } from "@/components/common/DetailCard";
+import { PageHeader } from "@/components/common/PageHeader";
 import { StatusHistory } from "@/components/common/StatusHistory";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
-import { ArrowLeft } from "lucide-react";
+import { SecureDocumentLink } from "@/components/common/SecureDocumentLink";
+import { Select } from "@/components/ui/Select";
+import { fmtDate } from "@/lib/format";
 
 const COMPOUNDING_STATUSES = [
   "submitted", "reviewing", "quote_sent", "approved", "in_production", "ready", "delivered", "cancelled",
@@ -20,7 +22,6 @@ const COMPOUNDING_STATUSES = [
 export default function CompoundingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const qc     = useQueryClient();
-  const router = useRouter();
   const [statusModal, setStatusModal] = useState(false);
   const [noteModal,   setNoteModal]   = useState(false);
   const [newStatus,   setNewStatus]   = useState("");
@@ -55,28 +56,22 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="flex items-start gap-3">
-        <button onClick={() => router.back()} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mt-1">
-          <ArrowLeft size={18} />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">{req.medicationName}</h1>
+      <PageHeader
+        title={req.medicationName}
+        description={`${req.form} · ${req.strength || "—"} · qty ${req.quantity}`}
+        onBack="auto"
+        actions={
+          <div className="flex items-center gap-2">
             <StatusBadge status={req.status} />
+            <Button variant="outline" size="sm" onClick={() => { setNewStatus(req.status); setStatusModal(true); }}>
+              Update Status
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
+              Add Note
+            </Button>
           </div>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-muted)] mt-1">
-            {req.form} · {req.strength || "—"} · qty {req.quantity}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => { setNewStatus(req.status); setStatusModal(true); }}>
-            Update Status
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
-            Add Note
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       <DetailCard
         title="Compounding Details"
@@ -86,7 +81,7 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
           { label: "Form",        value: req.form },
           { label: "Strength",    value: req.strength || "—" },
           { label: "Quantity",    value: req.quantity },
-          { label: "Submitted",   value: new Date(req.createdAt).toLocaleDateString("en-CA") },
+          { label: "Submitted",   value: fmtDate(req.createdAt) },
           { label: "Status",      value: <StatusBadge status={req.status} /> },
         ]}
       />
@@ -118,6 +113,13 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
+      {req.fileUrl && (
+        <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] px-5 py-4 flex items-center gap-3">
+          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Attached Document</p>
+          <SecureDocumentLink fileUrl={req.fileUrl} label="View Document" />
+        </div>
+      )}
+
       <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] p-6">
         <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)] mb-4">Status History</h2>
         <StatusHistory history={req.statusHistory} />
@@ -126,23 +128,20 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Update Compounding Status">
         <div className="space-y-4">
-          <div>
-            <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] mb-1.5">New Status</label>
-            <select
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)]"
-            >
-              {COMPOUNDING_STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-            </select>
-          </div>
+          <Select
+            label="Status"
+            value={newStatus}
+            onChange={(v) => setNewStatus(v)}
+            options={COMPOUNDING_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }))}
+          />
           {(newStatus === "quote_sent" || newStatus === "approved") && (
             <>
               <Input
                 label="Quote Amount (CAD)"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={quoteAmount}
-                onChange={(e) => setQuoteAmount(e.target.value)}
+                onChange={(e) => setQuoteAmount(e.target.value.replace(/[^0-9.]/g, ""))}
                 placeholder="e.g. 49.99"
               />
               <div>

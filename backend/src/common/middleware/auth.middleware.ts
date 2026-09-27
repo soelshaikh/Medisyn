@@ -35,7 +35,12 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
       ...new Set([...rolePermissions, ...(user.directPermissions ?? [])]),
     ];
 
-    req.user = { ...user, _id: String(user._id), effectivePermissions };
+    req.user = {
+      ...user,
+      _id:                  String(user._id),
+      roles:                user.roles.map((id) => String(id)),
+      effectivePermissions,
+    };
     next();
   } catch (err) {
     next(err instanceof AppError ? err : new AppError("Invalid or expired token", 401));

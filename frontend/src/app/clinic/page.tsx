@@ -1,8 +1,8 @@
-import { Clock3, CheckCircle2, XCircle, Ban } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth";
-import StatusBadge from "@/components/StatusBadge";
+"use client";
 
-export const metadata = { title: "Clinic Dashboard | MediSyn Compounding" };
+import { Clock3, CheckCircle2, XCircle, Ban } from "lucide-react";
+import { useAuthStore } from "@/stores/authStore";
+import StatusBadge from "@/components/StatusBadge";
 
 const STATUS_COPY: Record<string, { icon: typeof Clock3; title: string; body: string }> = {
   pending_verification: {
@@ -32,15 +32,16 @@ const STATUS_COPY: Record<string, { icon: typeof Clock3; title: string; body: st
   },
 };
 
-export default async function ClinicDashboard() {
-  const user = await getCurrentUser();
+export default function ClinicDashboard() {
+  const { user } = useAuthStore();
   if (!user) return null;
 
-  if (user.status !== "approved") {
+  if (user.status !== "active" && user.status !== "approved") {
     const copy = STATUS_COPY[user.status] ?? STATUS_COPY.pending_approval;
+    const Icon = copy.icon;
     return (
       <div className="mx-auto max-w-lg rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-        <copy.icon className="mx-auto h-12 w-12 text-brand-600" />
+        <Icon className="mx-auto h-12 w-12 text-brand-600" />
         <h1 className="mt-4 font-display text-xl font-bold text-ink-900">{copy.title}</h1>
         <p className="mt-2 text-sm text-slate-600">{copy.body}</p>
         <div className="mt-5 flex justify-center">
@@ -56,7 +57,7 @@ export default async function ClinicDashboard() {
         <CheckCircle2 className="h-8 w-8 text-brand-600" />
         <div>
           <h1 className="font-display text-2xl font-bold text-ink-900">Welcome, {user.fullName}</h1>
-          <p className="text-sm text-slate-600">Your clinic account is approved and active.</p>
+          <p className="text-sm text-slate-600">Your clinic account is active.</p>
         </div>
       </div>
 
@@ -68,8 +69,7 @@ export default async function ClinicDashboard() {
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="font-display text-base font-semibold text-ink-900">Need something from MediSyn?</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Reach our pharmacy team directly for patient referrals, prescription coordination, or general
-            questions.
+            Reach our pharmacy team directly for patient referrals, prescription coordination, or general questions.
           </p>
           <a href="/contact" className="mt-3 inline-block text-sm font-semibold text-brand-700 hover:text-brand-800">
             Contact MediSyn →

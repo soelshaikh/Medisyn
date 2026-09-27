@@ -37,6 +37,67 @@ router.patch("/me", asyncHandler(async (req, res) => {
   sendSuccess(res, user, "Profile updated");
 }));
 
+/* ── Saved addresses ── */
+const AddressDto = z.object({
+  label:      z.string().max(50).optional().default("Home"),
+  fullName:   z.string().min(1),
+  phone:      z.string().min(7),
+  address1:   z.string().min(1),
+  address2:   z.string().optional().default(""),
+  city:       z.string().min(1),
+  province:   z.string().min(2).max(2),
+  postalCode: z.string().min(6).max(7),
+  isDefault:  z.boolean().optional().default(false),
+});
+
+router.get("/me/addresses", asyncHandler(async (req, res) => {
+  const user = await UserModel.findById(req.user!._id).lean();
+  sendSuccess(res, user?.savedAddresses ?? []);
+}));
+
+router.post("/me/addresses", asyncHandler(async (req, res) => {
+  const dto  = AddressDto.parse(req.body);
+  const user = await UserModel.findById(req.user!._id);
+  if (!user) throw new AppError("User not found", 404);
+  if (dto.isDefault) user.savedAddresses.forEach((a) => { a.isDefault = false; });
+  user.savedAddresses.push({ ...dto, country: "CA" } as never);
+  await user.save();
+  sendSuccess(res, user.savedAddresses, "Address added", 201);
+}));
+
+router.patch("/me/addresses/:addrId", asyncHandler(async (req, res) => {
+  const dto  = AddressDto.partial().parse(req.body);
+  const user = await UserModel.findById(req.user!._id);
+  if (!user) throw new AppError("User not found", 404);
+  const addr = user.savedAddresses.id(String(req.params.addrId));
+  if (!addr) throw new AppError("Address not found", 404);
+  if (dto.isDefault) user.savedAddresses.forEach((a) => { a.isDefault = false; });
+  Object.assign(addr, dto);
+  await user.save();
+  sendSuccess(res, user.savedAddresses, "Address updated");
+}));
+
+router.delete("/me/addresses/:addrId", asyncHandler(async (req, res) => {
+  const user = await UserModel.findById(req.user!._id);
+  if (!user) throw new AppError("User not found", 404);
+  const addr = user.savedAddresses.id(String(req.params.addrId));
+  if (!addr) throw new AppError("Address not found", 404);
+  addr.deleteOne();
+  await user.save();
+  sendSuccess(res, null, "Address removed");
+}));
+
+router.patch("/me/addresses/:addrId/default", asyncHandler(async (req, res) => {
+  const user = await UserModel.findById(req.user!._id);
+  if (!user) throw new AppError("User not found", 404);
+  const addr = user.savedAddresses.id(String(req.params.addrId));
+  if (!addr) throw new AppError("Address not found", 404);
+  user.savedAddresses.forEach((a) => { a.isDefault = false; });
+  addr.isDefault = true;
+  await user.save();
+  sendSuccess(res, user.savedAddresses, "Default address updated");
+}));
+
 /* ── Admin: /admin/users ── */
 router.get("/", requirePermission("users.read"), asyncHandler(async (req, res) => {
   const page  = Math.max(1, Number(req.query.page) || 1);
@@ -59,7 +120,7 @@ router.get("/", requirePermission("users.read"), asyncHandler(async (req, res) =
   ]);
 
   sendList(res, users.map((u) => ({
-    id:       String(u._id),
+    _id:      String(u._id),
     email:    u.email,
     fullName: u.fullName,
     role:     u.role,

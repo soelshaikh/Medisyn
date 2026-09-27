@@ -1,4 +1,5 @@
 import type { StatusEntry } from "@/types/admin";
+import { fmtDateTime } from "@/lib/format";
 
 interface StatusHistoryProps {
   history: StatusEntry[];
@@ -23,7 +24,7 @@ export function StatusHistory({ history }: StatusHistoryProps) {
             <p className="text-[var(--font-size-xs)] text-[var(--color-text-secondary)] mt-0.5">{entry.note}</p>
           )}
           <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] mt-0.5">
-            {entry.changedByName || "System"} · {new Date(entry.changedAt).toLocaleString("en-CA")}
+            {entry.changedByName || "System"} · {fmtDateTime(entry.changedAt)}
           </p>
         </li>
       ))}

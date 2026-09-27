@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { asyncHandler } from "@/common/utils/asyncHandler";
-import { sendSuccess } from "@/common/utils/response";
+import { sendSuccess, sendList } from "@/common/utils/response";
+import { AppError } from "@/common/middleware/error.middleware";
+import { storageService } from "@/modules/files/file-storage.service";
 import * as svc from "./products.service";
 
 const CreateDto = z.object({
@@ -10,12 +12,16 @@ const CreateDto = z.object({
   description:          z.string().optional(),
   shortDescription:     z.string().max(500).optional(),
   categoryId:           z.string().min(1),
+  brandId:              z.string().nullable().optional(),
+  din:                  z.string().max(20).optional(),
+  upc:                  z.string().max(30).optional(),
   price:                z.number().int().min(0),
   compareAtPrice:       z.number().int().min(0).nullable().optional(),
   requiresPrescription: z.boolean().optional(),
   ageRestriction:       z.number().int().min(0).nullable().optional(),
   status:               z.enum(["draft", "active", "archived"]).optional(),
   tags:                 z.array(z.string()).optional(),
+  videoUrls:            z.array(z.string().url()).optional(),
   weight:               z.number().min(0).nullable().optional(),
   metaTitle:            z.string().max(160).optional(),
   metaDescription:      z.string().max(320).optional(),
@@ -27,6 +33,7 @@ const UpdateDto = CreateDto.omit({ sku: true, initialStock: true, lowStockThresh
 
 const FiltersDto = z.object({
   categoryId:           z.string().optional(),
+  brandId:              z.string().optional(),
   search:               z.string().optional(),
   status:               z.string().optional(),
   requiresPrescription: z.coerce.boolean().optional(),
@@ -44,12 +51,14 @@ function actor(req: Request) {
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const filters = FiltersDto.parse(req.query);
-  sendSuccess(res, await svc.listProducts(filters, false));
+  const { products, total, page, limit } = await svc.listProducts(filters, false);
+  sendList(res, products, { page, limit, total });
 });
 
 export const listAdmin = asyncHandler(async (req: Request, res: Response) => {
   const filters = FiltersDto.parse(req.query);
-  sendSuccess(res, await svc.listProducts(filters, true));
+  const { products, total, page, limit } = await svc.listProducts(filters, true);
+  sendList(res, products, { page, limit, total });
 });
 
 export const getBySlug = asyncHandler(async (req: Request, res: Response) =>
@@ -75,12 +84,31 @@ export const archive = asyncHandler(async (req: Request, res: Response) =>
 );
 
 export const addImage = asyncHandler(async (req: Request, res: Response) => {
-  const dto = z.object({
-    url:       z.string().min(1),
+  if (!req.file) throw new AppError("No image uploaded", 400);
+
+  const { alt, isPrimary } = z.object({
     alt:       z.string().optional(),
-    isPrimary: z.boolean().optional(),
+    isPrimary: z.preprocess((v) => v === "true" || v === true, z.boolean()).optional(),
   }).parse(req.body);
-  sendSuccess(res, await svc.addProductImage(String(req.params.id), dto), "Image added");
+
+  const { url } = await storageService.upload({
+    buffer:       req.file.buffer,
+    originalName: req.file.originalname,
+    mimeType:     req.file.mimetype,
+    folder:       "products",
+  });
+
+  sendSuccess(res, await svc.addProductImage(String(req.params.id), { url, alt, isPrimary }), "Image added");
+});
+
+export const setPrimaryImage = asyncHandler(async (req: Request, res: Response) => {
+  const { url } = z.object({ url: z.string().min(1) }).parse(req.body);
+  sendSuccess(res, await svc.setPrimaryImage(String(req.params.id), url), "Primary image updated");
+});
+
+export const reorderImages = asyncHandler(async (req: Request, res: Response) => {
+  const { urls } = z.object({ urls: z.array(z.string().min(1)).min(1) }).parse(req.body);
+  sendSuccess(res, await svc.reorderImages(String(req.params.id), urls), "Image order saved");
 });
 
 export const removeImage = asyncHandler(async (req: Request, res: Response) => {

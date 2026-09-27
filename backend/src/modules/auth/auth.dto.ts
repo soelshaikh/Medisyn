@@ -7,6 +7,7 @@ export const RegisterDto = z.object({
               .regex(/[0-9]/, "Must contain a number"),
   fullName: z.string().min(2, "Full name required").max(160),
   phone:    z.string().optional(),
+  role:     z.enum(["patient", "clinic", "pharmacy_partner"]).optional().default("patient"),
 });
 
 export const LoginDto = z.object({

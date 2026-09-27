@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { DataTable, type Column } from "@/components/ui/DataTable";
-import { Shield, Trash2 } from "lucide-react";
+import { Shield, Trash2, SlidersHorizontal } from "lucide-react";
 import type { AdminRole } from "@/types/admin";
 
 export default function RolesPage() {
@@ -20,7 +20,7 @@ export default function RolesPage() {
   const [slug, setSlug]               = useState("");
   const [desc, setDesc]               = useState("");
 
-  const { data: roles, isLoading } = useQuery({ queryKey: ["roles"], queryFn: rolesApi.list });
+  const { data: roles, isLoading, isFetching } = useQuery({ queryKey: ["roles"], queryFn: rolesApi.list });
 
   const createMut = useMutation({
     mutationFn: () => rolesApi.create({ name, slug, description: desc }),
@@ -68,19 +68,22 @@ export default function RolesPage() {
       </span>
     )},
     {
-      key: "actions", header: "", width: "120px",
+      key: "actions", header: "Actions", width: "110px",
       render: (r) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Link
             href={`/roles/${r._id}`}
-            className="text-[var(--font-size-xs)] font-semibold text-[var(--color-primary)] hover:underline"
+            title="Edit permissions"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-md)] text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-colors"
           >
-            Edit permissions
+            <SlidersHorizontal size={14} />
+            Permissions
           </Link>
           {!r.isSystem && (
             <button
               onClick={() => setDeleteTarget(r)}
-              className="text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors ml-1"
+              title="Delete role"
+              className="p-1.5 rounded-[var(--radius-md)] text-[var(--color-text-muted)] hover:bg-[var(--color-error-light)] hover:text-[var(--color-error)] transition-colors"
             >
               <Trash2 size={14} />
             </button>
@@ -91,11 +94,13 @@ export default function RolesPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
         title="Roles"
-        description="Manage admin roles and their permission bundles"
-        actions={<Button onClick={() => setCreateOpen(true)}>Create Role</Button>}
+        description="Manage roles & permissions"
+        onRefresh={() => qc.invalidateQueries({ queryKey: ["roles"] })}
+        refreshing={isFetching}
+        actions={<Button size="sm" onClick={() => setCreateOpen(true)}>Create Role</Button>}
       />
 
       <DataTable columns={columns} data={roles ?? []} loading={isLoading} keyFn={(r) => r._id} />

@@ -1,6 +1,10 @@
 import { AskPharmacistModel, type AskPharmacistStatus } from "./ask-pharmacist.schema";
+import { UserModel } from "@/modules/users/users.schema";
 import { AppError } from "@/common/middleware/error.middleware";
+import { EmailService } from "@/modules/email/email.service";
+import { createNotification, notifyAdmins } from "@/modules/notifications/notifications.service";
 import { logAction, type AuditActor } from "@/modules/audit/audit.service";
+import { logger } from "@/common/utils/logger";
 
 export async function createAskPharmacistRequest(data: {
   patientId: string;
@@ -18,6 +22,14 @@ export async function createAskPharmacistRequest(data: {
       changedByName: "",
       note:          "Question submitted by patient",
     }],
+  });
+
+  /* Notify admins of new question */
+  notifyAdmins({
+    type:     "ask_pharmacist_update",
+    title:    "New Pharmacist Question",
+    message:  `A patient submitted a new question: "${data.subject}"`,
+    metadata: { requestId: String(request._id) },
   });
 
   return request;
@@ -98,7 +110,36 @@ export async function respondToAskPharmacist(
     ipAddress:  actor.ip,
   });
 
+  /* Fire-and-forget: email + patient notification */
+  void _askPharmacistRespondedSideEffects(saved, responseText);
+
   return saved;
+}
+
+async function _askPharmacistRespondedSideEffects(
+  req: Awaited<ReturnType<typeof AskPharmacistModel.prototype.save>>,
+  responseText: string,
+) {
+  try {
+    const patient = await UserModel.findById(req.patientId).select("email fullName").lean();
+    if (!patient) return;
+
+    EmailService.sendAskPharmacistRespondedEmail(
+      { email: patient.email, fullName: patient.fullName },
+      req.subject,
+      responseText,
+    ).catch((e) => logger.error("[Email] ask-pharmacist responded", e));
+
+    createNotification({
+      userId:   String(req.patientId),
+      type:     "ask_pharmacist_update",
+      title:    "Pharmacist Responded",
+      message:  `Your pharmacist question "${req.subject}" has been answered.`,
+      metadata: { requestId: String(req._id) },
+    }).catch((e) => logger.error("[Notification] ask-pharmacist responded", e));
+  } catch (err) {
+    logger.error("[AskPharmacist] post-respond side effects failed", err);
+  }
 }
 
 export async function updateAskPharmacistStatus(

@@ -1,6 +1,10 @@
 import { CompoundingModel, type CompoundingStatus } from "./compounding.schema";
+import { UserModel } from "@/modules/users/users.schema";
 import { AppError } from "@/common/middleware/error.middleware";
+import { EmailService } from "@/modules/email/email.service";
+import { createNotification, notifyAdmins } from "@/modules/notifications/notifications.service";
 import { logAction, type AuditActor } from "@/modules/audit/audit.service";
+import { logger } from "@/common/utils/logger";
 
 export async function createCompoundingRequest(data: {
   patientId:         string;
@@ -23,6 +27,14 @@ export async function createCompoundingRequest(data: {
       changedByName: "",
       note:          "Compounding request submitted by patient",
     }],
+  });
+
+  /* Notify admins of new compounding request */
+  notifyAdmins({
+    type:     "compounding_update",
+    title:    "New Compounding Request",
+    message:  `A new compounding request has been submitted.`,
+    metadata: { requestId: String(request._id) },
   });
 
   return request;
@@ -110,7 +122,36 @@ export async function updateCompoundingStatus(
     ipAddress:  actor.ip,
   });
 
+  /* Fire-and-forget: email + patient notification */
+  void _compoundingStatusSideEffects(saved, status);
+
   return saved;
+}
+
+async function _compoundingStatusSideEffects(
+  req: Awaited<ReturnType<typeof CompoundingModel.prototype.save>>,
+  status: CompoundingStatus,
+) {
+  try {
+    const patient = await UserModel.findById(req.patientId).select("email fullName").lean();
+    if (!patient) return;
+
+    EmailService.sendCompoundingStatusChangedEmail(
+      { email: patient.email, fullName: patient.fullName },
+      String(req._id).slice(-8).toUpperCase(),
+      status,
+    ).catch((e) => logger.error("[Email] compounding status", e));
+
+    createNotification({
+      userId:   String(req.patientId),
+      type:     "compounding_update",
+      title:    "Compounding Update",
+      message:  `Your compounding request status is now ${status.replace(/_/g, " ")}`,
+      metadata: { requestId: String(req._id), status },
+    }).catch((e) => logger.error("[Notification] compounding status", e));
+  } catch (err) {
+    logger.error("[Compounding] post-status side effects failed", err);
+  }
 }
 
 export async function addCompoundingAdminNote(id: string, note: string, actor: AuditActor) {

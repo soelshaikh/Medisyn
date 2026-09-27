@@ -1,21 +1,20 @@
-import { desc, eq } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/db";
-import { minorAilmentRequests } from "@/db/schema";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, MessageSquare } from "lucide-react";
+import { minorAilmentsApi } from "@/api/minor-ailments.api";
 import MinorAilmentForm from "@/components/patient/MinorAilmentForm";
 import StatusBadge from "@/components/StatusBadge";
+import { useAuthStore } from "@/stores/authStore";
 
-export const metadata = { title: "Minor Ailments | MediSyn Compounding" };
-
-export default async function MinorAilmentsPage() {
-  const user = await getCurrentUser();
-  if (!user) return null;
-
-  const history = await db
-    .select()
-    .from(minorAilmentRequests)
-    .where(eq(minorAilmentRequests.patientId, user.id))
-    .orderBy(desc(minorAilmentRequests.createdAt));
+export default function MinorAilmentsPage() {
+  const { user } = useAuthStore();
+  const { data, isLoading } = useQuery({
+    queryKey: ["ailment-requests", "my"],
+    queryFn: () => minorAilmentsApi.listMyRequests(1, 50),
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
+  });
 
   return (
     <div className="space-y-8">
@@ -33,17 +32,36 @@ export default async function MinorAilmentsPage() {
           <h2 className="font-display text-lg font-semibold text-ink-900">My Requests</h2>
         </div>
         <div className="divide-y divide-slate-100">
-          {history.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center px-6 py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+            </div>
+          ) : !data?.docs?.length ? (
             <p className="px-6 py-8 text-center text-sm text-slate-500">No minor ailment requests yet.</p>
           ) : (
-            history.map((item) => (
-              <div key={item.id} className="flex flex-col gap-2 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-ink-900">{item.ailment}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">{item.details}</p>
-                  {item.adminNotes ? <p className="mt-1 text-xs text-brand-700">Note: {item.adminNotes}</p> : null}
+            data.docs.map((item) => (
+              <div key={item._id} className="px-6 py-4 space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-ink-900">{item.ailmentName ?? "Minor ailment"}</p>
+                    {typeof item.formData?.details === "string" && item.formData.details && (
+                      <p className="mt-0.5 text-xs text-slate-500">{item.formData.details}</p>
+                    )}
+                    <p className="mt-1 text-xs text-slate-400">
+                      {new Date(item.createdAt).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  </div>
+                  <StatusBadge status={item.status} />
                 </div>
-                <StatusBadge status={item.status} />
+                {item.responseText && (
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 flex gap-3">
+                    <MessageSquare className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-blue-700 mb-1">Pharmacist&apos;s Response</p>
+                      <p className="text-sm text-blue-900 leading-relaxed">{item.responseText}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}

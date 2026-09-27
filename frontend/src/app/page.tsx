@@ -1,5 +1,6 @@
 import Hero from "@/components/home/Hero";
 import StatsBar from "@/components/home/StatsBar";
+import PartnerLogos from "@/components/home/PartnerLogos";
 import ServicesOverview from "@/components/home/ServicesOverview";
 import WhyChooseUs from "@/components/home/WhyChooseUs";
 import Specialties from "@/components/home/Specialties";
@@ -13,6 +14,7 @@ export default function HomePage() {
     <>
       <Hero />
       <StatsBar />
+      <PartnerLogos />
       <ServicesOverview />
       <WhyChooseUs />
       <Specialties />

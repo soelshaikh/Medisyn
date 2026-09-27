@@ -2,21 +2,21 @@
 
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { partnersApi } from "@/api/partners.api";
 import { DetailCard } from "@/components/common/DetailCard";
+import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
-import { ArrowLeft } from "lucide-react";
+import { Select } from "@/components/ui/Select";
+import { fmtDate } from "@/lib/format";
 
 const PARTNER_STATUSES = ["active", "approved", "rejected", "suspended", "deactivated"];
 
 export default function PartnerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id }  = use(params);
   const qc      = useQueryClient();
-  const router  = useRouter();
   const [statusModal, setStatusModal] = useState(false);
   const [noteModal,   setNoteModal]   = useState(false);
   const [newStatus,   setNewStatus]   = useState("");
@@ -44,29 +44,22 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Header */}
-      <div className="flex items-start gap-3">
-        <button onClick={() => router.back()} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mt-1">
-          <ArrowLeft size={18} />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-              {p?.companyName ?? partner.fullName}
-            </h1>
+      <PageHeader
+        title={p?.companyName ?? partner.fullName}
+        description={partner.email}
+        onBack="auto"
+        actions={
+          <div className="flex items-center gap-2">
             <StatusBadge status={partner.status} />
+            <Button variant="outline" size="sm" onClick={() => { setNewStatus(partner.status); setStatusModal(true); }}>
+              Change Status
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
+              Add Note
+            </Button>
           </div>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-muted)] mt-1">{partner.email}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => { setNewStatus(partner.status); setStatusModal(true); }}>
-            Change Status
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
-            Add Note
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       <DetailCard
         title="Account"
@@ -76,7 +69,7 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
           { label: "Phone",        value: partner.phone },
           { label: "Status",       value: <StatusBadge status={partner.status} /> },
           { label: "Verified",     value: partner.emailVerified ? "Yes" : "No" },
-          { label: "Joined",       value: new Date(partner.createdAt).toLocaleDateString("en-CA") },
+          { label: "Joined",       value: fmtDate(partner.createdAt) },
         ]}
       />
 
@@ -98,13 +91,12 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Change Partner Status">
         <div className="space-y-4">
-          <select
+          <Select
+            label="Status"
             value={newStatus}
-            onChange={(e) => setNewStatus(e.target.value)}
-            className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)]"
-          >
-            {PARTNER_STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-          </select>
+            onChange={(v) => setNewStatus(v)}
+            options={PARTNER_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }))}
+          />
           <div className="flex gap-3 justify-end">
             <Button variant="ghost" onClick={() => setStatusModal(false)}>Cancel</Button>
             <Button loading={statusMut.isPending} onClick={() => statusMut.mutate()}>Save</Button>

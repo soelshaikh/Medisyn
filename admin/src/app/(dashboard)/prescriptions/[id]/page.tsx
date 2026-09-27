@@ -2,22 +2,22 @@
 
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { prescriptionsApi } from "@/api/prescriptions.api";
 import { DetailCard } from "@/components/common/DetailCard";
+import { PageHeader } from "@/components/common/PageHeader";
 import { StatusHistory } from "@/components/common/StatusHistory";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
-import { ArrowLeft } from "lucide-react";
+import { Select } from "@/components/ui/Select";
+import { fmtDate } from "@/lib/format";
 
 const RX_STATUSES = ["active", "expired", "cancelled"];
 
 export default function PrescriptionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const qc     = useQueryClient();
-  const router = useRouter();
   const [statusModal, setStatusModal] = useState(false);
   const [noteModal,   setNoteModal]   = useState(false);
   const [newStatus,   setNewStatus]   = useState("");
@@ -44,26 +44,22 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="flex items-start gap-3">
-        <button onClick={() => router.back()} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mt-1">
-          <ArrowLeft size={18} />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">{rx.medicationName}</h1>
+      <PageHeader
+        title={rx.medicationName}
+        description={rx.prescriptionNumber}
+        onBack="auto"
+        actions={
+          <div className="flex items-center gap-2">
             <StatusBadge status={rx.status} />
+            <Button variant="outline" size="sm" onClick={() => { setNewStatus(rx.status); setStatusModal(true); }}>
+              Update Status
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
+              Add Note
+            </Button>
           </div>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-muted)] mt-1 font-mono">{rx.prescriptionNumber}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => { setNewStatus(rx.status); setStatusModal(true); }}>
-            Update Status
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
-            Add Note
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       <DetailCard
         title="Prescription Details"
@@ -73,8 +69,8 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ i
           { label: "Medication",         value: rx.medicationName },
           { label: "Dosage",             value: rx.dosage || "—" },
           { label: "Refills Remaining",  value: rx.refillsRemaining },
-          { label: "Expires",            value: rx.expiresAt ? new Date(rx.expiresAt).toLocaleDateString("en-CA") : "No expiry" },
-          { label: "Added",              value: new Date(rx.createdAt).toLocaleDateString("en-CA") },
+          { label: "Expires",            value: rx.expiresAt ? fmtDate(rx.expiresAt) : "No expiry" },
+          { label: "Added",              value: fmtDate(rx.createdAt) },
         ]}
       />
 
@@ -101,16 +97,12 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ i
 
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Update Prescription Status">
         <div className="space-y-4">
-          <div>
-            <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] mb-1.5">New Status</label>
-            <select
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)]"
-            >
-              {RX_STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-            </select>
-          </div>
+          <Select
+            label="Status"
+            value={newStatus}
+            onChange={(v) => setNewStatus(v)}
+            options={RX_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }))}
+          />
           <div>
             <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] mb-1.5">Note (optional)</label>
             <textarea

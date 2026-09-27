@@ -1,29 +1,42 @@
 "use client";
 
 import { forwardRef } from "react";
+import { Info } from "lucide-react";
+import { Tooltip } from "./Tooltip";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
+  /** Shows an ℹ tooltip icon next to the label instead of hint text below the field */
+  tooltip?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, leftIcon, rightIcon, fullWidth = true, className = "", id, ...rest }, ref) => {
+  ({ label, error, hint, tooltip, leftIcon, rightIcon, fullWidth = true, className = "", id, ...rest }, ref) => {
     const inputId = id ?? (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
 
     return (
       <div className={fullWidth ? "w-full" : ""}>
         {label && (
-          <label
-            htmlFor={inputId}
-            className="block text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-primary)] mb-1.5"
-          >
-            {label}
-          </label>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <label
+              htmlFor={inputId}
+              className="text-[var(--font-size-sm)] font-[var(--font-weight-medium)] text-[var(--color-text-primary)]"
+            >
+              {label}
+            </label>
+            {tooltip && (
+              <Tooltip content={tooltip}>
+                <button type="button" className="text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] rounded-full">
+                  <Info size={12} />
+                </button>
+              </Tooltip>
+            )}
+          </div>
         )}
 
         <div className="relative">
@@ -37,10 +50,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={[
-              "w-full rounded-[var(--radius-md)] border bg-[var(--color-white)]",
-              "text-[var(--font-size-md)] text-[var(--color-text-primary)]",
+              "w-full rounded-[var(--radius-md)] border bg-white",
+              "text-[var(--font-size-sm)] text-[var(--color-text-primary)]",
               "placeholder:text-[var(--color-text-muted)]",
-              "px-3 py-2.5 transition-all duration-[var(--transition-fast)]",
+              "px-3 py-2 transition-colors duration-[var(--transition-fast)]",
               "focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-0 focus:border-[var(--color-primary)]",
               "disabled:bg-[var(--color-surface)] disabled:cursor-not-allowed disabled:opacity-60",
               error
@@ -61,10 +74,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         </div>
 
         {error && (
-          <p className="mt-1.5 text-[var(--font-size-sm)] text-[var(--color-error)]">{error}</p>
+          <p className="mt-1 text-[var(--font-size-xs)] text-[var(--color-error)]">{error}</p>
         )}
         {!error && hint && (
-          <p className="mt-1.5 text-[var(--font-size-sm)] text-[var(--color-text-muted)]">{hint}</p>
+          <p className="mt-1 text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{hint}</p>
         )}
       </div>
     );

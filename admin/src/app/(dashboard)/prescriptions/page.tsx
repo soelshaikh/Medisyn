@@ -1,25 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { prescriptionsApi } from "@/api/prescriptions.api";
+import { fmtDate } from "@/lib/format";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { Input } from "@/components/ui/Input";
-import { Search } from "lucide-react";
+import { Search, Eye } from "lucide-react";
+import { Select } from "@/components/ui/Select";
 import type { AdminPrescription } from "@/types/admin";
 
 const STATUSES = ["", "active", "expired", "cancelled"];
 
 export default function PrescriptionsPage() {
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page,   setPage]   = useState(1);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ["admin-prescriptions", search, status, page],
     queryFn:  () => prescriptionsApi.list({ search: search || undefined, status: status || undefined, page, limit: 25 }),
     placeholderData: (prev) => prev,
@@ -61,15 +64,15 @@ export default function PrescriptionsPage() {
       key: "date", header: "Added", width: "110px",
       render: (r) => (
         <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">
-          {new Date(r.createdAt).toLocaleDateString("en-CA")}
+          {fmtDate(r.createdAt)}
         </span>
       ),
     },
     {
-      key: "actions", header: "", width: "60px",
+      key: "actions", header: "Actions", width: "60px",
       render: (r) => (
-        <Link href={`/prescriptions/${r._id}`} className="text-[var(--font-size-xs)] font-semibold text-[var(--color-primary)] hover:underline">
-          View
+        <Link href={`/prescriptions/${r._id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
+          <Eye size={13} /> View
         </Link>
       ),
     },
@@ -79,30 +82,35 @@ export default function PrescriptionsPage() {
   const totalPages = Math.ceil(total / 25);
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Prescriptions" description={`${total.toLocaleString()} total`} />
-
-      <div className="flex flex-wrap gap-3">
-        <div className="w-64">
-          <Input
-            placeholder="Search medication or Rx #…"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            leftIcon={<Search size={14} />}
-          />
-        </div>
-        <select
-          value={status}
-          onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-          className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)] text-[var(--color-text-primary)] bg-white"
-        >
-          <option value="">All statuses</option>
-          {STATUSES.filter(Boolean).map((s) => (
-            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-          ))}
-        </select>
-      </div>
-
+    <div className="space-y-4">
+      <PageHeader
+        title="Prescriptions"
+        description={`${total.toLocaleString()} total`}
+        onRefresh={() => qc.invalidateQueries({ queryKey: ["admin-prescriptions"] })}
+        refreshing={isFetching}
+        filters={
+          <>
+            <div className="w-56">
+              <Input
+                placeholder="Search medication or Rx #…"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                leftIcon={<Search size={14} />}
+              />
+            </div>
+            <div className="w-44">
+              <Select
+                value={status || "_all"}
+                onChange={(v) => { setStatus(v === "_all" ? "" : v); setPage(1); }}
+                options={[
+                  { value: "_all", label: "All statuses" },
+                  ...STATUSES.filter(Boolean).map((s) => ({ value: s, label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) })),
+                ]}
+              />
+            </div>
+          </>
+        }
+      />
       <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(r) => r._id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>

@@ -3,16 +3,23 @@ import { AppError } from "@/common/middleware/error.middleware";
 import { logAction, type AuditActor } from "@/modules/audit/audit.service";
 
 export async function createPrescription(data: {
-  patientId:          string;
-  prescriptionNumber: string;
-  prescriberName:     string;
-  prescriberLicense?: string;
-  prescriberPhone?:   string;
-  medicationName:     string;
-  dosage?:            string;
-  refillsRemaining?:  number;
-  expiresAt?:         Date | null;
-  notes?:             string;
+  patientId:             string;
+  requestType?:          string;
+  prescriptionNumber?:   string;
+  prescriberName?:       string;
+  prescriberLicense?:    string;
+  prescriberPhone?:      string;
+  medicationName?:       string;
+  dosage?:               string;
+  refillsRemaining?:     number;
+  expiresAt?:            Date | null;
+  notes?:                string;
+  deliveryAddress?:      string;
+  dateOfBirth?:          string;
+  previousPharmacyName?: string;
+  previousPharmacyPhone?: string;
+  transferAll?:          boolean;
+  rxNumbers?:            string[];
 }) {
   const prescription = await PrescriptionModel.create({
     ...data,

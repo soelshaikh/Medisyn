@@ -12,6 +12,7 @@ export interface IStatusEntry {
 
 export interface IAskPharmacist extends Document {
   patientId:     Types.ObjectId;
+  topic:         string;
   subject:       string;
   question:      string;
   fileUrl:       string;
@@ -39,6 +40,7 @@ const StatusEntrySchema = new Schema<IStatusEntry>(
 const AskPharmacistSchema = new Schema<IAskPharmacist>(
   {
     patientId:    { type: Schema.Types.ObjectId, ref: "User", required: true },
+    topic:        { type: String, default: "", trim: true },
     subject:      { type: String, required: true, trim: true, maxlength: 200 },
     question:     { type: String, required: true },
     fileUrl:      { type: String, default: "" },

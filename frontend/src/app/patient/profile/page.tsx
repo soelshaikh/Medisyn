@@ -1,16 +1,16 @@
-import { eq } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/db";
-import { patientProfiles } from "@/db/schema";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { usersApi } from "@/api/users.api";
 import ProfileForm from "@/components/patient/ProfileForm";
 
-export const metadata = { title: "My Profile | MediSyn Compounding" };
-
-export default async function PatientProfilePage() {
-  const user = await getCurrentUser();
-  if (!user) return null;
-
-  const [profile] = await db.select().from(patientProfiles).where(eq(patientProfiles.userId, user.id)).limit(1);
+export default function PatientProfilePage() {
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: usersApi.getMe,
+    staleTime: 5 * 60 * 1000,
+  });
 
   return (
     <div className="space-y-6">
@@ -18,17 +18,13 @@ export default async function PatientProfilePage() {
         <h1 className="font-display text-2xl font-bold text-ink-900">My Profile</h1>
         <p className="mt-1 text-sm text-slate-600">Keep your contact details current so we can reach you quickly.</p>
       </div>
-      <ProfileForm
-        profile={{
-          fullName: user.fullName,
-          email: user.email,
-          phone: user.phone ?? "",
-          dateOfBirth: profile?.dateOfBirth ?? "",
-          address: profile?.address ?? "",
-          healthCardNumber: profile?.healthCardNumber ?? "",
-          preferredContactMethod: profile?.preferredContactMethod ?? "email",
-        }}
-      />
+      {isLoading ? (
+        <div className="flex justify-center rounded-2xl border border-slate-200 bg-white p-12">
+          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        </div>
+      ) : user ? (
+        <ProfileForm user={user} />
+      ) : null}
     </div>
   );
 }

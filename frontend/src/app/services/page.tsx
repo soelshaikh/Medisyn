@@ -16,6 +16,7 @@ import {
   Pill,
   Gauge,
 } from "lucide-react";
+import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 
 export const metadata: Metadata = {
   title: "Services & Compounding Specialties | Medisyn Compounding",
@@ -69,14 +70,46 @@ const CORE_SERVICES = [
 ];
 
 const SPECIALTIES = [
-  { icon: Sparkles, title: "Dermatology & Anti-Aging", description: "Personalized creams and gels for acne, eczema, psoriasis, dermatitis and anti-wrinkle care." },
-  { icon: Baby, title: "Pediatric Compounding", description: "Great-tasting, correctly dosed liquids and chewables for children who struggle with standard medication." },
-  { icon: Dna, title: "Hormone Therapy & Fertility", description: "Bio-identical hormone replacement, progesterone, estradiol and testosterone formulations." },
-  { icon: HeartPulse, title: "Men's Health", description: "Rapid-dissolve tablets and customized treatment options for erectile dysfunction and low testosterone." },
-  { icon: Activity, title: "Pain Management", description: "Transdermal pain creams combining multiple active ingredients to target localized pain without systemic side effects." },
-  { icon: Dumbbell, title: "Sports Recovery", description: "Recovery blends, magnesium formulations and topical anti-inflammatories built for active lifestyles." },
-  { icon: PawPrint, title: "Veterinary Medicine", description: "Flavored, easy-to-administer medication for dogs, cats, and other companion animals." },
-  { icon: Pill, title: "Allergy-Friendly Formulas", description: "Dye-free, gluten-free, lactose-free and preservative-free medication options available on request." },
+  {
+    icon: Sparkles,
+    title: "Dermatology & Anti-Aging",
+    description: "Personalized creams and gels for acne, eczema, psoriasis, dermatitis and anti-wrinkle care.",
+  },
+  {
+    icon: Baby,
+    title: "Pediatric Compounding",
+    description: "Great-tasting, correctly dosed liquids and chewables for children who struggle with standard medication.",
+  },
+  {
+    icon: Dna,
+    title: "Hormone Therapy & Fertility",
+    description: "Bio-identical hormone replacement, progesterone, estradiol and testosterone formulations.",
+  },
+  {
+    icon: HeartPulse,
+    title: "Men's Health",
+    description: "Rapid-dissolve tablets and customized treatment options for erectile dysfunction and low testosterone.",
+  },
+  {
+    icon: Activity,
+    title: "Pain Management",
+    description: "Transdermal pain creams combining multiple active ingredients to target localized pain without systemic side effects.",
+  },
+  {
+    icon: Dumbbell,
+    title: "Sports Recovery",
+    description: "Recovery blends, magnesium formulations and topical anti-inflammatories built for active lifestyles.",
+  },
+  {
+    icon: PawPrint,
+    title: "Veterinary Medicine",
+    description: "Flavored, easy-to-administer medication for dogs, cats, and other companion animals.",
+  },
+  {
+    icon: Pill,
+    title: "Allergy-Friendly Formulas",
+    description: "Dye-free, gluten-free, lactose-free and preservative-free medication options available on request.",
+  },
 ];
 
 export default function ServicesPage() {
@@ -97,15 +130,32 @@ export default function ServicesPage() {
 
       <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {CORE_SERVICES.map((service) => (
-            <div key={service.title} className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                <service.icon className="h-6 w-6" />
+          {CORE_SERVICES.map((service) => {
+            const href = service.title === "Vaccinations & Minor Ailments" ? "/services/vaccinations" : undefined;
+            const inner = (
+              <>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                  <service.icon className="h-6 w-6" />
+                </div>
+                <h3 className="mt-5 font-display text-lg font-semibold text-ink-900">{service.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{service.description}</p>
+                {href && (
+                  <span className="mt-4 inline-flex items-center text-xs font-semibold text-brand-600 hover:text-brand-700">
+                    Book a vaccine appointment →
+                  </span>
+                )}
+              </>
+            );
+            return href ? (
+              <Link key={service.title} href={href} className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lg block">
+                {inner}
+              </Link>
+            ) : (
+              <div key={service.title} className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lg">
+                {inner}
               </div>
-              <h3 className="mt-5 font-display text-lg font-semibold text-ink-900">{service.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{service.description}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -117,17 +167,17 @@ export default function ServicesPage() {
               Specialized formulations for every need
             </h2>
           </div>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+          <BentoGrid className="mt-12">
             {SPECIALTIES.map((item) => (
-              <div key={item.title} className="rounded-2xl bg-white p-6 ring-1 ring-slate-200">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-600 text-white">
-                  <item.icon className="h-5 w-5" />
-                </div>
-                <h3 className="mt-4 font-display text-base font-semibold text-ink-900">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.description}</p>
-              </div>
+              <BentoGridItem
+                key={item.title}
+                title={item.title}
+                description={item.description}
+                Icon={item.icon}
+              />
             ))}
-          </div>
+          </BentoGrid>
         </div>
       </section>
 
@@ -139,10 +189,16 @@ export default function ServicesPage() {
           Talk to a Medisyn pharmacist for free — we&rsquo;ll recommend the right formulation and handle the rest.
         </p>
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href="/get-started" className="rounded-full bg-brand-600 px-7 py-3.5 text-sm font-semibold text-white hover:bg-brand-700">
+          <Link
+            href="/get-started"
+            className="rounded-full bg-brand-600 px-7 py-3.5 text-sm font-semibold text-white hover:bg-brand-700 transition"
+          >
             Get Started
           </Link>
-          <Link href="/contact" className="rounded-full border border-slate-300 px-7 py-3.5 text-sm font-semibold text-ink-900 hover:border-brand-400">
+          <Link
+            href="/contact"
+            className="rounded-full border border-slate-300 px-7 py-3.5 text-sm font-semibold text-ink-900 hover:border-brand-400 transition"
+          >
             Ask a Pharmacist
           </Link>
         </div>

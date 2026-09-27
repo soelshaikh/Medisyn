@@ -99,6 +99,14 @@ export async function deleteAilment(id: string, actor?: AuditActor) {
   });
 }
 
+export async function batchSortOrder(items: { id: string; sortOrder: number }[]) {
+  await Promise.all(
+    items.map(({ id, sortOrder }) =>
+      AilmentCatalogModel.updateOne({ _id: id }, { $set: { sortOrder } })
+    )
+  );
+}
+
 export async function updateAilmentFields(id: string, fields: IIntakeField[], actor?: AuditActor) {
   const before = await AilmentCatalogModel.findById(id).lean();
   if (!before) throw new AppError("Ailment not found", 404);

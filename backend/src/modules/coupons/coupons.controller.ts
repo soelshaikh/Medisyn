@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { asyncHandler } from "@/common/utils/asyncHandler";
-import { sendSuccess } from "@/common/utils/response";
+import { sendSuccess, sendList } from "@/common/utils/response";
 import * as svc from "./coupons.service";
 
 const CouponDto = z.object({
@@ -25,12 +25,13 @@ function actor(req: Request) {
 }
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const { isActive, page, limit } = z.object({
+  const { isActive, page = 1, limit = 20 } = z.object({
     isActive: z.coerce.boolean().optional(),
     page:     z.coerce.number().int().min(1).optional(),
     limit:    z.coerce.number().int().min(1).max(100).optional(),
   }).parse(req.query);
-  sendSuccess(res, await svc.listCoupons({ isActive, page, limit }));
+  const result = await svc.listCoupons({ isActive, page, limit });
+  sendList(res, result.data, { page, limit, total: result.total });
 });
 
 export const create = asyncHandler(async (req: Request, res: Response) => {

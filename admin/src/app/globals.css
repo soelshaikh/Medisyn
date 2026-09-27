@@ -17,6 +17,37 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* All interactive elements show a pointer cursor */
+a,
+button,
+[role="button"],
+[role="tab"],
+[role="option"],
+[role="menuitem"],
+[role="checkbox"],
+[role="radio"],
+label,
+select,
+summary,
+[tabindex]:not([tabindex="-1"]) {
+  cursor: pointer;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+textarea { cursor: text; }
+
+input[type="checkbox"],
+input[type="radio"] { cursor: pointer; }
+
+[disabled],
+[aria-disabled="true"] { cursor: not-allowed; }
+
 html { scroll-behavior: smooth; }
 
 body {
@@ -34,7 +65,9 @@ body {
   border-radius: var(--radius-sm);
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin    { to { transform: rotate(360deg); } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes float   { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 .animate-spin    { animation: spin 0.8s linear infinite; }
 .animate-fade-in { animation: fade-in 0.2s ease both; }
+.animate-float   { animation: float 3s ease-in-out infinite; }

@@ -2,22 +2,24 @@
 
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { askPharmacistApi } from "@/api/ask-pharmacist.api";
 import { DetailCard } from "@/components/common/DetailCard";
+import { PageHeader } from "@/components/common/PageHeader";
 import { StatusHistory } from "@/components/common/StatusHistory";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
+import { SecureDocumentLink } from "@/components/common/SecureDocumentLink";
+import { Select } from "@/components/ui/Select";
+import { fmtDate, fmtDateTime } from "@/lib/format";
 
 const ASK_STATUSES = ["open", "answered", "closed"];
 
 export default function AskPharmacistDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const qc     = useQueryClient();
-  const router = useRouter();
   const [respondModal, setRespondModal] = useState(false);
   const [statusModal,  setStatusModal]  = useState(false);
   const [noteModal,    setNoteModal]    = useState(false);
@@ -51,34 +53,28 @@ export default function AskPharmacistDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="flex items-start gap-3">
-        <button onClick={() => router.back()} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mt-1">
-          <ArrowLeft size={18} />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">{ask.subject}</h1>
+      <PageHeader
+        title={ask.subject}
+        description={`Asked ${fmtDate(ask.createdAt)}`}
+        onBack="auto"
+        actions={
+          <div className="flex items-center gap-2">
             <StatusBadge status={ask.status} />
-          </div>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-muted)] mt-1">
-            Asked {new Date(ask.createdAt).toLocaleDateString("en-CA")}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {ask.status === "open" && (
-            <Button size="sm" onClick={() => setRespondModal(true)}>
-              <MessageCircle size={14} className="mr-1.5" />
-              Respond
+            {ask.status === "open" && (
+              <Button size="sm" onClick={() => setRespondModal(true)}>
+                <MessageCircle size={14} className="mr-1.5" />
+                Respond
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => { setNewStatus(ask.status); setStatusModal(true); }}>
+              Change Status
             </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => { setNewStatus(ask.status); setStatusModal(true); }}>
-            Change Status
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
-            Note
-          </Button>
-        </div>
-      </div>
+            <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
+              Note
+            </Button>
+          </div>
+        }
+      />
 
       {/* Question */}
       <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] p-6">
@@ -87,14 +83,7 @@ export default function AskPharmacistDetailPage({ params }: { params: Promise<{ 
           {ask.question}
         </p>
         {ask.fileUrl && (
-          <a
-            href={ask.fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 mt-3 text-[var(--font-size-xs)] text-[var(--color-primary)] font-semibold hover:underline"
-          >
-            View Attachment
-          </a>
+          <SecureDocumentLink fileUrl={ask.fileUrl} className="mt-3" />
         )}
       </div>
 
@@ -107,7 +96,7 @@ export default function AskPharmacistDetailPage({ params }: { params: Promise<{ 
           </p>
           {ask.respondedAt && (
             <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] mt-2">
-              Responded {new Date(ask.respondedAt).toLocaleString("en-CA")}
+              Responded {fmtDateTime(ask.respondedAt)}
             </p>
           )}
         </div>
@@ -147,13 +136,12 @@ export default function AskPharmacistDetailPage({ params }: { params: Promise<{ 
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Change Status">
         <div className="space-y-4">
-          <select
+          <Select
+            label="Status"
             value={newStatus}
-            onChange={(e) => setNewStatus(e.target.value)}
-            className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)]"
-          >
-            {ASK_STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-          </select>
+            onChange={(v) => setNewStatus(v)}
+            options={ASK_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }))}
+          />
           <textarea
             value={statusNote}
             onChange={(e) => setStatusNote(e.target.value)}

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { authenticate, requirePermission } from "@/common/middleware/auth.middleware";
+import { healthcareSubmitLimiter } from "@/common/middleware/rate-limit.middleware";
 import { asyncHandler } from "@/common/utils/asyncHandler";
 import { sendSuccess } from "@/common/utils/response";
 import type { Request } from "express";
@@ -19,7 +20,7 @@ const router = Router();
 router.use(authenticate);
 
 /* ── Patient routes ── */
-router.post("/", asyncHandler(async (req, res) => {
+router.post("/", healthcareSubmitLimiter, asyncHandler(async (req, res) => {
   const dto = z.object({
     medicationName:    z.string().min(1).max(200),
     strength:          z.string().max(100).optional(),
@@ -50,7 +51,7 @@ router.get("/my/:id", asyncHandler(async (req, res) => {
 }));
 
 /* ── Admin routes ── */
-router.get("/admin", requirePermission("healthcare.compounding.read"), asyncHandler(async (req, res) => {
+router.get("/admin", requirePermission("compounding.read"), asyncHandler(async (req, res) => {
   const filters = z.object({
     status: z.string().optional(),
     search: z.string().optional(),
@@ -60,11 +61,11 @@ router.get("/admin", requirePermission("healthcare.compounding.read"), asyncHand
   sendSuccess(res, await svc.listAdminCompoundingRequests(filters));
 }));
 
-router.get("/admin/:id", requirePermission("healthcare.compounding.read"), asyncHandler(async (req, res) => {
+router.get("/admin/:id", requirePermission("compounding.read"), asyncHandler(async (req, res) => {
   sendSuccess(res, await svc.getAdminCompoundingRequest(String(req.params.id)));
 }));
 
-router.patch("/admin/:id/status", requirePermission("healthcare.compounding.manage"), asyncHandler(async (req, res) => {
+router.patch("/admin/:id/status", requirePermission("compounding.status.update"), asyncHandler(async (req, res) => {
   const { status, note, quoteAmount, quoteNote } = z.object({
     status:      z.enum(COMPOUNDING_STATUSES),
     note:        z.string().max(500).optional().default(""),
@@ -76,7 +77,7 @@ router.patch("/admin/:id/status", requirePermission("healthcare.compounding.mana
   ), "Status updated");
 }));
 
-router.post("/admin/:id/notes", requirePermission("healthcare.compounding.manage"), asyncHandler(async (req, res) => {
+router.post("/admin/:id/notes", requirePermission("compounding.notes"), asyncHandler(async (req, res) => {
   const { note } = z.object({ note: z.string().min(1).max(2000) }).parse(req.body);
   sendSuccess(res, await svc.addCompoundingAdminNote(String(req.params.id), note, actor(req)), "Note added");
 }));

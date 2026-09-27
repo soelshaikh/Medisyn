@@ -1,22 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
 import LoginForm from "@/components/auth/LoginForm";
 
 export const metadata: Metadata = { title: "Log In | MediSyn Compounding" };
 
-function roleHome(role: string): string {
-  if (role === "admin") return "/admin";
-  if (role === "clinic") return "/clinic";
-  if (role === "pharmacy_partner") return "/partner";
-  return "/patient";
-}
-
-export default async function LoginPage() {
-  const user = await getCurrentUser();
-  if (user) redirect(roleHome(user.role));
-
+export default function LoginPage() {
   return (
     <section className="bg-gradient-to-b from-brand-50 to-white px-6 py-16">
       <div className="mx-auto max-w-md">

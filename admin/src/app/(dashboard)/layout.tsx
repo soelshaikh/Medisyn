@@ -5,16 +5,24 @@ import { useRouter } from "next/navigation";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
 import { AdminSidebar } from "@/components/common/AdminSidebar";
 import { AdminTopbar } from "@/components/common/AdminTopbar";
+import { Spinner } from "@/components/ui/Spinner";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAdminAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAdminAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) router.replace("/login");
-  }, [isAuthenticated, router]);
+    if (_hasHydrated && !isAuthenticated) router.replace("/login");
+  }, [_hasHydrated, isAuthenticated, router]);
 
-  if (!isAuthenticated) return null;
+  // Wait for Zustand to rehydrate from localStorage before making any auth decision
+  if (!_hasHydrated || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface)]">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--color-surface)]">

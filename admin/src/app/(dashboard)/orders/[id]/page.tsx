@@ -2,15 +2,16 @@
 
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { ordersApi } from "@/api/orders.api";
-import { StatusBadge } from "@/components/common/StatusBadge";
+import { fmtDateTime } from "@/lib/format";
 import { DetailCard } from "@/components/common/DetailCard";
+import { PageHeader } from "@/components/common/PageHeader";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { StatusHistory } from "@/components/common/StatusHistory";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
-import { ArrowLeft } from "lucide-react";
+import { Select } from "@/components/ui/Select";
 
 const ORDER_STATUSES = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"];
 
@@ -21,7 +22,6 @@ function formatCAD(cents: number) {
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const qc     = useQueryClient();
-  const router = useRouter();
   const [statusModal, setStatusModal] = useState(false);
   const [noteModal,   setNoteModal]   = useState(false);
   const [newStatus,   setNewStatus]   = useState("");
@@ -46,39 +46,37 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
   if (!order)    return <p className="text-[var(--color-text-muted)]">Order not found.</p>;
 
+  const populatedUser = order.userId && typeof order.userId === "object" ? order.userId : null;
+  const customerName  = populatedUser?.fullName  ?? order.guestInfo?.fullName;
+  const customerEmail = populatedUser?.email      ?? order.guestInfo?.email;
+  const customerPhone = populatedUser?.phone      ?? order.guestInfo?.phone;
+
   return (
     <div className="space-y-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-start gap-3">
-        <button onClick={() => router.back()} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mt-1">
-          <ArrowLeft size={18} />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)] font-mono">{order.orderNumber}</h1>
+      <PageHeader
+        title={order.orderNumber}
+        description={`Placed ${fmtDateTime(order.createdAt)}`}
+        onBack="auto"
+        actions={
+          <div className="flex items-center gap-2">
             <StatusBadge status={order.status} />
+            <Button variant="outline" size="sm" onClick={() => { setNewStatus(order.status); setStatusModal(true); }}>
+              Update Status
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
+              Add Note
+            </Button>
           </div>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-muted)] mt-1">
-            Placed {new Date(order.createdAt).toLocaleString("en-CA")}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => { setNewStatus(order.status); setStatusModal(true); }}>
-            Update Status
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
-            Add Note
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Customer */}
       <DetailCard
         title="Customer"
         fields={[
-          { label: "Name",    value: order.guestInfo?.fullName },
-          { label: "Email",   value: order.guestInfo?.email },
-          { label: "Phone",   value: order.guestInfo?.phone },
+          { label: "Name",    value: customerName },
+          { label: "Email",   value: customerEmail },
+          { label: "Phone",   value: customerPhone },
           { label: "Payment", value: order.paymentMethod.replace(/_/g, " ") },
         ]}
       />
@@ -160,18 +158,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Update Order Status">
         <div className="space-y-4">
-          <div>
-            <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] mb-1.5">
-              New Status
-            </label>
-            <select
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)]"
-            >
-              {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-            </select>
-          </div>
+          <Select
+            label="Status"
+            value={newStatus}
+            onChange={(v) => setNewStatus(v)}
+            options={ORDER_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }))}
+          />
           <div>
             <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] mb-1.5">
               Note (optional)

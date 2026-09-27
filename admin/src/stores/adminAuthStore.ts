@@ -13,6 +13,8 @@ interface AdminAuthState {
   user: AdminUser | null;
   accessToken: string | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
+  setHasHydrated: (v: boolean) => void;
   setAuth: (user: AdminUser, accessToken: string) => void;
   clearAuth: () => void;
   hasPermission: (permission: string) => boolean;
@@ -24,17 +26,20 @@ export const useAdminAuthStore = create<AdminAuthState>()(
       user: null,
       accessToken: null,
       isAuthenticated: false,
+      _hasHydrated: false,
+
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
 
       setAuth: (user, accessToken) => {
         if (typeof window !== "undefined") {
-          sessionStorage.setItem("admin_access_token", accessToken);
+          sessionStorage.setItem("access_token", accessToken);
         }
         set({ user, accessToken, isAuthenticated: true });
       },
 
       clearAuth: () => {
         if (typeof window !== "undefined") {
-          sessionStorage.removeItem("admin_access_token");
+          sessionStorage.removeItem("access_token");
         }
         set({ user: null, accessToken: null, isAuthenticated: false });
       },
@@ -48,6 +53,9 @@ export const useAdminAuthStore = create<AdminAuthState>()(
     {
       name: "medisyn-admin-auth",
       partialize: (s) => ({ user: s.user, isAuthenticated: s.isAuthenticated }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     },
   ),
 );

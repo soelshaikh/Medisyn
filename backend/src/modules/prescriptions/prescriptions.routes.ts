@@ -14,15 +14,23 @@ function actor(req: Request) {
 const PRESCRIPTION_STATUSES: [PrescriptionStatus, ...PrescriptionStatus[]] = ["active","expired","cancelled"];
 
 const CreateDto = z.object({
-  prescriptionNumber: z.string().min(1).max(100),
-  prescriberName:     z.string().min(1).max(200),
-  prescriberLicense:  z.string().max(100).optional(),
-  prescriberPhone:    z.string().max(30).optional(),
-  medicationName:     z.string().min(1).max(200),
-  dosage:             z.string().max(100).optional(),
-  refillsRemaining:   z.number().int().min(0).optional(),
-  expiresAt:          z.coerce.date().nullable().optional(),
-  notes:              z.string().max(1000).optional(),
+  requestType:           z.enum(["standard","new_delivery","refill","transfer"]).optional(),
+  prescriptionNumber:    z.string().max(100).optional().default(""),
+  prescriberName:        z.string().max(200).optional().default(""),
+  prescriberLicense:     z.string().max(100).optional(),
+  prescriberPhone:       z.string().max(30).optional(),
+  medicationName:        z.string().max(200).optional().default(""),
+  dosage:                z.string().max(100).optional(),
+  refillsRemaining:      z.number().int().min(0).optional(),
+  expiresAt:             z.coerce.date().nullable().optional(),
+  notes:                 z.string().max(2000).optional(),
+  /* Request-type-specific */
+  deliveryAddress:       z.string().max(500).optional(),
+  dateOfBirth:           z.string().max(20).optional(),
+  previousPharmacyName:  z.string().max(200).optional(),
+  previousPharmacyPhone: z.string().max(30).optional(),
+  transferAll:           z.boolean().optional(),
+  rxNumbers:             z.array(z.string().max(100)).max(10).optional(),
 });
 
 const router = Router();
@@ -55,7 +63,7 @@ router.patch("/my/:id", asyncHandler(async (req, res) => {
 }));
 
 /* ── Admin routes ── */
-router.get("/admin", requirePermission("healthcare.prescriptions.read"), asyncHandler(async (req, res) => {
+router.get("/admin", requirePermission("prescriptions.read"), asyncHandler(async (req, res) => {
   const filters = z.object({
     status: z.string().optional(),
     search: z.string().optional(),
@@ -65,11 +73,11 @@ router.get("/admin", requirePermission("healthcare.prescriptions.read"), asyncHa
   sendSuccess(res, await svc.listAdminPrescriptions(filters));
 }));
 
-router.get("/admin/:id", requirePermission("healthcare.prescriptions.read"), asyncHandler(async (req, res) => {
+router.get("/admin/:id", requirePermission("prescriptions.read"), asyncHandler(async (req, res) => {
   sendSuccess(res, await svc.getAdminPrescription(String(req.params.id)));
 }));
 
-router.patch("/admin/:id/status", requirePermission("healthcare.prescriptions.manage"), asyncHandler(async (req, res) => {
+router.patch("/admin/:id/status", requirePermission("prescriptions.status.update"), asyncHandler(async (req, res) => {
   const { status, note } = z.object({
     status: z.enum(PRESCRIPTION_STATUSES),
     note:   z.string().max(500).optional().default(""),
@@ -77,7 +85,7 @@ router.patch("/admin/:id/status", requirePermission("healthcare.prescriptions.ma
   sendSuccess(res, await svc.updatePrescriptionStatus(String(req.params.id), status, note, actor(req)), "Status updated");
 }));
 
-router.post("/admin/:id/notes", requirePermission("healthcare.prescriptions.manage"), asyncHandler(async (req, res) => {
+router.post("/admin/:id/notes", requirePermission("prescriptions.notes"), asyncHandler(async (req, res) => {
   const { note } = z.object({ note: z.string().min(1).max(2000) }).parse(req.body);
   sendSuccess(res, await svc.addPrescriptionAdminNote(String(req.params.id), note, actor(req)), "Note added");
 }));

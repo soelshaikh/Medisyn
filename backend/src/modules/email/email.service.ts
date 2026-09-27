@@ -101,4 +101,41 @@ export class EmailService {
     const { subject, html } = emailTemplates.accountSuspended(user.fullName, reason);
     await this.send({ to: user.email, subject, html, type: "account_suspended", metadata: { userId: String(user._id), reason } });
   }
+
+  static async sendOrderStatusChangedEmail(
+    user: { email: string; fullName: string },
+    orderNumber: string,
+    status: string,
+  ) {
+    const { subject, html } = emailTemplates.orderStatusChanged(user.fullName, orderNumber, status);
+    await this.send({ to: user.email, subject, html, type: "order_status_changed", metadata: { orderNumber, status } });
+  }
+
+  static async sendCompoundingStatusChangedEmail(
+    user: { email: string; fullName: string },
+    refId: string,
+    status: string,
+  ) {
+    const { subject, html } = emailTemplates.compoundingStatusChanged(user.fullName, refId, status);
+    await this.send({ to: user.email, subject, html, type: "compounding_status_changed", metadata: { refId, status } });
+  }
+
+  static async sendAppointmentStatusChangedEmail(
+    user: { email: string; fullName: string },
+    service: string,
+    dateTime: string,
+    status: string,
+  ) {
+    const { subject, html } = emailTemplates.appointmentStatusChanged(user.fullName, service, dateTime, status);
+    await this.send({ to: user.email, subject, html, type: "appointment_status_changed", metadata: { service, dateTime, status } });
+  }
+
+  static async sendAskPharmacistRespondedEmail(
+    user: { email: string; fullName: string },
+    subject: string,
+    responseText: string,
+  ) {
+    const { subject: emailSubject, html } = emailTemplates.askPharmacistResponded(user.fullName, subject, responseText);
+    await this.send({ to: user.email, subject: emailSubject, html, type: "ask_pharmacist_responded", metadata: { subject } });
+  }
 }

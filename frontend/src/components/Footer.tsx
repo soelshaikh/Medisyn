@@ -40,14 +40,14 @@ export default function Footer() {
             </p>
             <div className="mt-5 flex gap-3">
               <a
-                href="https://facebook.com"
+                href="#"
                 aria-label="Facebook"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-brand-600"
               >
                 <FacebookIcon />
               </a>
               <a
-                href="https://instagram.com"
+                href="#"
                 aria-label="Instagram"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-brand-600"
               >
@@ -74,6 +74,7 @@ export default function Footer() {
               <li><Link href="/get-started?type=refill" className="hover:text-brand-400">Refill Request</Link></li>
               <li><Link href="/get-started?type=transfer" className="hover:text-brand-400">Transfer Prescription</Link></li>
               <li><Link href="/contact" className="hover:text-brand-400">Ask a Pharmacist</Link></li>
+              <li><Link href="/track-order" className="hover:text-brand-400">Track My Order</Link></li>
             </ul>
           </div>
 

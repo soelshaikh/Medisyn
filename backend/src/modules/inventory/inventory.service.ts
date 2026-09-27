@@ -109,3 +109,12 @@ export async function deductStock(items: Array<{ productId: string; quantity: nu
     await InventoryModel.findByIdAndUpdate(inv._id, { $inc: { quantity: -quantity } });
   }
 }
+
+/* Called when an order is cancelled — returns stock for tracked items */
+export async function restoreStock(items: Array<{ productId: string; quantity: number }>) {
+  for (const { productId, quantity } of items) {
+    const inv = await InventoryModel.findOne({ productId });
+    if (!inv || !inv.trackInventory) continue;
+    await InventoryModel.findByIdAndUpdate(inv._id, { $inc: { quantity } });
+  }
+}
