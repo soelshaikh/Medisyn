@@ -130,6 +130,72 @@ export class EmailService {
     await this.send({ to: user.email, subject, html, type: "appointment_status_changed", metadata: { service, dateTime, status } });
   }
 
+  /**
+   * Generic dispatcher used by EmailTriggerService.
+   * Resolves the right template from templateKey and sends.
+   */
+  static async sendTransactionalEmail(opts: {
+    to:          string;
+    fullName:    string;
+    templateKey: string;
+    module:      string;
+    fromStatus:  string;
+    toStatus:    string;
+    refId:       string;
+    extra:       Record<string, unknown>;
+  }): Promise<void> {
+    const { to, fullName, templateKey, module, toStatus, refId, extra } = opts;
+    let subject: string;
+    let html: string;
+
+    switch (templateKey) {
+      case "orderStatusChanged": {
+        const t = emailTemplates.orderStatusChanged(fullName, refId, toStatus);
+        subject = t.subject; html = t.html;
+        break;
+      }
+      case "prescriptionReceived": {
+        const t = emailTemplates.prescriptionReceived(fullName, refId);
+        subject = t.subject; html = t.html;
+        break;
+      }
+      case "prescriptionStatusChanged": {
+        const t = emailTemplates.prescriptionStatusChanged(fullName, refId, toStatus);
+        subject = t.subject; html = t.html;
+        break;
+      }
+      case "compoundingStatusChanged": {
+        const t = emailTemplates.compoundingStatusChanged(fullName, refId, toStatus);
+        subject = t.subject; html = t.html;
+        break;
+      }
+      case "appointmentStatusChanged": {
+        const t = emailTemplates.appointmentStatusChanged(
+          fullName,
+          String(extra.service ?? ""),
+          String(extra.dateTime ?? ""),
+          toStatus,
+        );
+        subject = t.subject; html = t.html;
+        break;
+      }
+      case "askPharmacistResponded": {
+        const t = emailTemplates.askPharmacistResponded(
+          fullName,
+          String(extra.questionSubject ?? ""),
+          String(extra.responseText ?? ""),
+        );
+        subject = t.subject; html = t.html;
+        break;
+      }
+      default:
+        logger.warn(`[EmailService] Unknown templateKey: ${templateKey} — skipping`);
+        return;
+    }
+
+    await this.send({ to, subject, html, type: templateKey, metadata: { module, refId, toStatus } });
+  }
+
   static async sendAskPharmacistRespondedEmail(
     user: { email: string; fullName: string },
     subject: string,

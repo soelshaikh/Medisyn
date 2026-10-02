@@ -26,6 +26,7 @@ export interface PharmacySettings {
   licenseNumber: string;
   workingHours:  WorkingHours[];
   holidays:      Holiday[];
+  emailVerificationRequired: boolean;
   updatedAt:     string;
 }
 
@@ -57,4 +58,9 @@ export const settingsApi = {
 
   deleteHoliday: (id: string) =>
     apiClient.delete(`/settings/holidays/${id}`).then((r) => r.data),
+
+  updatePolicies: (data: { emailVerificationRequired?: boolean }) =>
+    apiClient
+      .patch<{ data: PharmacySettings }>("/settings/policies", data)
+      .then((r) => r.data.data),
 };

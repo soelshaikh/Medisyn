@@ -11,7 +11,9 @@ function actor(req: Request) {
   return { id: req.user!._id, email: req.user!.email, name: req.user!.fullName, ip: req.ip };
 }
 
-const PRESCRIPTION_STATUSES: [PrescriptionStatus, ...PrescriptionStatus[]] = ["active","expired","cancelled"];
+const PRESCRIPTION_STATUSES: [PrescriptionStatus, ...PrescriptionStatus[]] = [
+  "submitted","received","verified","dispensed","cancelled",
+];
 
 const CreateDto = z.object({
   requestType:           z.enum(["standard","new_delivery","refill","transfer"]).optional(),
@@ -82,7 +84,14 @@ router.patch("/admin/:id/status", requirePermission("prescriptions.status.update
     status: z.enum(PRESCRIPTION_STATUSES),
     note:   z.string().max(500).optional().default(""),
   }).parse(req.body);
-  sendSuccess(res, await svc.updatePrescriptionStatus(String(req.params.id), status, note, actor(req)), "Status updated");
+  sendSuccess(
+    res,
+    await svc.updatePrescriptionStatus(
+      String(req.params.id), status, note, actor(req),
+      new Set(req.user!.effectivePermissions),
+    ),
+    "Status updated",
+  );
 }));
 
 router.post("/admin/:id/notes", requirePermission("prescriptions.notes"), asyncHandler(async (req, res) => {

@@ -2,6 +2,7 @@
 
 import { use, useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+// useMutation retained for saveMut, archiveMut, removeImgMut, setPrimaryMut, reorderMut
 import { useRouter } from "next/navigation";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -11,7 +12,8 @@ import {
   SortableContext, rectSortingStrategy, useSortable, arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { productsApi, categoriesApi, brandsApi, inventoryApi } from "@/api/products.api";
+import { productsApi, categoriesApi, brandsApi } from "@/api/products.api";
+import { InventoryCard } from "./InventoryCard";
 import { StatusBadge }  from "@/components/common/StatusBadge";
 import { Button }       from "@/components/ui/Button";
 import { Input }        from "@/components/ui/Input";
@@ -170,8 +172,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   /* ── ui state ── */
   const [archiveModal,   setArchiveModal]   = useState(false);
-  const [stockModal,     setStockModal]     = useState(false);
-  const [stockDelta,     setStockDelta]     = useState("");
   const [uploadingImg,   setUploadingImg]   = useState(false);
   const [imgError,       setImgError]       = useState("");
   const [saveError,      setSaveError]      = useState("");
@@ -294,12 +294,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const archiveMut = useMutation({
     mutationFn: () => productsApi.archive(id),
     onSuccess:  () => { qc.invalidateQueries({ queryKey: ["admin-products"] }); setArchiveModal(false); },
-  });
-
-  /* ── stock adjust ── */
-  const stockMut = useMutation({
-    mutationFn: () => inventoryApi.adjust(id, parseInt(stockDelta, 10)),
-    onSuccess:  () => { qc.invalidateQueries({ queryKey: ["admin-product", id] }); setStockModal(false); setStockDelta(""); },
   });
 
   /* ── video helpers ── */
@@ -607,34 +601,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </Card>
 
-          <Card title="Inventory">
-            {product.inventory ? (
-              <div className="space-y-2.5">
-                <dl className="space-y-1.5 text-[var(--font-size-sm)]">
-                  {[
-                    ["Qty in stock",  product.inventory.quantity],
-                    ["Low stock at",  product.inventory.lowStockThreshold],
-                    ["Tracking",      product.inventory.trackInventory ? "Enabled" : "Disabled"],
-                  ].map(([k, v]) => (
-                    <div key={k as string} className="flex justify-between">
-                      <dt className="text-[var(--color-text-muted)]">{k}</dt>
-                      <dd className={[
-                        "font-semibold",
-                        k === "Qty in stock" && product.inventory!.trackInventory && Number(v) <= product.inventory!.lowStockThreshold
-                          ? "text-[var(--color-error)]"
-                          : "text-[var(--color-text-primary)]",
-                      ].join(" ")}>{String(v)}</dd>
-                    </div>
-                  ))}
-                </dl>
-                <Button size="sm" variant="outline" className="w-full" onClick={() => { setStockDelta(""); setStockModal(true); }}>
-                  Adjust Stock
-                </Button>
-              </div>
-            ) : (
-              <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">No inventory record configured.</p>
-            )}
-          </Card>
+          <InventoryCard
+            productId={id}
+            productName={product.name}
+            inventory={product.inventory}
+          />
 
           <Card title="Drug Identifiers">
             <div className="space-y-2.5">
@@ -711,32 +682,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </Modal>
 
-      {/* Stock adjust modal */}
-      <Modal open={stockModal} onClose={() => setStockModal(false)} title="Adjust Stock">
-        <div className="space-y-4">
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
-            Current qty: <strong>{product.inventory?.quantity ?? "N/A"}</strong>. Enter positive to add, negative to subtract.
-          </p>
-          <Input
-            label="Adjustment"
-            type="text"
-            inputMode="numeric"
-            value={stockDelta}
-            onChange={(e) => setStockDelta(e.target.value.replace(/[^0-9-]/g, ""))}
-            placeholder="e.g. 10 or -5"
-          />
-          <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setStockModal(false)}>Cancel</Button>
-            <Button
-              loading={stockMut.isPending}
-              disabled={!stockDelta || stockDelta === "-" || parseInt(stockDelta) === 0}
-              onClick={() => stockMut.mutate()}
-            >
-              Apply
-            </Button>
-          </div>
-        </div>
-      </Modal>
+
     </div>
   );
 }

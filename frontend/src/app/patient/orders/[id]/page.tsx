@@ -2,9 +2,10 @@
 
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, Package, XCircle, AlertTriangle } from "lucide-react";
+import { Loader2, ArrowLeft, Package, XCircle, AlertTriangle, FileText } from "lucide-react";
 import Link from "next/link";
 import { ordersApi } from "@/api/orders.api";
+import { invoicesApi } from "@/api/invoices.api";
 import StatusBadge from "@/components/StatusBadge";
 import { useAuthStore } from "@/stores/authStore";
 import { inputClass } from "@/lib/ui";
@@ -31,6 +32,14 @@ export default function PatientOrderDetailPage({ params }: { params: Promise<{ i
     queryKey: ["orders", "my", id],
     queryFn: () => ordersApi.getById(id),
     enabled: !!user,
+  });
+
+  /* Invoice — only fetched when order is delivered */
+  const { data: invoiceList } = useQuery({
+    queryKey: ["invoices", "my", "for-order", id],
+    queryFn:  () => invoicesApi.list(1, 5),
+    enabled:  !!user && order?.status === "delivered",
+    select:   (d) => d?.find((inv) => inv.orderId === id) ?? null,
   });
 
   const cancelMut = useMutation({
@@ -73,15 +82,25 @@ export default function PatientOrderDetailPage({ params }: { params: Promise<{ i
           <StatusBadge status={order.status} />
           <span className="text-sm text-slate-400">{fmtDate(order.createdAt)}</span>
         </div>
-        {CANCELLABLE.has(order.status) && (
-          <button
-            type="button"
-            onClick={() => { setShowCancel(true); setCancelError(""); }}
-            className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100"
-          >
-            <XCircle className="h-4 w-4" /> Cancel Order
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {order.status === "delivered" && invoiceList && (
+            <Link
+              href={`/patient/invoices/${invoiceList._id}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100"
+            >
+              <FileText className="h-4 w-4" /> View Invoice
+            </Link>
+          )}
+          {CANCELLABLE.has(order.status) && (
+            <button
+              type="button"
+              onClick={() => { setShowCancel(true); setCancelError(""); }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100"
+            >
+              <XCircle className="h-4 w-4" /> Cancel Order
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Cancel confirm panel */}

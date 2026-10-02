@@ -6,14 +6,17 @@ import { settingsApi, type WorkingHours, type Holiday } from "@/api/settings.api
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { TimePicker } from "@/components/ui/TimePicker";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { Plus, Pencil, Trash2, CheckCircle2, AlertTriangle } from "lucide-react";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const PROVINCES = ["AB","BC","MB","NB","NL","NS","NT","NU","ON","PE","QC","SK","YT"];
+const PROVINCE_OPTIONS = ["AB","BC","MB","NB","NL","NS","NT","NU","ON","PE","QC","SK","YT"]
+  .map((p) => ({ value: p, label: p }));
 
-const TAB_LABELS = ["Pharmacy Info", "Working Hours", "Holidays"] as const;
+const TAB_LABELS = ["Pharmacy Info", "Working Hours", "Holidays", "Policies"] as const;
 type Tab = (typeof TAB_LABELS)[number];
 
 /* ── Small section card ── */
@@ -149,6 +152,13 @@ export default function SettingsPage() {
     },
   });
 
+  /* ────────────────────────────────── POLICIES ── */
+  const policiesMut = useMutation({
+    mutationFn: (data: { emailVerificationRequired?: boolean }) =>
+      settingsApi.updatePolicies(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-settings"] }),
+  });
+
   /* ────────────────────────────────── RENDER ── */
   if (isLoading) {
     return (
@@ -239,18 +249,12 @@ export default function SettingsPage() {
                 onChange={(e) => setInfo((s) => ({ ...s, city: e.target.value }))}
                 placeholder="Toronto"
               />
-              <div className="space-y-1">
-                <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)]">
-                  Province
-                </label>
-                <select
-                  value={info.province}
-                  onChange={(e) => setInfo((s) => ({ ...s, province: e.target.value }))}
-                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-2 text-[var(--font-size-sm)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                >
-                  {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
+              <Select
+                label="Province"
+                value={info.province}
+                onChange={(v) => setInfo((s) => ({ ...s, province: v }))}
+                options={PROVINCE_OPTIONS}
+              />
               <Input
                 label="Postal Code"
                 value={info.postalCode}
@@ -312,18 +316,14 @@ export default function SettingsPage() {
                   {/* Time range */}
                   {h.isOpen ? (
                     <div className="flex items-center gap-2 flex-1">
-                      <input
-                        type="time"
+                      <TimePicker
                         value={h.openTime}
-                        onChange={(e) => setHourField(h.day, "openTime", e.target.value)}
-                        className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 py-1.5 text-[var(--font-size-sm)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                        onChange={(v) => setHourField(h.day, "openTime", v)}
                       />
                       <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">to</span>
-                      <input
-                        type="time"
+                      <TimePicker
                         value={h.closeTime}
-                        onChange={(e) => setHourField(h.day, "closeTime", e.target.value)}
-                        className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 py-1.5 text-[var(--font-size-sm)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                        onChange={(v) => setHourField(h.day, "closeTime", v)}
                       />
                     </div>
                   ) : (
@@ -402,6 +402,56 @@ export default function SettingsPage() {
                   ))}
               </div>
             )}
+          </div>
+        </Card>
+      )}
+
+      {/* ──────────────── POLICIES TAB ── */}
+      {activeTab === "Policies" && (
+        <Card title="Platform Policies">
+          <div className="space-y-1">
+            <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] mb-4">
+              These settings control registration and login behaviour across the platform. Changes take effect immediately.
+            </p>
+
+            {/* Policy row */}
+            <div className="flex items-start justify-between gap-6 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)]">
+                  Require email verification before login
+                </p>
+                <p className="mt-0.5 text-[var(--font-size-xs)] text-[var(--color-text-muted)]">
+                  When enabled, new registrants must click the verification link in their email before they can sign in.
+                  When disabled, accounts are activated instantly on registration.
+                </p>
+              </div>
+
+              {/* Toggle */}
+              <button
+                type="button"
+                disabled={policiesMut.isPending}
+                onClick={() =>
+                  policiesMut.mutate({
+                    emailVerificationRequired: !(settings?.emailVerificationRequired ?? false),
+                  })
+                }
+                className={[
+                  "relative shrink-0 mt-0.5 w-10 h-6 rounded-full transition-colors duration-[var(--transition-base)]",
+                  "focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-1",
+                  settings?.emailVerificationRequired
+                    ? "bg-[var(--color-primary)]"
+                    : "bg-[var(--color-border)]",
+                ].join(" ")}
+                aria-label={settings?.emailVerificationRequired ? "Disable email verification" : "Enable email verification"}
+              >
+                <span
+                  className={[
+                    "absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-[var(--transition-base)]",
+                    settings?.emailVerificationRequired ? "translate-x-4" : "translate-x-0",
+                  ].join(" ")}
+                />
+              </button>
+            </div>
           </div>
         </Card>
       )}

@@ -15,4 +15,13 @@ export const ordersApi = {
 
   addNote: (id: string, note: string) =>
     apiClient.post(`${BASE}/admin/${id}/notes`, { note }).then((r) => r.data),
+
+  overrideBatchAllocations: (
+    id: string,
+    allocations: Array<{
+      batchId: string; batchNumber: string; productId: string;
+      productName: string; expiryDate: string; allocatedQty: number;
+    }>,
+  ) =>
+    apiClient.patch(`${BASE}/admin/${id}/batch-allocations`, { allocations }).then((r) => r.data),
 };

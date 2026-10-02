@@ -54,3 +54,11 @@ export async function deleteHoliday(holidayId: string) {
   holiday.deleteOne();
   return settings.save();
 }
+
+export async function updatePolicies(data: { emailVerificationRequired?: boolean }) {
+  const settings = await getOrCreate();
+  if (data.emailVerificationRequired !== undefined) {
+    settings.emailVerificationRequired = data.emailVerificationRequired;
+  }
+  return settings.save();
+}

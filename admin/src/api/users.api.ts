@@ -10,7 +10,20 @@ interface UserListResponse {
   limit: number;
 }
 
+export interface UserSearchResult {
+  _id:      string;
+  uhid:     string | null;
+  fullName: string;
+  email:    string;
+  phone:    string | null;
+}
+
 export const usersApi = {
+  search: (q: string) =>
+    apiClient
+      .get<{ data: UserSearchResult[] }>(`${BASE}/search`, { params: { q } })
+      .then((r) => r.data.data),
+
   list: (params?: Record<string, unknown>) =>
     apiClient
       .get<{ data: AdminUser[]; meta: { page: number; limit: number; total: number; totalPages: number } }>(BASE, { params })

@@ -43,13 +43,23 @@ export interface IStatusHistory {
   note:      string;
 }
 
+export interface IBatchAllocation {
+  productId:   Types.ObjectId;
+  productName: string;
+  batchId:     Types.ObjectId;
+  batchNumber: string;
+  expiryDate:  Date;
+  allocatedQty: number;
+}
+
 export interface IOrder extends Document {
-  orderNumber:     string;
-  userId:          Types.ObjectId | null;
-  guestInfo:       { email: string; fullName: string; phone: string } | null;
-  items:           IOrderItem[];
-  shippingAddress: IShippingAddress;
-  billingAddress:  IShippingAddress;
+  orderNumber:      string;
+  userId:           Types.ObjectId | null;
+  guestInfo:        { email: string; fullName: string; phone: string } | null;
+  items:            IOrderItem[];
+  batchAllocations: IBatchAllocation[];
+  shippingAddress:  IShippingAddress;
+  billingAddress:   IShippingAddress;
   subtotal:        number; // cents
   taxBreakdown:    ITaxLine[];
   taxTotal:        number; // cents
@@ -82,6 +92,15 @@ const OrderSchema = new Schema<IOrder>(
       price:     { type: Number, required: true },
       quantity:  { type: Number, required: true, min: 1 },
       lineTotal: { type: Number, required: true },
+    }],
+    batchAllocations: [{
+      productId:   { type: Schema.Types.ObjectId, ref: "Product", required: true },
+      productName: { type: String, required: true },
+      batchId:     { type: Schema.Types.ObjectId, ref: "ProductBatch", required: true },
+      batchNumber: { type: String, required: true },
+      expiryDate:  { type: Date, required: true },
+      allocatedQty: { type: Number, required: true, min: 1 },
+      _id: false,
     }],
     shippingAddress: {
       type: new Schema({

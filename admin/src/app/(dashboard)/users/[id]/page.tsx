@@ -12,6 +12,7 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { ArrowLeft } from "lucide-react";
 import { fmtDate } from "@/lib/format";
+import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 
 const USER_STATUSES = ["active", "suspended", "deactivated"];
 
@@ -109,6 +110,11 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           Change Status
         </Button>
       </div>
+
+      {/* Patient direct thread — only shown for patient-role users */}
+      {(user.role as string) === "patient" && (
+        <AdminThreadPanel entityType="patient" entityId={id} />
+      )}
 
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Change User Status">

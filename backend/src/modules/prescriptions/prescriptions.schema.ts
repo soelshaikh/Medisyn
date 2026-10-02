@@ -1,6 +1,11 @@
 import mongoose, { type Document, Schema, type Types } from "mongoose";
 
-export type PrescriptionStatus = "active" | "expired" | "cancelled";
+export type PrescriptionStatus =
+  | "submitted"
+  | "received"
+  | "verified"
+  | "dispensed"
+  | "cancelled";
 
 export interface IStatusEntry {
   status:        string;
@@ -67,7 +72,11 @@ const PrescriptionSchema = new Schema<IPrescription>(
     previousPharmacyPhone: { type: String, default: "" },
     transferAll:           { type: Boolean, default: false },
     rxNumbers:             [{ type: String }],
-    status:                { type: String, enum: ["active","expired","cancelled"], default: "active" },
+    status: {
+      type:    String,
+      enum:    ["submitted","received","verified","dispensed","cancelled"],
+      default: "submitted",
+    },
     statusHistory:         [StatusEntrySchema],
     adminNotes:            { type: String, default: "", select: false },
   },

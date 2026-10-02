@@ -67,8 +67,9 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "medisyn-auth",
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+      onRehydrateStorage: (initialState) => (_hydratedState, error) => {
+        if (error) console.error("[auth] rehydration error:", error);
+        initialState.setHasHydrated(true);
       },
     },
   ),

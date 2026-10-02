@@ -25,6 +25,7 @@ export interface IPharmacySettings extends Document {
   province: string;
   postalCode: string;
   licenseNumber: string;
+  emailVerificationRequired: boolean;
   updatedAt: Date;
 }
 
@@ -52,6 +53,8 @@ const PharmacySettingsSchema = new Schema<IPharmacySettings>({
   province:     { type: String, default: "ON" },
   postalCode:   { type: String, default: "" },
   licenseNumber:{ type: String, default: "" },
+  /* ── Platform policies ── */
+  emailVerificationRequired: { type: Boolean, default: false },
 }, { timestamps: true });
 
 export const PharmacySettingsModel: mongoose.Model<IPharmacySettings> =

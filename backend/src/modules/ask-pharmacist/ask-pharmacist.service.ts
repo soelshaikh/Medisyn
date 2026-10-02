@@ -1,7 +1,7 @@
 import { AskPharmacistModel, type AskPharmacistStatus } from "./ask-pharmacist.schema";
 import { UserModel } from "@/modules/users/users.schema";
 import { AppError } from "@/common/middleware/error.middleware";
-import { EmailService } from "@/modules/email/email.service";
+import { EmailTriggerService } from "@/modules/email/email-trigger.service";
 import { createNotification, notifyAdmins } from "@/modules/notifications/notifications.service";
 import { logAction, type AuditActor } from "@/modules/audit/audit.service";
 import { logger } from "@/common/utils/logger";
@@ -124,11 +124,11 @@ async function _askPharmacistRespondedSideEffects(
     const patient = await UserModel.findById(req.patientId).select("email fullName").lean();
     if (!patient) return;
 
-    EmailService.sendAskPharmacistRespondedEmail(
-      { email: patient.email, fullName: patient.fullName },
-      req.subject,
-      responseText,
-    ).catch((e) => logger.error("[Email] ask-pharmacist responded", e));
+    void EmailTriggerService.fire("ask-pharmacist", "open", "answered", {
+      customer: { email: patient.email, fullName: patient.fullName },
+      refId:    String(req._id),
+      extra:    { questionSubject: req.subject, responseText },
+    });
 
     createNotification({
       userId:   String(req.patientId),

@@ -1,6 +1,10 @@
 import { PrescriptionModel, type PrescriptionStatus } from "./prescriptions.schema";
+import { UserModel } from "@/modules/users/users.schema";
 import { AppError } from "@/common/middleware/error.middleware";
+import { guardTransition } from "@/common/transitions/transition-guards";
+import { EmailTriggerService } from "@/modules/email/email-trigger.service";
 import { logAction, type AuditActor } from "@/modules/audit/audit.service";
+import { logger } from "@/common/utils/logger";
 
 export async function createPrescription(data: {
   patientId:             string;
@@ -23,15 +27,29 @@ export async function createPrescription(data: {
 }) {
   const prescription = await PrescriptionModel.create({
     ...data,
-    status: "active",
+    status: "submitted",
     statusHistory: [{
-      status:        "active",
+      status:        "submitted",
       changedAt:     new Date(),
       changedBy:     null,
       changedByName: "",
-      note:          "Prescription added by patient",
+      note:          "Prescription request submitted by patient",
     }],
   });
+
+  /* Fire email trigger for new prescription submission */
+  void (async () => {
+    try {
+      const patient = await UserModel.findById(data.patientId).select("email fullName").lean();
+      if (patient) {
+        void EmailTriggerService.fire("prescriptions", null, "submitted", {
+          customer: { email: patient.email, fullName: patient.fullName },
+          refId:    String(prescription._id).slice(-8).toUpperCase(),
+          status:   "submitted",
+        });
+      }
+    } catch (e) { logger.error("[Prescriptions] new submission email trigger failed", e); }
+  })();
 
   return prescription;
 }
@@ -113,9 +131,14 @@ export async function updatePrescriptionStatus(
   status: PrescriptionStatus,
   note: string,
   actor: AuditActor,
+  actorPermissions?: Set<string>,
 ) {
   const prescription = await PrescriptionModel.findById(id);
   if (!prescription) throw new AppError("Prescription not found", 404);
+
+  if (actorPermissions) {
+    guardTransition("prescriptions", prescription.status, status, actorPermissions);
+  }
 
   const oldStatus = prescription.status;
   prescription.status = status;
@@ -140,6 +163,20 @@ export async function updatePrescriptionStatus(
     details:    { note },
     ipAddress:  actor.ip,
   });
+
+  /* Fire email trigger for this status transition */
+  void (async () => {
+    try {
+      const patient = await UserModel.findById(prescription.patientId).select("email fullName").lean();
+      if (patient) {
+        void EmailTriggerService.fire("prescriptions", oldStatus, status, {
+          customer: { email: patient.email, fullName: patient.fullName },
+          refId:    String(prescription._id).slice(-8).toUpperCase(),
+          status,
+        });
+      }
+    } catch (e) { logger.error("[Prescriptions] status email trigger failed", e); }
+  })();
 
   return saved;
 }

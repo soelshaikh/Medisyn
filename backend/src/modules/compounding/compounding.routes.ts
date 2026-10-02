@@ -72,9 +72,14 @@ router.patch("/admin/:id/status", requirePermission("compounding.status.update")
     quoteAmount: z.number().int().min(0).nullable().optional(),
     quoteNote:   z.string().max(500).optional(),
   }).parse(req.body);
-  sendSuccess(res, await svc.updateCompoundingStatus(
-    String(req.params.id), status, note, actor(req), quoteAmount, quoteNote,
-  ), "Status updated");
+  sendSuccess(
+    res,
+    await svc.updateCompoundingStatus(
+      String(req.params.id), status, note, actor(req), quoteAmount, quoteNote,
+      new Set(req.user!.effectivePermissions),
+    ),
+    "Status updated",
+  );
 }));
 
 router.post("/admin/:id/notes", requirePermission("compounding.notes"), asyncHandler(async (req, res) => {

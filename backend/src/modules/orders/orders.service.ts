@@ -1,14 +1,18 @@
-import { OrderModel, type IShippingAddress, type OrderStatus } from "./orders.schema";
+import { OrderModel, type IShippingAddress, type OrderStatus, type IBatchAllocation } from "./orders.schema";
 import { CartModel } from "@/modules/cart/cart.schema";
 import { ProductModel } from "@/modules/products/products.schema";
 import { UserModel } from "@/modules/users/users.schema";
 import { deductStock, restoreStock } from "@/modules/inventory/inventory.service";
+import { InventoryModel } from "@/modules/inventory/inventory.schema";
+import { deductBatchStock, restoreBatchStock } from "@/modules/inventory/batch.service";
 import { validateCoupon, incrementUsage } from "@/modules/coupons/coupons.service";
 import { calculateTax } from "@/modules/tax/tax.service";
 import { AppError } from "@/common/middleware/error.middleware";
-import { EmailService } from "@/modules/email/email.service";
+import { guardTransition } from "@/common/transitions/transition-guards";
+import { EmailTriggerService } from "@/modules/email/email-trigger.service";
 import { createNotification } from "@/modules/notifications/notifications.service";
 import { logAction, type AuditActor } from "@/modules/audit/audit.service";
+import { createFromOrder } from "@/modules/invoices/invoice.service";
 import { logger } from "@/common/utils/logger";
 
 async function generateOrderNumber(): Promise<string> {
@@ -72,14 +76,34 @@ export async function checkout(input: CheckoutInput) {
   const tax           = calculateTax(taxableAmount, shippingAddress.province);
   const total         = taxableAmount + tax.total;
 
+  /* Deduct aggregate stock (existing behaviour, always runs) */
   await deductStock(items.map((i) => ({ productId: String(i.productId), quantity: i.quantity })));
 
+  /* Batch allocation — runs per item only when batch tracking is enabled */
   const orderNumber = await generateOrderNumber();
+  const batchAllocations: IBatchAllocation[] = [];
+
+  for (const item of items) {
+    const pid = String(item.productId);
+    const inv  = await InventoryModel.findOne({ productId: pid }).lean();
+    if (inv?.batchTrackingEnabled) {
+      try {
+        const allocs = await deductBatchStock(pid, item.name, item.quantity, orderNumber, orderNumber);
+        batchAllocations.push(...allocs as unknown as IBatchAllocation[]);
+      } catch (batchErr) {
+        /* Batch allocation failed — log and continue without batch tracking for this item.
+           Aggregate stock is already deducted above; admin can resolve manually. */
+        logger.warn("[Orders] batch allocation failed for product", { pid, batchErr });
+      }
+    }
+  }
+
   const order = await OrderModel.create({
     orderNumber,
     userId:     userId ?? null,
     guestInfo:  userId ? null : guestInfo,
     items,
+    batchAllocations,
     shippingAddress,
     billingAddress: resolvedBillingAddress,
     subtotal,
@@ -103,11 +127,12 @@ export async function checkout(input: CheckoutInput) {
   const totalStr  = `$${(total / 100).toFixed(2)} CAD`;
 
   if (email && fullName) {
-    EmailService.sendOrderConfirmedEmail(
-      { email, fullName },
-      orderNumber,
-      totalStr,
-    ).catch(() => null);
+    void EmailTriggerService.fire("orders", null, "pending", {
+      customer: { email, fullName },
+      refId:    orderNumber,
+      status:   "pending",
+      extra:    { total: totalStr },
+    });
   }
 
   await logAction({
@@ -168,10 +193,19 @@ export async function listAdminOrders(filters: {
 }
 
 export async function updateOrderStatus(
-  id: string, status: OrderStatus, note: string, changedBy: string, actor?: AuditActor,
+  id: string,
+  status: OrderStatus,
+  note: string,
+  changedBy: string,
+  actor?: AuditActor,
+  actorPermissions?: Set<string>,
 ) {
   const order = await OrderModel.findById(id);
   if (!order) throw new AppError("Order not found", 404);
+
+  if (actorPermissions) {
+    guardTransition("orders", order.status, status, actorPermissions);
+  }
 
   const oldStatus = order.status;
 
@@ -198,14 +232,22 @@ export async function updateOrderStatus(
     ipAddress:  actor?.ip,
   });
 
-  /* Fire-and-forget: email + notification */
-  void _orderStatusSideEffects(saved, status);
+  /* Fire-and-forget: email (config-driven) + notification */
+  void _orderStatusSideEffects(saved, oldStatus, status);
+
+  /* Auto-generate invoice when order reaches delivered */
+  if (status === "delivered") {
+    createFromOrder(String(saved._id)).catch((err) =>
+      logger.error("[Invoices] auto-create failed", err),
+    );
+  }
 
   return saved;
 }
 
 async function _orderStatusSideEffects(
   order: Awaited<ReturnType<typeof OrderModel.prototype.save>>,
+  oldStatus: string,
   status: OrderStatus,
 ) {
   try {
@@ -221,11 +263,11 @@ async function _orderStatusSideEffects(
     }
 
     if (recipientEmail && recipientName) {
-      EmailService.sendOrderStatusChangedEmail(
-        { email: recipientEmail, fullName: recipientName },
-        order.orderNumber,
+      void EmailTriggerService.fire("orders", oldStatus, status, {
+        customer: { email: recipientEmail, fullName: recipientName },
+        refId:    order.orderNumber,
         status,
-      ).catch((e) => logger.error("[Email] order status", e));
+      });
     }
 
     if (order.userId) {
@@ -258,6 +300,7 @@ export async function cancelMyOrder(
     );
   }
 
+  const prevStatus = order.status;
   order.status = "cancelled";
   order.statusHistory.push({
     status:    "cancelled",
@@ -267,15 +310,29 @@ export async function cancelMyOrder(
   });
   await order.save();
 
-  /* Restore inventory */
+  /* Restore aggregate inventory */
   const stockItems = order.items.map((i) => ({
     productId: String(i.productId),
     quantity:  i.quantity,
   }));
   void restoreStock(stockItems).catch((e) => logger.error("[Orders] restoreStock failed", e));
 
+  /* Restore batch stock if allocations exist */
+  if (order.batchAllocations?.length) {
+    const batchAllocs = order.batchAllocations.map((a) => ({
+      productId:   String(a.productId),
+      productName: a.productName,
+      batchId:     String(a.batchId),
+      batchNumber: a.batchNumber,
+      expiryDate:  a.expiryDate,
+      allocatedQty: a.allocatedQty,
+    }));
+    void restoreBatchStock(batchAllocs, String(order._id), order.orderNumber)
+      .catch((e) => logger.error("[Orders] restoreBatchStock failed", e));
+  }
+
   /* Notify */
-  void _orderStatusSideEffects(order as never, "cancelled");
+  void _orderStatusSideEffects(order as never, prevStatus, "cancelled");
 
   return order;
 }
@@ -325,6 +382,92 @@ export async function trackOrder(orderNumber: string, email: string) {
       note:      h.note,
     })),
   };
+}
+
+/**
+ * Admin overrides the batch allocations for an order.
+ * Old batch quantities are restored, new FEFO allocation is applied.
+ * Only allowed on non-delivered, non-cancelled orders.
+ */
+export async function overrideBatchAllocations(
+  orderId: string,
+  newAllocations: Array<{ batchId: string; batchNumber: string; productId: string; productName: string; expiryDate: Date; allocatedQty: number }>,
+  actor: AuditActor,
+) {
+  const order = await OrderModel.findById(orderId);
+  if (!order) throw new AppError("Order not found", 404);
+  if (["delivered", "cancelled"].includes(order.status)) {
+    throw new AppError("Cannot modify batch allocations on a completed or cancelled order", 409);
+  }
+
+  /* Restore existing batch allocations */
+  if (order.batchAllocations?.length) {
+    const existing = order.batchAllocations.map((a) => ({
+      productId:   String(a.productId),
+      productName: a.productName,
+      batchId:     String(a.batchId),
+      batchNumber: a.batchNumber,
+      expiryDate:  a.expiryDate,
+      allocatedQty: a.allocatedQty,
+    }));
+    await restoreBatchStock(existing, orderId, order.orderNumber);
+  }
+
+  /* Apply new batch allocations by deducting per-batch directly */
+  const { ProductBatchModel } = await import("@/modules/inventory/productBatch.schema");
+  const { InventoryMovementModel } = await import("@/modules/inventory/inventoryMovement.schema");
+  const { InventoryModel: InvModel } = await import("@/modules/inventory/inventory.schema");
+
+  for (const alloc of newAllocations) {
+    const batch = await ProductBatchModel.findById(alloc.batchId);
+    if (!batch) throw new AppError(`Batch ${alloc.batchNumber} not found`, 404);
+    if (batch.currentQty < alloc.allocatedQty) {
+      throw new AppError(`Insufficient stock in batch ${alloc.batchNumber}: available ${batch.currentQty}`, 409);
+    }
+
+    const qtyBefore = batch.currentQty;
+    const qtyAfter  = qtyBefore - alloc.allocatedQty;
+    batch.currentQty = qtyAfter;
+    if (batch.currentQty === 0) batch.status = "depleted";
+    await batch.save();
+
+    await InventoryMovementModel.create({
+      productId:    alloc.productId,
+      batchId:      batch._id,
+      batchNumber:  batch.batchNumber,
+      movementType: "order_fulfilled",
+      qty:          -alloc.allocatedQty,
+      qtyBefore,
+      qtyAfter,
+      orderId,
+      orderNumber:  order.orderNumber,
+      performedBy:  actor.id,
+      notes:        "Admin batch override",
+    });
+
+    /* Sync aggregate */
+    const result = await ProductBatchModel.aggregate<{ total: number }>([
+      { $match: { productId: batch.productId, status: "active" } },
+      { $group: { _id: null, total: { $sum: "$currentQty" } } },
+    ]);
+    await InvModel.findOneAndUpdate({ productId: batch.productId }, { quantity: result[0]?.total ?? 0 });
+  }
+
+  order.batchAllocations = newAllocations as unknown as IBatchAllocation[];
+  await order.save();
+
+  await logAction({
+    userId:     actor.id,
+    userEmail:  actor.email,
+    actorName:  actor.name,
+    action:     "order.batch_allocations.override",
+    resource:   "order",
+    resourceId: orderId,
+    details:    { allocationCount: newAllocations.length },
+    ipAddress:  actor.ip,
+  });
+
+  return order;
 }
 
 export async function addAdminNote(id: string, note: string, actor?: AuditActor) {

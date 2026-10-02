@@ -25,6 +25,7 @@ export interface IUser extends Document {
   directPermissions: string[];
   fullName: string;
   phone?: string;
+  uhid?: string;
   status: UserStatus;
   emailVerified: boolean;
   verificationToken?: string;
@@ -45,6 +46,7 @@ const schema = new mongoose.Schema<IUser>(
     directPermissions: { type: [String], default: [] },
     fullName:     { type: String, required: true, trim: true },
     phone:        { type: String },
+    uhid:         { type: String, unique: true, sparse: true },
     status: {
       type: String,
       required: true,

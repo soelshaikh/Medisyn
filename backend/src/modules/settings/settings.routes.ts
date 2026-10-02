@@ -67,4 +67,12 @@ router.delete("/holidays/:id", requirePermission("settings.manage"), asyncHandle
   sendSuccess(res, await svc.deleteHoliday(String(req.params.id)), "Holiday deleted");
 }));
 
+/* PATCH /settings/policies */
+router.patch("/policies", requirePermission("settings.manage"), asyncHandler(async (req, res) => {
+  const dto = z.object({
+    emailVerificationRequired: z.boolean().optional(),
+  }).parse(req.body);
+  sendSuccess(res, await svc.updatePolicies(dto), "Policies updated");
+}));
+
 export default router;

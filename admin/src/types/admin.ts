@@ -82,23 +82,68 @@ export interface DashboardMetrics {
   };
 }
 
+export interface BatchAllocation {
+  productId:   string;
+  productName: string;
+  batchId:     string;
+  batchNumber: string;
+  expiryDate:  string;
+  allocatedQty: number;
+}
+
+export interface ProductBatch {
+  _id:              string;
+  productId:        string;
+  batchNumber:      string;
+  expiryDate:       string;
+  manufacturedDate: string | null;
+  receivedDate:     string;
+  initialQty:       number;
+  currentQty:       number;
+  status:           "active" | "depleted" | "expired" | "recalled";
+  notes:            string;
+  recallReason:     string | null;
+  recalledAt:       string | null;
+  supplier:         string | null;
+  purchaseOrderRef: string | null;
+  createdAt:        string;
+  updatedAt:        string;
+}
+
+export interface InventoryMovement {
+  _id:          string;
+  productId:    string;
+  batchId:      string;
+  batchNumber:  string;
+  movementType: string;
+  qty:          number;
+  qtyBefore:    number;
+  qtyAfter:     number;
+  orderId:      string | null;
+  orderNumber:  string | null;
+  performedBy:  string | null;
+  notes:        string;
+  createdAt:    string;
+}
+
 export interface AdminOrder {
-  _id:             string;
-  orderNumber:     string;
-  userId:          { _id: string; email: string; fullName: string; phone?: string } | string | null;
-  guestInfo:       { email: string; fullName: string; phone: string } | null;
-  items:           Array<{ name: string; sku: string; price: number; quantity: number; lineTotal: number }>;
-  shippingAddress: { fullName: string; city: string; province: string; postalCode: string };
-  subtotal:        number;
-  taxTotal:        number;
-  discountAmount:  number;
-  total:           number;
-  couponCode:      string | null;
-  paymentMethod:   string;
-  status:          string;
-  statusHistory:   StatusEntry[];
-  notes:           string;
-  createdAt:       string;
+  _id:              string;
+  orderNumber:      string;
+  userId:           { _id: string; email: string; fullName: string; phone?: string } | string | null;
+  guestInfo:        { email: string; fullName: string; phone: string } | null;
+  items:            Array<{ name: string; sku: string; price: number; quantity: number; lineTotal: number }>;
+  batchAllocations: BatchAllocation[];
+  shippingAddress:  { fullName: string; city: string; province: string; postalCode: string };
+  subtotal:         number;
+  taxTotal:         number;
+  discountAmount:   number;
+  total:            number;
+  couponCode:       string | null;
+  paymentMethod:    string;
+  status:           string;
+  statusHistory:    StatusEntry[];
+  notes:            string;
+  createdAt:        string;
 }
 
 export interface AdminBrand {
@@ -135,7 +180,13 @@ export interface AdminProduct {
   weight:              number | null;
   metaTitle:           string;
   metaDescription:     string;
-  inventory?:          { quantity: number; lowStockThreshold: number; trackInventory: boolean };
+  inventory?:          {
+    quantity:             number;
+    lowStockThreshold:    number;
+    trackInventory:       boolean;
+    batchTrackingEnabled: boolean;
+    nearExpiryAlertDays:  number;
+  };
   createdAt:           string;
   updatedAt:           string;
 }
@@ -264,6 +315,168 @@ export interface AdminAilmentRequest {
   statusHistory: StatusEntry[];
   adminNotes:   string;
   createdAt:    string;
+}
+
+export type InvoiceStatus        = "draft" | "finalized" | "cancelled" | "system_cancelled";
+export type InvoicePaymentStatus = "unpaid" | "partial_paid" | "paid" | "overpaid" | "cancelled" | "system_cancelled";
+export type PaymentMethod        = "cash" | "card" | "e_transfer" | "cheque";
+
+export interface InvoiceAddress {
+  fullName:     string;
+  phone:        string;
+  addressLine1: string;
+  addressLine2?: string;
+  city:         string;
+  province:     string;
+  postalCode:   string;
+  country:      string;
+}
+
+export interface InvoiceTaxLine {
+  label:  string;
+  rate:   number;
+  amount: number;
+}
+
+/* Separate collection — returned as lineItems[] in detail view */
+export interface InvoiceLineItem {
+  _id:            string;
+  invoiceId:      string;
+  productId?:     string;
+  name:           string;
+  sku:            string;
+  description?:   string;
+  quantity:       number;
+  unitPrice:      number;
+  discountAmount: number;
+  lineTotal:      number;
+  sortOrder:      number;
+  createdAt:      string;
+  updatedAt:      string;
+}
+
+export interface InvoiceLineItemHistory {
+  _id:        string;
+  lineItemId: string;
+  invoiceId:  string;
+  action:     "created" | "updated" | "deleted";
+  before?:    Record<string, unknown>;
+  after?:     Record<string, unknown>;
+  changedBy:  { id: string; name: string; email: string };
+  reason?:    string;
+  changedAt:  string;
+}
+
+export type PaymentTransactionStatus = "pending" | "completed" | "failed" | "refunded" | "cancelled";
+export type PaymentTransactionType   = "payment" | "refund";
+
+export interface PaymentStatusHistoryEntry {
+  status:    PaymentTransactionStatus;
+  changedBy: { id: string; name: string; email: string } | null;
+  changedAt: string;
+  note?:     string;
+}
+
+export interface PaymentTransaction {
+  _id:               string;
+  type:              PaymentTransactionType;
+  amount:            number;
+  currency:          string;
+  method:            PaymentMethod;
+  reference?:        string;
+  status:            PaymentTransactionStatus;
+  payerId?:          string;
+  payerName?:        string;
+  payerEmail?:       string;
+  amountAllocated:   number;
+  amountUnallocated: number;
+  recordedBy:        { id: string; name: string; email: string };
+  /* Refund-specific */
+  refundOf?:          string | PaymentTransaction;
+  refundReason?:      string;
+  processedBy?:       { id: string; name: string; email: string };
+  processedAt?:       string;
+  failureReason?:     string;
+  financiallySettled: boolean;
+  statusHistory:      PaymentStatusHistoryEntry[];
+  notes?:             string;
+  createdAt:          string;
+  updatedAt:          string;
+  /* Populated in detail view */
+  allocations?:       PaymentAllocation[];
+  refunds?:           PaymentTransaction[];
+}
+
+export interface PaymentAllocation {
+  _id:           string;
+  transactionId: string | PaymentTransaction;
+  invoiceId:     string;
+  amount:        number;
+  allocatedBy:   { id: string; name: string; email: string };
+  notes?:        string;
+  createdAt:     string;
+}
+
+export interface AdminInvoice {
+  _id:            string;
+  invoiceNumber:  string;
+  type:           "ecommerce" | "adhoc";
+  status:         InvoiceStatus;
+  paymentStatus:  InvoicePaymentStatus;
+  orderId?:       string;
+  orderNumber?:   string;
+  customerId?:    string;
+  customerName:   string;
+  customerEmail:  string;
+  billingAddress: InvoiceAddress;
+  subtotal:       number;
+  discountAmount: number;
+  couponCode?:    string;
+  taxLines:       InvoiceTaxLine[];
+  taxTotal:       number;
+  total:          number;
+  amountPaid:     number;
+  amountDue:      number;
+  notes?:         string;
+  internalNotes?: string;
+  guestToken?:    string;
+  issuedAt?:      string;
+  cancelledAt?:   string;
+  cancelReason?:  string;
+  createdAt:      string;
+  updatedAt:      string;
+  /* Populated in detail view */
+  lineItems?:     InvoiceLineItem[];
+}
+
+export interface RefundReport {
+  totalRefunded:  number;
+  pendingAmount:  number;
+  pendingCount:   number;
+  completedCount: number;
+  failedCount:    number;
+  cancelledCount: number;
+  byMethod: {
+    cash:      number;
+    card:      number;
+    eTransfer: number;
+    cheque:    number;
+  };
+}
+
+export interface InvoiceSummary {
+  totalRevenue:   number;
+  totalTax:       number;
+  totalDiscount:  number;
+  totalPaid:      number;
+  totalDue:       number;
+  count:          number;
+  ecommerceCount: number;
+  adhocCount:     number;
+  unpaidCount:    number;
+  partialCount:   number;
+  paidCount:      number;
+  refunds:        RefundReport;
 }
 
 export interface ListResponse<T> {

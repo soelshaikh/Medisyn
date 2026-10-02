@@ -10,6 +10,7 @@ import { fmt12h } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarX2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import SlotCalendar from "@/components/patient/SlotCalendar";
 
 /* ── No-slot fallback form ── */
 function NoSlotForm({
@@ -268,44 +269,14 @@ export default function AppointmentForm() {
           />
         ) : (
           <div>
-            <label className={labelClass}>Available slots</label>
             {loadingSlots ? (
               <p className="text-sm text-slate-500">Loading available slots…</p>
             ) : (
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {slots.map((slot) => {
-                  const full = slot.isFullyBooked && slot.capacityType === "strict";
-                  return (
-                    <button
-                      key={slot._id}
-                      type="button"
-                      disabled={full}
-                      onClick={() => setSelectedSlot(selectedSlot?._id === slot._id ? null : slot)}
-                      className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
-                        selectedSlot?._id === slot._id
-                          ? "border-brand-500 bg-brand-50 text-brand-900"
-                          : full
-                          ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
-                          : "border-slate-200 hover:border-brand-300"
-                      }`}
-                    >
-                      <p className="font-semibold">
-                        {new Date(slot.date).toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })}
-                      </p>
-                      <p className="text-slate-500">{fmt12h(slot.startTime)} – {fmt12h(slot.endTime)}</p>
-                      {full ? (
-                        <p className="mt-1 text-xs text-red-500">Fully booked</p>
-                      ) : (
-                        <p className="mt-1 text-xs text-green-600">
-                          {slot.capacityType === "strict"
-                            ? `${slot.spotsLeft} spot${slot.spotsLeft !== 1 ? "s" : ""} left`
-                            : "Open capacity"}
-                        </p>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              <SlotCalendar
+                slots={slots}
+                selectedSlot={selectedSlot}
+                onSelect={setSelectedSlot}
+              />
             )}
           </div>
         )

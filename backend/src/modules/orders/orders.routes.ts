@@ -26,9 +26,10 @@ router.get(   "/my/:id",          authenticate, ctrl.myOrder);
 router.patch( "/my/:id/cancel",   authenticate, ctrl.cancelMyOrder);
 
 /* Admin */
-router.get(  "/admin",            authenticate, requirePermission("orders.read"),          ctrl.adminList);
-router.get(  "/admin/:id",        authenticate, requirePermission("orders.read"),          ctrl.adminGet);
-router.patch("/admin/:id/status", authenticate, requirePermission("orders.status.update"), ctrl.updateStatus);
-router.post( "/admin/:id/notes",  authenticate, requirePermission("orders.update"),        ctrl.addNote);
+router.get(  "/admin",                         authenticate, requirePermission("orders.read"),          ctrl.adminList);
+router.get(  "/admin/:id",                     authenticate, requirePermission("orders.read"),          ctrl.adminGet);
+router.patch("/admin/:id/status",              authenticate, requirePermission("orders.status.update"), ctrl.updateStatus);
+router.post( "/admin/:id/notes",               authenticate, requirePermission("orders.update"),        ctrl.addNote);
+router.patch("/admin/:id/batch-allocations",   authenticate, requirePermission("orders.status.update"), ctrl.overrideBatchAllocations);
 
 export default router;

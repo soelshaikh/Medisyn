@@ -89,11 +89,42 @@ export const inventoryApi = {
   lowStock: () =>
     apiClient.get("/admin/inventory/low-stock").then((r) => r.data.data),
 
+  nearExpiry: (days?: number) =>
+    apiClient.get("/admin/inventory/near-expiry", { params: days ? { days } : {} }).then((r) => r.data.data),
+
+  allMovements: (params?: Record<string, unknown>) =>
+    apiClient.get("/admin/inventory/movements", { params }).then((r) => r.data.data),
+
+  get: (productId: string) =>
+    apiClient.get(`/admin/inventory/${productId}`).then((r) => r.data.data),
+
   update: (productId: string, data: Record<string, unknown>) =>
     apiClient.patch(`/admin/inventory/${productId}`, data).then((r) => r.data),
 
   adjust: (productId: string, delta: number) =>
     apiClient.post(`/admin/inventory/${productId}/adjust`, { delta }).then((r) => r.data),
+
+  /* Batch endpoints */
+  listBatches: (productId: string) =>
+    apiClient.get(`/admin/inventory/${productId}/batches`).then((r) => r.data.data),
+
+  addBatch: (productId: string, data: Record<string, unknown>) =>
+    apiClient.post(`/admin/inventory/${productId}/batches`, data).then((r) => r.data.data),
+
+  updateBatch: (productId: string, batchId: string, data: Record<string, unknown>) =>
+    apiClient.patch(`/admin/inventory/${productId}/batches/${batchId}`, data).then((r) => r.data.data),
+
+  recallBatch: (productId: string, batchId: string, reason: string) =>
+    apiClient.post(`/admin/inventory/${productId}/batches/${batchId}/recall`, { reason }).then((r) => r.data.data),
+
+  adjustBatch: (productId: string, batchId: string, delta: number, reason: string) =>
+    apiClient.post(`/admin/inventory/${productId}/batches/${batchId}/adjust`, { delta, reason }).then((r) => r.data.data),
+
+  batchMovements: (productId: string, batchId: string, params?: Record<string, unknown>) =>
+    apiClient.get(`/admin/inventory/${productId}/batches/${batchId}/movements`, { params }).then((r) => r.data.data),
+
+  productMovements: (productId: string, params?: Record<string, unknown>) =>
+    apiClient.get(`/admin/inventory/${productId}/movements`, { params }).then((r) => r.data.data),
 };
 
 export const couponsApi = {

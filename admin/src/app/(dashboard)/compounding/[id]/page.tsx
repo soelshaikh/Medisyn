@@ -14,14 +14,40 @@ import { Spinner } from "@/components/ui/Spinner";
 import { SecureDocumentLink } from "@/components/common/SecureDocumentLink";
 import { Select } from "@/components/ui/Select";
 import { fmtDate } from "@/lib/format";
+import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
-const COMPOUNDING_STATUSES = [
-  "submitted", "reviewing", "quote_sent", "approved", "in_production", "ready", "delivered", "cancelled",
-];
+/** Forward-only transitions per compounding status, with required permission per move. */
+const COMPOUNDING_TRANSITIONS: Record<string, Array<{ to: string; permission: string }>> = {
+  submitted:     [
+    { to: "reviewing",     permission: "compounding.status.update" },
+    { to: "cancelled",     permission: "compounding.status.update" },
+  ],
+  reviewing:     [
+    { to: "quote_sent",    permission: "compounding.status.update" },
+    { to: "cancelled",     permission: "compounding.status.update" },
+  ],
+  quote_sent:    [
+    { to: "approved",      permission: "compounding.status.approve" },
+    { to: "cancelled",     permission: "compounding.status.update" },
+  ],
+  approved:      [
+    { to: "in_production", permission: "compounding.status.update" },
+    { to: "cancelled",     permission: "compounding.status.update" },
+  ],
+  in_production: [
+    { to: "ready",         permission: "compounding.status.complete" },
+    { to: "cancelled",     permission: "compounding.status.update" },
+  ],
+  ready: [
+    { to: "delivered",     permission: "compounding.status.complete" },
+  ],
+};
 
 export default function CompoundingDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const qc     = useQueryClient();
+  const { id }            = use(params);
+  const qc                = useQueryClient();
+  const { hasPermission } = useAdminAuthStore();
   const [statusModal, setStatusModal] = useState(false);
   const [noteModal,   setNoteModal]   = useState(false);
   const [newStatus,   setNewStatus]   = useState("");
@@ -54,6 +80,16 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
   if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
   if (!req)      return <p className="text-[var(--color-text-muted)]">Request not found.</p>;
 
+  const availableTransitions = (COMPOUNDING_TRANSITIONS[req.status] ?? [])
+    .filter((t) => hasPermission(t.permission));
+  const canUpdateStatus = availableTransitions.length > 0;
+
+  function openStatusModal() {
+    const first = availableTransitions[0]?.to ?? "";
+    setNewStatus(first);
+    setStatusModal(true);
+  }
+
   return (
     <div className="space-y-6 max-w-3xl">
       <PageHeader
@@ -63,7 +99,7 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
         actions={
           <div className="flex items-center gap-2">
             <StatusBadge status={req.status} />
-            <Button variant="outline" size="sm" onClick={() => { setNewStatus(req.status); setStatusModal(true); }}>
+            <Button variant="outline" size="sm" onClick={openStatusModal} disabled={!canUpdateStatus}>
               Update Status
             </Button>
             <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
@@ -125,6 +161,8 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
         <StatusHistory history={req.statusHistory} />
       </div>
 
+      <AdminThreadPanel entityType="compounding" entityId={id} />
+
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Update Compounding Status">
         <div className="space-y-4">
@@ -132,7 +170,10 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
             label="Status"
             value={newStatus}
             onChange={(v) => setNewStatus(v)}
-            options={COMPOUNDING_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }))}
+            options={availableTransitions.map((t) => ({
+              value: t.to,
+              label: t.to.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+            }))}
           />
           {(newStatus === "quote_sent" || newStatus === "approved") && (
             <>

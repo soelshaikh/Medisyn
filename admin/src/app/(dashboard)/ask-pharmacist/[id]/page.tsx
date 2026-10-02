@@ -14,6 +14,7 @@ import { MessageCircle } from "lucide-react";
 import { SecureDocumentLink } from "@/components/common/SecureDocumentLink";
 import { Select } from "@/components/ui/Select";
 import { fmtDate, fmtDateTime } from "@/lib/format";
+import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 
 const ASK_STATUSES = ["open", "answered", "closed"];
 
@@ -106,6 +107,8 @@ export default function AskPharmacistDetailPage({ params }: { params: Promise<{ 
         <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)] mb-4">Status History</h2>
         <StatusHistory history={ask.statusHistory} />
       </div>
+
+      <AdminThreadPanel entityType="ask_pharmacist" entityId={id} />
 
       {/* Respond modal */}
       <Modal open={respondModal} onClose={() => setRespondModal(false)} title="Respond to Question" width="max-w-2xl">

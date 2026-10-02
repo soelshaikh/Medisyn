@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { fmtDate, fmtDateTime } from "@/lib/format";
+import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 import { MessageCircle } from "lucide-react";
 import type { AdminAilmentRequest } from "@/types/admin";
 
@@ -162,6 +163,8 @@ export default function AilmentRequestDetailPage({ params }: { params: Promise<{
         <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)] mb-4">Status History</h2>
         <StatusHistory history={req.statusHistory} />
       </div>
+
+      <AdminThreadPanel entityType="minor_ailment" entityId={id} />
 
       {/* Respond modal */}
       <Modal open={respondModal} onClose={() => setRespondModal(false)} title="Respond to Request" width="max-w-2xl">

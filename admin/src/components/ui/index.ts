@@ -11,3 +11,5 @@ export { DataTable } from "./DataTable";
 export { Pagination } from "./Pagination";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { Tooltip } from "./Tooltip";
+export { DateRangePicker } from "./DateRangePicker";
+export type { DateRangeValue } from "./DateRangePicker";

@@ -1,7 +1,8 @@
 import { CompoundingModel, type CompoundingStatus } from "./compounding.schema";
 import { UserModel } from "@/modules/users/users.schema";
 import { AppError } from "@/common/middleware/error.middleware";
-import { EmailService } from "@/modules/email/email.service";
+import { guardTransition } from "@/common/transitions/transition-guards";
+import { EmailTriggerService } from "@/modules/email/email-trigger.service";
 import { createNotification, notifyAdmins } from "@/modules/notifications/notifications.service";
 import { logAction, type AuditActor } from "@/modules/audit/audit.service";
 import { logger } from "@/common/utils/logger";
@@ -88,9 +89,14 @@ export async function updateCompoundingStatus(
   actor: AuditActor,
   quoteAmount?: number | null,
   quoteNote?: string,
+  actorPermissions?: Set<string>,
 ) {
   const request = await CompoundingModel.findById(id);
   if (!request) throw new AppError("Request not found", 404);
+
+  if (actorPermissions) {
+    guardTransition("compounding", request.status, status, actorPermissions);
+  }
 
   const oldStatus = request.status;
   request.status = status;
@@ -122,25 +128,26 @@ export async function updateCompoundingStatus(
     ipAddress:  actor.ip,
   });
 
-  /* Fire-and-forget: email + patient notification */
-  void _compoundingStatusSideEffects(saved, status);
+  /* Fire-and-forget: email (config-driven) + patient notification */
+  void _compoundingStatusSideEffects(saved, oldStatus, status);
 
   return saved;
 }
 
 async function _compoundingStatusSideEffects(
   req: Awaited<ReturnType<typeof CompoundingModel.prototype.save>>,
+  oldStatus: string,
   status: CompoundingStatus,
 ) {
   try {
     const patient = await UserModel.findById(req.patientId).select("email fullName").lean();
     if (!patient) return;
 
-    EmailService.sendCompoundingStatusChangedEmail(
-      { email: patient.email, fullName: patient.fullName },
-      String(req._id).slice(-8).toUpperCase(),
+    void EmailTriggerService.fire("compounding", oldStatus, status, {
+      customer: { email: patient.email, fullName: patient.fullName },
+      refId:    String(req._id).slice(-8).toUpperCase(),
       status,
-    ).catch((e) => logger.error("[Email] compounding status", e));
+    });
 
     createNotification({
       userId:   String(req.patientId),

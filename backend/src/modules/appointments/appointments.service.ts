@@ -1,7 +1,7 @@
 import { AppointmentBookingModel, type AppointmentStatus } from "./appointments.schema";
 import { AppointmentSlotModel } from "@/modules/appointment-slots/appointment-slots.schema";
 import { AppError } from "@/common/middleware/error.middleware";
-import { EmailService } from "@/modules/email/email.service";
+import { EmailTriggerService } from "@/modules/email/email-trigger.service";
 import { UserModel } from "@/modules/users/users.schema";
 import { createNotification, notifyAdmins } from "@/modules/notifications/notifications.service";
 import { logAction, type AuditActor } from "@/modules/audit/audit.service";
@@ -206,13 +206,14 @@ export async function updateBookingStatus(
   });
 
   /* Fire-and-forget: email + notification */
-  void _appointmentStatusSideEffects(saved, status);
+  void _appointmentStatusSideEffects(saved, oldStatus, status);
 
   return saved;
 }
 
 async function _appointmentStatusSideEffects(
   booking: Awaited<ReturnType<typeof AppointmentBookingModel.prototype.save>>,
+  oldStatus: AppointmentStatus,
   status: AppointmentStatus,
 ) {
   try {
@@ -231,12 +232,11 @@ async function _appointmentStatusSideEffects(
       : "—";
     const serviceName = svcDoc?.name ?? "Appointment";
 
-    EmailService.sendAppointmentStatusChangedEmail(
-      { email: patient.email, fullName: patient.fullName },
-      serviceName,
-      dateTime,
-      status,
-    ).catch((e) => logger.error("[Email] appointment status", e));
+    void EmailTriggerService.fire("appointments", oldStatus, status, {
+      customer: { email: patient.email, fullName: patient.fullName },
+      refId:    String(booking._id),
+      extra:    { service: serviceName, dateTime },
+    });
 
     createNotification({
       userId:   String(booking.patientId),

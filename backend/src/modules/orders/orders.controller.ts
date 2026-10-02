@@ -98,6 +98,7 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
   }).parse(req.body);
   sendSuccess(res, await svc.updateOrderStatus(
     String(req.params.id), status, note, req.user!._id, actor(req),
+    new Set(req.user!.effectivePermissions),
   ), "Order status updated");
 });
 
@@ -112,5 +113,24 @@ export const cancelMyOrder = asyncHandler(async (req: Request, res: Response) =>
     res,
     await svc.cancelMyOrder(String(req.params.id), req.user!._id, reason),
     "Order cancelled",
+  );
+});
+
+export const overrideBatchAllocations = asyncHandler(async (req: Request, res: Response) => {
+  const dto = z.object({
+    allocations: z.array(z.object({
+      batchId:      z.string().min(1),
+      batchNumber:  z.string().min(1),
+      productId:    z.string().min(1),
+      productName:  z.string().min(1),
+      expiryDate:   z.coerce.date(),
+      allocatedQty: z.number().int().min(1),
+    })).min(1),
+  }).parse(req.body);
+
+  sendSuccess(
+    res,
+    await svc.overrideBatchAllocations(String(req.params.id), dto.allocations, actor(req)!),
+    "Batch allocations updated",
   );
 });

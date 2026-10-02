@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ShieldCheck, ShoppingCart, Pill,
-  BarChart3, FileText, Settings,
+  BarChart3, FileText, Settings, Layers, Receipt,
   ChevronDown, ChevronRight,
   PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
@@ -13,12 +13,14 @@ import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
 /* ── Feature flags — set to true to show a section, false to hide ── */
 const NAV_FLAGS = {
-  dashboard:      false,
+  dashboard:      true,
   accessControl:  true,
   commerce:       true,
+  inventory:      true,
+  invoices:       true,
   healthcare:     true,
-  reports:        false,
-  auditLog:       false,
+  reports:        true,
+  auditLog:       true,
   settings:       true,
 } as const;
 
@@ -48,18 +50,33 @@ const NAV: NavItem[] = [
       { label: "Coupons",    href: "/coupons",    permission: "orders.read" },
     ],
   }] : []),
+  ...(NAV_FLAGS.inventory ? [{
+    type: "group" as const, label: "Inventory", icon: Layers, permission: "inventory.read",
+    children: [
+      { label: "Near Expiry",    href: "/inventory/near-expiry", permission: "inventory.read" },
+      { label: "Movement Log",   href: "/inventory/movements",   permission: "inventory.movements.read" },
+    ],
+  }] : []),
+  ...(NAV_FLAGS.invoices ? [{
+    type: "group" as const, label: "Billing", icon: Receipt, permission: "invoices.read",
+    children: [
+      { label: "All Invoices",   href: "/invoices",          permission: "invoices.read" },
+      { label: "New Adhoc",      href: "/invoices/new",      permission: "invoices.create" },
+      { label: "Reports",        href: "/invoices/reports",  permission: "invoices.reports" },
+    ],
+  }] : []),
   ...(NAV_FLAGS.healthcare ? [{
     type: "group" as const, label: "Healthcare", icon: Pill, permission: "prescriptions.read",
     children: [
-      // { label: "Prescriptions",  href: "/prescriptions",         permission: "prescriptions.read" },
-      // { label: "Compounding",    href: "/compounding",           permission: "compounding.read" },
-      // { label: "Ask Pharmacist", href: "/ask-pharmacist",        permission: "ask-pharmacist.read" },
-      // { label: "AP Topics",      href: "/ask-pharmacist/topics", permission: "ask-pharmacist.topics.manage" },
+      { label: "Prescriptions",  href: "/prescriptions",         permission: "prescriptions.read" },
+      { label: "Compounding",    href: "/compounding",           permission: "compounding.read" },
+      { label: "Ask Pharmacist", href: "/ask-pharmacist",        permission: "ask-pharmacist.read" },
+      { label: "AP Topics",      href: "/ask-pharmacist/topics", permission: "ask-pharmacist.topics.manage" },
       { label: "Appointments",   href: "/appointments",          permission: "appointments.read" },
-      // { label: "Ailment Catalog",   href: "/minor-ailments",          permission: "minor-ailments.catalog.read" },
-      // { label: "Ailment Requests",  href: "/minor-ailments/requests", permission: "minor-ailments.requests.read" },
-      // { label: "Clinics",        href: "/clinics",               permission: "users.read" },
-      // { label: "Partners",       href: "/partners",              permission: "users.read" },
+      { label: "Ailment Catalog",   href: "/minor-ailments",          permission: "minor-ailments.catalog.read" },
+      { label: "Ailment Requests",  href: "/minor-ailments/requests", permission: "minor-ailments.requests.read" },
+      { label: "Clinics",        href: "/clinics",               permission: "users.read" },
+      { label: "Partners",       href: "/partners",              permission: "users.read" },
     ],
   }] : []),
   ...(NAV_FLAGS.reports  ? [{ type: "link" as const, label: "Reports",   href: "/reports", icon: BarChart3, permission: "reports.read" }] : []),
@@ -67,8 +84,9 @@ const NAV: NavItem[] = [
   ...(NAV_FLAGS.settings ? [{
     type: "group" as const, label: "Settings", icon: Settings, permission: "settings.read",
     children: [
-      { label: "Pharmacy Info & Hours", href: "/settings", permission: "settings.read" },
-      { label: "FAQs",                  href: "/faqs",     permission: "content.faqs.read" },
+      { label: "Pharmacy Info & Hours", href: "/settings",                  permission: "settings.read" },
+      { label: "Email Triggers",        href: "/settings/email-triggers",   permission: "email-triggers.read" },
+      { label: "FAQs",                  href: "/faqs",                      permission: "content.faqs.read" },
     ],
   }] : []),
 ];

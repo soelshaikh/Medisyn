@@ -4,6 +4,74 @@ This file is the cumulative project history. Each session is also recorded in `w
 
 ---
 
+## Session: 2026-09-29 (C) — UI Polish + UHID System + Invoice Template Fix + DB Wipe
+
+**What was done:**
+- `type="number"` → `type="text"` with `blockNonNumeric` keyboard guard across invoice form + orders page
+- Invoice new-form layout: two-column (sticky left: customer+billing / right: items+tax+totals), input padding tightened, whitespace eliminated
+- UHID system: `backend/src/lib/counter.ts` (`nextUHID()` → `MED-000001`), `uhid` sparse-unique field on User schema, UHID assigned on every new registration in `auth.service.ts`
+- `GET /users/search?q=...` endpoint — searches fullName, email, phone, uhid; returns top 10; requires `users.read`
+- Admin `users.api.ts` — `search()` method + `UserSearchResult` type
+- Invoice form customer section: separate search box removed; each field (Name, Email, Phone) is now its own autocomplete (`AcField`) with 280ms debounce + shared dropdown + UHID badge on selection
+- `/invoices/reports` rewritten as card-grid hub (4 report cards); existing content moved to `/invoices/reports/summary`
+- `invoice.template.ts` — fixed all 8 TypeScript compile errors: `inv.items` → `inv.lineItems`, `"void"` → `"cancelled"/"system_cancelled"`, `inv.voidReason` → `inv.cancelReason`, `fmtDate` now accepts `undefined`, `inv.customerPhone` → `addr.phone`; introduced `RenderableInvoice` type
+- `invoices.routes.ts` — replaced all `as never` casts with `as RenderableInvoice`
+- `backend/src/scripts/wipe-dev-db.ts` *(new)* — full DB wipe with dev-only guard + `--confirm` flag + collection count preview
+- Ran wipe (381 docs / 40 collections) + seed — clean database confirmed
+
+**Still pending:**
+- `/invoices/reports/revenue`, `/tax`, `/adhoc` sub-pages not built
+- UHID not yet displayed on admin user detail or patient post-signup
+- Orders detail `ORDER_STATUSES` permission-filter (carried from session B)
+
+**See:** `worklog/2026-09-29c.md` for full detail
+
+---
+
+## Session: 2026-09-29 (B) — Transition Permission & Email Trigger Bug Fixes
+
+**What was done:**
+- Fixed P0 Bug: `cancelMyOrder` in `orders.service.ts` captured `prevStatus` before mutation — side effects were incorrectly passing `"cancelled"` as both `fromStatus` and `toStatus`
+- Fixed P1 Bug: `checkout` now fires `EmailTriggerService.fire("orders", null, "pending", ...)` instead of `"confirmed"` — seed updated to match (`null → "pending"` row)
+- Fixed P1 Bug: Rewrote `EmailTriggerService.resolve()` — replaced non-deterministic `$or [fromStatus, null, "*"]` with exact-then-wildcard two-query approach
+- Fixed P1 Bug: `ask-pharmacist.service.ts` — replaced hardcoded `EmailService.sendAskPharmacistRespondedEmail` with `EmailTriggerService.fire`
+- Fixed P1 Bug: `appointments.service.ts` — replaced hardcoded `EmailService.sendAppointmentStatusChangedEmail` with `EmailTriggerService.fire`; added `oldStatus` param to `_appointmentStatusSideEffects`
+- Fixed P1 UI: `admin/src/app/(dashboard)/prescriptions/[id]/page.tsx` — replaced broken `["active", "expired", "cancelled"]` with `RX_TRANSITIONS` map; modal now shows only valid next states filtered by actor's permissions via `useAdminAuthStore`
+- Fixed P3 UI: `admin/src/app/(dashboard)/compounding/[id]/page.tsx` — same pattern; `COMPOUNDING_TRANSITIONS` map with permission filtering
+- Created `backend/src/database/migrate-prescription-status.ts` — one-time migration script: `active → received`, `expired → cancelled`
+
+**Still pending:**
+- Migration script must be run before any production deployment (not yet executed)
+- P2 Bug 5 double-lock: route guard vs. transition permission mismatch (mitigated by seed, proper fix deferred)
+- P2 Bug 7: `actorPermissions` optional in service signatures — system callers bypass guard (deferred)
+- Available-transitions API endpoint (deferred)
+- Orders detail UI: `ORDER_STATUSES` still not permission-filtered (same pattern as prescriptions/compounding fix)
+
+---
+
+## Session: 2026-09-29 — Invoice Refund Lifecycle + Data Reset Script + Billing Report
+
+**What was done:**
+- Full refund lifecycle implemented in `payment.service.ts`: pending → completed/failed/cancelled, with `processRefund()` applying financial changes (allocation reversal, invoice.amountPaid decrement, paymentStatus recalculation)
+- `financiallySettled` flag prevents double-accounting on auto-refunds created during invoice cancellation
+- `statusHistory[]` on every `PaymentTransaction` — full audit trail of who changed what and when
+- Routes added: `GET /admin/payments/pending-refunds`, `PATCH .../process-refund`, `.../fail-refund`, `.../cancel-refund`
+- `invoiceSummary()` now returns embedded `refunds: RefundReport` — no separate endpoint needed
+- `InvoiceSummary` type updated in admin types; `InvoiceSummary.refunds` added
+- Missing `paymentsApi` methods added to `admin/src/api/invoices.api.ts`: `listPendingRefunds`, `processRefund`, `failRefund`, `cancelRefund`
+- Billing summary page (`/invoices/reports/summary`) expanded into 4 sections: Billing Summary, Payment Status, Refund Report, Refunds by Method — color-coded KPI cards
+- Reports index card renamed to "Billing & Refund Report"
+- Data reset script created: `backend/src/scripts/reset-dev-data.ts` — deletes invoice/order/user data with `--confirm` guard and production refusal
+
+**Still pending:**
+- PDF template reads `invoice.items` (not `lineItems`)
+- Admin invoice detail page uses old model
+- Invoice number at finalization (not draft creation)
+- `systemCancelInvoice` missing auto-refund call
+- `invoices.void` → `invoices.cancel` permission rename
+
+---
+
 ## Session: 2026-09-19 — Frontend UI Polish + Broken Content Fixes
 
 **What was done:**
@@ -273,5 +341,56 @@ This file is the cumulative project history. Each session is also recorded in `w
 **TypeScript:** 0 errors.
 
 **All 10 backend phases complete. Frontend migration is the only remaining work.**
+
+---
+
+## Session: 2026-09-27 — Invoice Module + Commerce Platform Plan + UI Component System
+
+**What was done:**
+- Built complete invoice module: backend (schema, counter, numbering, service, HTML template, Playwright PDF, routes) + admin UI (list, detail, new adhoc, reports) + patient frontend (list, detail, order link)
+- Invoice format: `MP-{E|A}-{YY}-{YY}-{00001}` (Canadian FY April–March, atomic counter)
+- All amounts snapshotted at issuance; `createFromOrder` idempotent; guest token for unauthenticated PDF access
+- Created `docs/MediSyn_Commerce_Platform_Plan.md` — multi-tenant subscription API product design
+- Built three new reusable UI components: `DateRangePicker`, `FilterPanel` + `FilterField`, `DataGrid`
+- Rewrote inventory movements page as first example of new component pattern
+
+**See:** `worklog/2026-09-27.md` for full detail
+
+---
+
+## Session: 2026-09-28 (2) — Permissions Cleanup + Enterprise Thread System
+
+**What was done:**
+- Fixed admin invoice list (`ListResponse` bug — `data?.data` was always `[]` at runtime)
+- Renamed admin sidebar "Invoices" group → "Billing"
+- Added 6 new granular permissions: `inventory.batches.recall`, `inventory.movements.read`, `invoices.reports`, `threads.read`, `threads.reply_patient`, `threads.add_note`
+- Updated inventory + invoice routes to enforce new permissions
+- Built full enterprise thread system: `Thread` + `ThreadMessage` MongoDB collections (separate, not embedded), cursor pagination, quoted replies (parentMessageId), soft deletes, read tracking, 15-min edit window
+- Built `AdminThreadPanel` component: collapsible, two tabs, date dividers, timestamps, hover reply/edit/delete, inline edit form, Ctrl+Enter, load earlier
+- Added `AdminThreadPanel` to 7 admin detail pages (orders, prescriptions, ask-pharmacist, compounding, minor-ailments, appointments, patient users)
+- Built patient `/messages` page: chat UI with aligned bubbles, date dividers, reply-to, 60s polling
+- Added "Messages" to patient portal nav
+
+**Remaining for next session:**
+1. Fix `ListResponse` bug across all other admin list pages (orders, prescriptions, etc.)
+2. Vaccine detail calendar view (confirmed, never implemented)
+3. Thread permission guard in AdminThreadPanel
+4. Patient entity thread read view (from patient portal)
+5. Admin Messages inbox view
+6. Re-run `npm run seed` to register new permissions in DB
+
+**See:** `worklog/2026-09-28.md` (Session 2) for full detail
+
+---
+
+## Session: 2026-09-28 — UI Component Rollout + Invoice PDF Fixes
+
+**What was done:**
+- Rewrote near-expiry, invoices list, and invoices reports pages using new FilterPanel + DateRangePicker + DataGrid pattern — removed all native `<select>`, pill buttons, and raw `<input type="date">` elements
+- Fixed invoice PDF 401: replaced `pdfUrl()` (bare URL, no auth header) with `downloadPdf()` (axios blob with Bearer token) across 4 files
+- Fixed invoice PDF 500: `playwright-core` has no bundled browser — switched to full `playwright` package; requires `npx playwright install chromium` one-time setup
+- Diagnosed invoice sidebar not showing: `invoices.read` permission not yet in DB — fixed by re-running `npm run seed`
+
+**See:** `worklog/2026-09-28.md` for full detail
 
 ---

@@ -151,6 +151,20 @@ export const emailTemplates = {
     `),
   }),
 
+  prescriptionStatusChanged: (name: string, refId: string, status: string) => ({
+    subject: `Prescription update — Ref #${refId}`,
+    html: base(`
+      <h2 style="color:#0284C7;margin-top:0;">Prescription Update</h2>
+      <p>Hi ${name},</p>
+      <p>Your prescription status has been updated:</p>
+      <div style="background:#F7F9FB;padding:16px;border-radius:6px;margin:20px 0;">
+        <p style="margin:4px 0;"><strong>Reference:</strong> #${refId}</p>
+        <p style="margin:4px 0;"><strong>New status:</strong> ${status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+      </div>
+      <p>Log in to your patient portal to view full details or contact us if you have questions.</p>
+    `),
+  }),
+
   askPharmacistResponded: (name: string, subject: string, responseText: string) => ({
     subject: `Pharmacist response — ${subject}`,
     html: base(`

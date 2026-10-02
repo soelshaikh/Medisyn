@@ -45,6 +45,9 @@ import notificationsRoutes     from "./modules/notifications/notifications.route
 import reportsRoutes           from "./modules/reports/reports.routes";
 import filesRoutes             from "./modules/files/files.routes";
 import settingsRoutes          from "./modules/settings/settings.routes";
+import invoicesRoutes              from "./modules/invoices/invoices.routes";
+import threadRoutes               from "./modules/threads/thread.routes";
+import emailTriggerConfigRoutes   from "./modules/email/email-trigger-config.routes";
 
 export const app = express();
 
@@ -151,6 +154,15 @@ app.use("/api/v1/files", filesRoutes);
 
 /* Pharmacy Settings */
 app.use("/api/v1/settings", settingsRoutes);
+
+/* Invoices */
+app.use("/api/v1/invoices", invoicesRoutes);
+
+/* Threads */
+app.use("/api/v1", threadRoutes);
+
+/* Email trigger configuration */
+app.use("/api/v1/admin/email-triggers", emailTriggerConfigRoutes);
 
 /* Serve local uploads in development (no-op in production when using S3) */
 app.use("/uploads", express.static("uploads"));

@@ -7,6 +7,8 @@ import { UserModel } from "@/modules/users/users.schema";
 import { RefreshTokenModel } from "./auth.schema";
 import type { RegisterDtoType, LoginDtoType, ResetPasswordDtoType } from "./auth.dto";
 import { EmailService } from "@/modules/email/email.service";
+import { nextUHID } from "@/lib/counter";
+import { getSettings } from "@/modules/settings/settings.service";
 
 /* ── Token helpers ── */
 function generateAccessToken(userId: string, email: string, role: string) {
@@ -53,9 +55,19 @@ export async function register(data: RegisterDtoType) {
   const exists = await UserModel.findOne({ email: data.email.toLowerCase() });
   if (exists) throw new AppError("Email already registered", 409);
 
+  const settings = await getSettings();
+  const verificationRequired = settings.emailVerificationRequired;
+
   const passwordHash = await argon2.hash(data.password);
-  const verificationToken = randomBytes(32).toString("hex");
-  const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+  const uhid = await nextUHID();
+
+  let verificationToken: string | undefined;
+  let verificationTokenExpires: Date | undefined;
+
+  if (verificationRequired) {
+    verificationToken        = randomBytes(32).toString("hex");
+    verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+  }
 
   const user = await UserModel.create({
     email:    data.email.toLowerCase(),
@@ -63,12 +75,16 @@ export async function register(data: RegisterDtoType) {
     fullName: data.fullName,
     phone:    data.phone,
     role:     data.role ?? "patient",
-    status:   "pending_verification",
+    uhid,
+    status:        verificationRequired ? "pending_verification" : "active",
+    emailVerified: !verificationRequired,
     verificationToken,
     verificationTokenExpires,
   });
 
-  EmailService.sendVerificationEmail(user, verificationToken).catch(() => null);
+  if (verificationRequired && verificationToken) {
+    EmailService.sendVerificationEmail(user, verificationToken).catch(() => null);
+  }
 
   return { user: mapUser(user), verificationToken };
 }
@@ -81,9 +97,13 @@ export async function login(data: LoginDtoType) {
   const valid = await argon2.verify(user.passwordHash, data.password);
   if (!valid) throw new AppError("Invalid email or password", 401);
 
-  if (!user.emailVerified) throw new AppError("Please verify your email first", 403);
-  if (user.status === "suspended") throw new AppError("Account suspended", 403);
+  if (user.status === "suspended")  throw new AppError("Account suspended", 403);
   if (user.status === "deactivated") throw new AppError("Account deactivated", 403);
+
+  const settings = await getSettings();
+  if (settings.emailVerificationRequired && !user.emailVerified) {
+    throw new AppError("Please verify your email before signing in", 403);
+  }
 
   const roles = user.roles?.length
     ? await RoleModel.find({ _id: { $in: user.roles } }).select("name slug permissions")

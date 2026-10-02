@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, User, FileText, MessageCircleQuestion, CalendarHeart, Stethoscope, MapPin, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, User, FileText, MessageCircleQuestion, CalendarHeart, Stethoscope, MapPin, ShoppingBag, Receipt, MessageCircle, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import PortalShell, { type PortalNavItem } from "@/components/portal/PortalShell";
 
@@ -14,6 +14,8 @@ const NAV_ITEMS: PortalNavItem[] = [
   { href: "/patient/appointments",     label: "Vaccines & Appointments", icon: CalendarHeart },
   { href: "/patient/minor-ailments",   label: "Minor Ailments",         icon: Stethoscope },
   { href: "/patient/orders",           label: "My Orders",              icon: ShoppingBag },
+  { href: "/patient/invoices",         label: "My Invoices",            icon: Receipt },
+  { href: "/patient/messages",         label: "Messages",               icon: MessageCircle },
   { href: "/patient/addresses",        label: "My Addresses",           icon: MapPin },
   { href: "/patient/profile",          label: "My Profile",             icon: User },
 ];
@@ -31,8 +33,16 @@ export default function PatientLayout({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, user, router, _hasHydrated]);
 
-  if (!_hasHydrated || !isAuthenticated || !user || user.role !== "patient") {
-    return <div className="min-h-screen bg-slate-50" />;
+  if (!_hasHydrated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !user || user.role !== "patient") {
+    return null;
   }
 
   return (

@@ -8,9 +8,30 @@ MediSyn is a Canadian pharmacy/healthcare platform. This repository is the **ful
 - Give recommendations with reasoning, then ask for confirmation before acting.
 - Label every decision: CONFIRMED | PROPOSED | OPEN QUESTION | RESEARCH | ASSUMPTION
 - Do not silently change previously confirmed decisions.
-- After every meaningful work session, update `worklog.md` and `worklog/YYYY-MM-DD.md`.
 - Before starting a new task, review the relevant previous worklog.
 - If you need a decision from the user, stop and ask rather than inventing an answer.
+
+## Worklog Rule (Non-Negotiable — applies to every session without exception)
+
+At the end of every session — regardless of how small — write two files:
+
+**1. `worklog/YYYY-MM-DD.md`** — detailed session log. Must include:
+- Every file created or modified (with full path relative to repo root)
+- Every decision made this session and whether it is CONFIRMED, PROPOSED, or OPEN
+- Every bug or TypeScript error found and the exact fix applied
+- New routes, schemas, types, or API endpoints added
+- Anything that is still broken, incomplete, or deferred — exact items, not vague "TBD"
+
+**2. `worklog.md`** — running cumulative summary at the top of the file. Must include:
+- Session date and a 5–8 word title
+- Bullet list of what was done (concise, file-level)
+- "Still pending" section listing deferred items carried forward
+
+**Format rules:**
+- Always prepend the new session entry — newest session at the top of `worklog.md`
+- Never delete or overwrite previous session entries
+- Use absolute file paths when referencing files (e.g. `backend/src/modules/invoices/invoice.service.ts`, not just `invoice.service.ts`)
+- If a session spans multiple days, use the date the work was completed
 
 ## Source of Truth Files
 - `docs/MediSyn_Backend_Master_Prompt_Claude.md` — backend scope, modules, architecture, permissions

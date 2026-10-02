@@ -98,6 +98,29 @@ router.patch("/me/addresses/:addrId/default", asyncHandler(async (req, res) => {
   sendSuccess(res, user.savedAddresses, "Default address updated");
 }));
 
+/* ── Customer search (typeahead) ── */
+router.get("/search", requirePermission("users.read"), asyncHandler(async (req, res) => {
+  const q = String(req.query.q || "").trim();
+  if (!q) { sendSuccess(res, []); return; }
+
+  const users = await UserModel.find({
+    $or: [
+      { fullName: { $regex: q, $options: "i" } },
+      { email:    { $regex: q, $options: "i" } },
+      { phone:    { $regex: q, $options: "i" } },
+      { uhid:     { $regex: `^${q}`, $options: "i" } },
+    ],
+  }).select("fullName email phone uhid").limit(10).lean();
+
+  sendSuccess(res, users.map((u) => ({
+    _id:      String(u._id),
+    uhid:     u.uhid ?? null,
+    fullName: u.fullName,
+    email:    u.email,
+    phone:    u.phone ?? null,
+  })));
+}));
+
 /* ── Admin: /admin/users ── */
 router.get("/", requirePermission("users.read"), asyncHandler(async (req, res) => {
   const page  = Math.max(1, Number(req.query.page) || 1);
@@ -121,6 +144,7 @@ router.get("/", requirePermission("users.read"), asyncHandler(async (req, res) =
 
   sendList(res, users.map((u) => ({
     _id:      String(u._id),
+    uhid:     u.uhid ?? null,
     email:    u.email,
     fullName: u.fullName,
     role:     u.role,

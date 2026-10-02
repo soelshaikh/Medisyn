@@ -9,6 +9,7 @@ import { PERMISSION_CATALOG, ALL_PERMISSION_KEYS } from "@/modules/permissions/p
 import { VaccineServiceModel } from "@/modules/vaccine-services/vaccine-services.schema";
 import { AilmentCatalogModel } from "@/modules/minor-ailments/ailment-catalog.schema";
 import { AskPharmacistTopicModel } from "@/modules/ask-pharmacist/ask-pharmacist-topics.schema";
+import { EmailTriggerConfigModel } from "@/modules/email/email-trigger-config.schema";
 
 async function seed() {
   console.log("🌱  Connecting to MongoDB...");
@@ -38,16 +39,29 @@ async function seed() {
       name: "Pharmacist",
       description: "Pharmacist — manage prescriptions, compounding, appointments",
       permissions: [
-        "prescriptions.read", "prescriptions.update", "prescriptions.status.update",
+        /* Prescriptions — full workflow including gated transitions */
+        "prescriptions.read", "prescriptions.update",
+        "prescriptions.status.update",    // received / cancelled
+        "prescriptions.status.verify",    // → verified  (pharmacist-only gate)
+        "prescriptions.status.dispense",  // → dispensed (pharmacist-only gate)
         "prescriptions.files.read", "prescriptions.assign", "prescriptions.notes",
-        "compounding.read", "compounding.update", "compounding.status.update",
+        /* Compounding — full workflow including gated transitions */
+        "compounding.read", "compounding.update",
+        "compounding.status.update",   // reviewing / quote_sent / in_production
+        "compounding.status.approve",  // → approved  (pharmacist-only gate)
+        "compounding.status.complete", // → ready / delivered (pharmacist-only gate)
         "compounding.files.read", "compounding.assign", "compounding.notes",
+        /* Ask pharmacist */
         "ask-pharmacist.read", "ask-pharmacist.respond", "ask-pharmacist.status.update",
         "ask-pharmacist.assign", "ask-pharmacist.notes",
+        /* Minor ailments */
         "minor-ailments.requests.read", "minor-ailments.requests.update",
+        /* Appointments */
         "appointments.read", "appointments.update", "appointments.status.update",
         "appointments.availability.read",
-        "orders.read", "orders.status.update",
+        /* Orders — pharmacist can confirm and deliver */
+        "orders.read", "orders.status.update", "orders.status.confirm", "orders.status.deliver",
+        /* Misc */
         "users.read",
         "notifications.read",
       ],
@@ -58,10 +72,15 @@ async function seed() {
       name: "Staff",
       description: "General staff — order management, basic operations",
       permissions: [
-        "orders.read", "orders.update", "orders.status.update",
+        /* Orders — staff can confirm but NOT deliver */
+        "orders.read", "orders.update", "orders.status.update", "orders.status.confirm",
+        /* Prescriptions — intake only (received/cancelled), NOT verify/dispense */
         "prescriptions.read", "prescriptions.status.update",
+        /* Compounding — production steps only, NOT approve/complete */
         "compounding.read", "compounding.status.update",
+        /* Appointments */
         "appointments.read", "appointments.status.update",
+        /* Misc */
         "users.read",
         "products.read", "inventory.read",
         "notifications.read",
@@ -240,6 +259,51 @@ async function seed() {
     );
   }
   console.log(`   ${pharmacistTopics.length} ask-pharmacist topics seeded`);
+
+  /* ── 7. Seed email trigger configs ── */
+  console.log("📧  Seeding email trigger configs...");
+  const emailTriggers = [
+    /* Orders */
+    { module: "orders", fromStatus: null,               toStatus: "pending",          enabled: true,  templateKey: "orderStatusChanged",      recipientTypes: ["customer"], description: "Order placed — acknowledgement to customer" },
+    { module: "orders", fromStatus: "pending",          toStatus: "confirmed",        enabled: true,  templateKey: "orderStatusChanged",      recipientTypes: ["customer"], description: "Order confirmed by staff" },
+    { module: "orders", fromStatus: "confirmed",        toStatus: "processing",       enabled: false, templateKey: "orderStatusChanged",      recipientTypes: ["customer"], description: "Order moved to processing (internal — off by default)" },
+    { module: "orders", fromStatus: "processing",       toStatus: "ready_for_pickup", enabled: true,  templateKey: "orderStatusChanged",      recipientTypes: ["customer"], description: "Order ready for pickup" },
+    { module: "orders", fromStatus: "ready_for_pickup", toStatus: "delivered",        enabled: true,  templateKey: "orderStatusChanged",      recipientTypes: ["customer"], description: "Order delivered / picked up" },
+    { module: "orders", fromStatus: "*",                toStatus: "cancelled",        enabled: true,  templateKey: "orderStatusChanged",      recipientTypes: ["customer"], description: "Order cancelled" },
+
+    /* Prescriptions */
+    { module: "prescriptions", fromStatus: null,         toStatus: "submitted",  enabled: true,  templateKey: "prescriptionReceived",      recipientTypes: ["customer"], description: "Prescription submitted — acknowledgement" },
+    { module: "prescriptions", fromStatus: "submitted",  toStatus: "received",   enabled: false, templateKey: "prescriptionStatusChanged", recipientTypes: ["customer"], description: "Prescription received by pharmacy (internal)" },
+    { module: "prescriptions", fromStatus: "received",   toStatus: "verified",   enabled: true,  templateKey: "prescriptionStatusChanged", recipientTypes: ["customer"], description: "Prescription verified by pharmacist" },
+    { module: "prescriptions", fromStatus: "verified",   toStatus: "dispensed",  enabled: true,  templateKey: "prescriptionStatusChanged", recipientTypes: ["customer"], description: "Prescription dispensed — ready for pickup" },
+    { module: "prescriptions", fromStatus: "*",          toStatus: "cancelled",  enabled: true,  templateKey: "prescriptionStatusChanged", recipientTypes: ["customer"], description: "Prescription cancelled" },
+
+    /* Compounding */
+    { module: "compounding", fromStatus: "submitted",    toStatus: "reviewing",     enabled: false, templateKey: "compoundingStatusChanged", recipientTypes: ["customer"], description: "Compounding under review (internal)" },
+    { module: "compounding", fromStatus: "reviewing",    toStatus: "quote_sent",    enabled: true,  templateKey: "compoundingStatusChanged", recipientTypes: ["customer"], description: "Compounding quote sent to patient" },
+    { module: "compounding", fromStatus: "quote_sent",   toStatus: "approved",      enabled: true,  templateKey: "compoundingStatusChanged", recipientTypes: ["customer"], description: "Compounding quote approved" },
+    { module: "compounding", fromStatus: "approved",     toStatus: "in_production", enabled: false, templateKey: "compoundingStatusChanged", recipientTypes: ["customer"], description: "Compounding in production (internal)" },
+    { module: "compounding", fromStatus: "in_production",toStatus: "ready",         enabled: true,  templateKey: "compoundingStatusChanged", recipientTypes: ["customer"], description: "Compounding ready for pickup" },
+    { module: "compounding", fromStatus: "ready",        toStatus: "delivered",     enabled: true,  templateKey: "compoundingStatusChanged", recipientTypes: ["customer"], description: "Compounding delivered" },
+    { module: "compounding", fromStatus: "*",            toStatus: "cancelled",     enabled: true,  templateKey: "compoundingStatusChanged", recipientTypes: ["customer"], description: "Compounding cancelled" },
+
+    /* Appointments */
+    { module: "appointments", fromStatus: "pending",   toStatus: "confirmed",  enabled: true,  templateKey: "appointmentStatusChanged", recipientTypes: ["customer"], description: "Appointment confirmed" },
+    { module: "appointments", fromStatus: "confirmed", toStatus: "cancelled",  enabled: true,  templateKey: "appointmentStatusChanged", recipientTypes: ["customer"], description: "Appointment cancelled" },
+    { module: "appointments", fromStatus: "*",         toStatus: "cancelled",  enabled: true,  templateKey: "appointmentStatusChanged", recipientTypes: ["customer"], description: "Appointment cancelled (any state)" },
+
+    /* Ask Pharmacist */
+    { module: "ask-pharmacist", fromStatus: "open", toStatus: "answered", enabled: true, templateKey: "askPharmacistResponded", recipientTypes: ["customer"], description: "Pharmacist responded to question" },
+  ];
+
+  for (const trigger of emailTriggers) {
+    await EmailTriggerConfigModel.updateOne(
+      { module: trigger.module, fromStatus: trigger.fromStatus, toStatus: trigger.toStatus },
+      { $setOnInsert: trigger },
+      { upsert: true },
+    );
+  }
+  console.log(`   ${emailTriggers.length} email trigger configs seeded`);
 
   console.log("✅  Seed complete");
   await mongoose.disconnect();

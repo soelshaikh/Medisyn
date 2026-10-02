@@ -47,6 +47,9 @@ const schema = z.object({
   SEED_ADMIN_EMAIL:    z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().optional(),
   SEED_ADMIN_NAME:     z.string().optional(),
+
+  APP_TIMEZONE:               z.string().default("America/Toronto"),
+  INVOICE_GUEST_TOKEN_TTL_DAYS: z.coerce.number().default(30),
 });
 
 const parsed = schema.safeParse(process.env);

@@ -14,6 +14,7 @@ import { ArrowLeft, CheckCircle, XCircle, MessageSquare } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import type { AppointmentSlot, VaccineService } from "@/types/admin";
 import { fmtDate, fmtDateTime } from "@/lib/format";
+import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 
 const ADMIN_STATUSES = ["confirmed", "cancelled", "completed", "no_show"];
 
@@ -191,6 +192,8 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
         <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)] mb-4">Status History</h2>
         <StatusHistory history={booking.statusHistory} />
       </div>
+
+      <AdminThreadPanel entityType="appointment" entityId={id} />
 
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title={isPending ? "Review Booking" : "Update Status"}>
