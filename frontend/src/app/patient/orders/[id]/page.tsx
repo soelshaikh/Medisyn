@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ordersApi } from "@/api/orders.api";
 import { invoicesApi } from "@/api/invoices.api";
 import StatusBadge from "@/components/StatusBadge";
+import PatientThreadPanel from "@/components/patient/PatientThreadPanel";
 import { useAuthStore } from "@/stores/authStore";
 import { inputClass } from "@/lib/ui";
 
@@ -255,6 +256,9 @@ export default function PatientOrderDetailPage({ params }: { params: Promise<{ i
           </ol>
         </div>
       )}
+
+      {/* Messages from Pharmacy */}
+      <PatientThreadPanel entityType="order" entityId={id} />
     </div>
   );
 }

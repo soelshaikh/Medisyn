@@ -4,6 +4,89 @@ This file is the cumulative project history. Each session is also recorded in `w
 
 ---
 
+## Session: 2026-10-02 (E) — Admin Detail Pages Two-Column Redesign + Prescription Service Types
+
+**What was done:**
+- `admin/src/app/(dashboard)/prescriptions/[id]/page.tsx` — two-column layout; replaced 2 DetailCards with compact icon+value side-by-side cards (Hash/FileText/Activity/RefreshCw/Calendar/Clock + User/Shield/Phone); AdminThreadPanel sticky right column
+- `admin/src/app/(dashboard)/compounding/[id]/page.tsx` — same pattern; compact cards (FileText/Tag/Zap/Hash/Calendar + User/Shield); AdminThreadPanel sticky right
+- `admin/src/app/(dashboard)/ask-pharmacist/[id]/page.tsx` — two-column layout (no DetailCard was present); question + response + history on left; AdminThreadPanel sticky right
+- `admin/src/app/(dashboard)/appointments/bookings/[id]/page.tsx` — two-column layout; replaced 2 DetailCards with compact side-by-side cards (User/Mail/Phone + Stethoscope/Clock/Calendar/Layers/Users); AdminThreadPanel sticky right; removed ArrowLeft import dependency (use router.back with ← text)
+- `frontend/src/components/patient/PrescriptionForm.tsx` — full rewrite with 4 service type selector cards at top (New Prescription, New + Delivery, Refill, Transfer); fields change conditionally per type; Transfer shows previous pharmacy fields + transferAll toggle + rxNumbers tag input; Delivery shows delivery address; Refill hides prescriber; form is now controlled state (not FormData)
+
+**Still pending:** None from this session
+
+---
+
+## Session: 2026-10-02 (D) — Order Detail Redesign + PatientThreadPanel Reusable Component
+
+**What was done:**
+- `admin/src/app/(dashboard)/orders/[id]/page.tsx` — full layout redesign: two-column flex (left: order info, right: sticky thread panel); Customer + Shipping replaced with compact icon+value cards side-by-side (User/Mail/Phone/CreditCard/MapPin/Building2/Hash icons); items table padding tightened; removed `max-w-4xl`; `AdminThreadPanel` now always visible on the right column with `defaultOpen` prop
+- `frontend/src/components/patient/PatientThreadPanel.tsx` *(new)* — reusable patient messaging component; accepts `entityType`, `entityId`, `title`, `className`; encapsulates query (30s poll), send mutation, auto-scroll, chat bubble UI
+- `frontend/src/app/patient/orders/[id]/page.tsx` — replaced inline "Messages from Pharmacy" block with `<PatientThreadPanel entityType="order" entityId={id} />`; removed now-unused imports (useRef, useEffect, MessageCircle, Send, patientThreadsApi)
+- `frontend/src/app/patient/prescriptions/page.tsx` — added per-prescription "Messages" toggle button; clicking expands `<PatientThreadPanel entityType="prescription" entityId={rx._id} />` inline below that prescription row; only one open at a time (single state)
+- `frontend/src/app/patient/ask-a-pharmacist/page.tsx` — same expandable Messages toggle per request card; `<PatientThreadPanel entityType="ask_pharmacist" entityId={ask._id} title="Chat with Pharmacist" />`
+- `frontend/src/app/patient/minor-ailments/page.tsx` — same pattern; `<PatientThreadPanel entityType="minor_ailment" entityId={item._id} title="Messages about this request" />`
+- `frontend/src/app/patient/appointments/page.tsx` — same pattern; `<PatientThreadPanel entityType="appointment" entityId={appt._id} title="Messages about this appointment" />`
+
+**PatientThreadPanel coverage (all entity types with patient-facing lists):**
+| Page | Entity type | Done |
+|---|---|---|
+| `/patient/orders/[id]` | `order` | ✅ |
+| `/patient/prescriptions` | `prescription` | ✅ |
+| `/patient/ask-a-pharmacist` | `ask_pharmacist` | ✅ |
+| `/patient/minor-ailments` | `minor_ailment` | ✅ |
+| `/patient/appointments` | `appointment` | ✅ |
+
+**Still pending:**
+- Patient mark-read for entity thread messages (deferred)
+- Thread real-time (WebSocket/SSE) — deferred to async infrastructure phase
+
+---
+
+## Session: 2026-10-02 (C) — Admin UX: System Role Edit + Login Remember Me + Users Split
+
+**What was done:**
+- `admin/src/app/(dashboard)/roles/[id]/page.tsx` — removed system-role read-only guards; all roles now fully editable (Save button, checkboxes, group toggles all enabled regardless of `isSystem` flag)
+- `admin/src/app/(auth)/login/page.tsx` — full rewrite: eye/EyeOff password toggle; Remember Me checkbox; saved accounts stored in `localStorage["admin_saved_accounts"]` (max 5); suggestions dropdown on email focus filtered by typed input; ArrowDown/ArrowUp/Enter/Escape keyboard nav with `highlightIdx`; mouse hover syncs highlight; ✕ per account to remove; auto-fills credentials on mount if remembered
+- `admin/src/components/common/AdminSidebar.tsx` — split "Users" into "Patients" (`/users/patients`) + "Staff Members" (`/users/staff`) under Access Control group
+- `admin/src/app/(dashboard)/users/page.tsx` — redirect to `/users/patients`
+- `admin/src/app/(dashboard)/users/patients/page.tsx` *(new)* — patients list (hasRoles=false): Name/Email, UHID, Status, Joined
+- `admin/src/app/(dashboard)/users/staff/page.tsx` *(new)* — staff list (hasRoles=true): Name/Email, Role badges (colour-cycling), Status, Joined
+- `backend/src/modules/users/users.routes.ts` — added `hasRoles` query filter; list response includes populated `roles[]` array
+
+**Still pending:**
+- Unread message count badge on AdminThreadPanel tab not persisting across navigation (local state only — no server read tracking for admin)
+
+---
+
+## Session: 2026-10-02 (B) — Users Split: Patients + Staff Members Pages
+
+**What was done:**
+- `backend/src/modules/users/users.routes.ts` — added `hasRoles` filter: `hasRoles=true` → users with RBAC roles, `hasRoles=false` → users without
+- `admin/src/components/common/AdminSidebar.tsx` — replaced "Users" nav item with "Patients" (`/users/patients`) + "Staff Members" (`/users/staff`) under Access Control
+- `admin/src/app/(dashboard)/users/page.tsx` — now redirects to `/users/patients`
+- `admin/src/app/(dashboard)/users/patients/page.tsx` *(new)* — patient-focused list: Name/Email, UHID, Status, Joined; filtered `hasRoles=false`
+- `admin/src/app/(dashboard)/users/staff/page.tsx` *(new)* — staff-focused list: Name/Email, Roles (coloured badges), Status, Joined; filtered `hasRoles=true`
+
+**Still pending:** None
+
+---
+
+## Session: 2026-10-02 — Order List Customer Fix + Patient Order Messaging
+
+**What was done:**
+- `backend/src/modules/orders/orders.service.ts` — `listAdminOrders` now populates `userId` (email, fullName, phone); fixes CUSTOMER column showing "—" for registered users
+- `admin/src/app/(dashboard)/orders/page.tsx` — Customer column resolves name/email from `guestInfo` OR populated `userId`; ORDER sub-label (email) same fix
+- `backend/src/modules/threads/thread.routes.ts` — Added `POST /threads/:entityType/:entityId/patient/messages` so patients can reply to entity threads
+- `frontend/src/api/threads.api.ts` — Added `getEntityMessages` + `postEntityMessage` to `patientThreadsApi`
+- `frontend/src/app/patient/orders/[id]/page.tsx` — Added "Messages from Pharmacy" section: chat bubble UI, 30s auto-poll, Ctrl+Enter send, empty state
+
+**Still pending:**
+- Patient mark-read for entity thread messages (deferred — not critical)
+- Thread real-time (WebSocket/SSE) — deferred to async infrastructure phase
+
+---
+
 ## Session: 2026-09-29 (C) — UI Polish + UHID System + Invoice Template Fix + DB Wipe
 
 **What was done:**

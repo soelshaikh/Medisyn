@@ -2,20 +2,19 @@
 
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Hash, FileText, Activity, RefreshCw, Calendar, Clock, User, Shield, Phone } from "lucide-react";
 import { prescriptionsApi } from "@/api/prescriptions.api";
-import { DetailCard } from "@/components/common/DetailCard";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusHistory } from "@/components/common/StatusHistory";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { Select } from "@/components/ui/Select";
 import { fmtDate } from "@/lib/format";
-import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
-/** Forward-only transitions for each prescription status, with required permission per move. */
 const RX_TRANSITIONS: Record<string, Array<{ to: string; permission: string }>> = {
   submitted: [
     { to: "received",  permission: "prescriptions.status.update" },
@@ -30,6 +29,15 @@ const RX_TRANSITIONS: Record<string, Array<{ to: string; permission: string }>> 
     { to: "cancelled", permission: "prescriptions.status.update" },
   ],
 };
+
+function InfoRow({ icon, value }: { icon: React.ReactNode; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+      <span className="text-[var(--color-text-muted)] shrink-0">{icon}</span>
+      <span className="text-[var(--color-text-secondary)] truncate">{value ?? "—"}</span>
+    </div>
+  );
+}
 
 export default function PrescriptionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id }           = use(params);
@@ -59,18 +67,16 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ i
   if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
   if (!rx)       return <p className="text-[var(--color-text-muted)]">Prescription not found.</p>;
 
-  const availableTransitions = (RX_TRANSITIONS[rx.status] ?? [])
-    .filter((t) => hasPermission(t.permission));
+  const availableTransitions = (RX_TRANSITIONS[rx.status] ?? []).filter((t) => hasPermission(t.permission));
   const canUpdateStatus = availableTransitions.length > 0;
 
   function openStatusModal() {
-    const first = availableTransitions[0]?.to ?? "";
-    setNewStatus(first);
+    setNewStatus(availableTransitions[0]?.to ?? "");
     setStatusModal(true);
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-4">
       <PageHeader
         title={rx.medicationName}
         description={rx.prescriptionNumber}
@@ -88,41 +94,54 @@ export default function PrescriptionDetailPage({ params }: { params: Promise<{ i
         }
       />
 
-      <DetailCard
-        title="Prescription Details"
-        cols={2}
-        fields={[
-          { label: "Rx Number",          value: rx.prescriptionNumber },
-          { label: "Medication",         value: rx.medicationName },
-          { label: "Dosage",             value: rx.dosage || "—" },
-          { label: "Refills Remaining",  value: rx.refillsRemaining },
-          { label: "Expires",            value: rx.expiresAt ? fmtDate(rx.expiresAt) : "No expiry" },
-          { label: "Added",              value: fmtDate(rx.createdAt) },
-        ]}
-      />
+      <div className="flex gap-5 items-start">
+        {/* ── Left column ── */}
+        <div className="flex-1 min-w-0 space-y-4">
 
-      <DetailCard
-        title="Prescriber"
-        fields={[
-          { label: "Name",          value: rx.prescriberName },
-          { label: "License #",     value: rx.prescriberLicense || "—" },
-          { label: "Phone",         value: rx.prescriberPhone || "—" },
-        ]}
-      />
+          {/* Prescription details + Prescriber side by side */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-4 py-3 space-y-2">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Prescription Details</p>
+              <div className="space-y-1.5">
+                <InfoRow icon={<Hash size={13} />}       value={rx.prescriptionNumber} />
+                <InfoRow icon={<FileText size={13} />}   value={rx.medicationName} />
+                <InfoRow icon={<Activity size={13} />}   value={rx.dosage || "—"} />
+                <InfoRow icon={<RefreshCw size={13} />}  value={`${rx.refillsRemaining} refills`} />
+                <InfoRow icon={<Calendar size={13} />}   value={rx.expiresAt ? fmtDate(rx.expiresAt) : "No expiry"} />
+                <InfoRow icon={<Clock size={13} />}      value={fmtDate(rx.createdAt)} />
+              </div>
+            </div>
 
-      {rx.notes && (
-        <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] px-5 py-4">
-          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Patient Notes</p>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{rx.notes}</p>
+            <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-4 py-3 space-y-2">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Prescriber</p>
+              <div className="space-y-1.5">
+                <InfoRow icon={<User size={13} />}   value={rx.prescriberName} />
+                <InfoRow icon={<Shield size={13} />} value={rx.prescriberLicense || "—"} />
+                <InfoRow icon={<Phone size={13} />}  value={rx.prescriberPhone || "—"} />
+              </div>
+            </div>
+          </div>
+
+          {/* Patient notes */}
+          {rx.notes && (
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] px-4 py-3">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Patient Notes</p>
+              <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{rx.notes}</p>
+            </div>
+          )}
+
+          {/* Status history */}
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-5 py-4">
+            <h2 className="text-[var(--font-size-sm)] font-semibold text-[var(--color-text-primary)] mb-3">Status History</h2>
+            <StatusHistory history={rx.statusHistory} />
+          </div>
         </div>
-      )}
 
-      <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] p-6">
-        <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)] mb-4">Status History</h2>
-        <StatusHistory history={rx.statusHistory} />
+        {/* ── Right column: thread ── */}
+        <div className="w-[380px] shrink-0 sticky top-4">
+          <AdminThreadPanel entityType="prescription" entityId={id} defaultOpen />
+        </div>
       </div>
-
-      <AdminThreadPanel entityType="prescription" entityId={id} />
 
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Update Prescription Status">
         <div className="space-y-4">

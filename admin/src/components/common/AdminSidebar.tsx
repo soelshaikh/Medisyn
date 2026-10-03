@@ -35,9 +35,10 @@ const NAV: NavItem[] = [
   ...(NAV_FLAGS.accessControl ? [{
     type: "group" as const, label: "Access Control", icon: ShieldCheck, permission: "roles.read",
     children: [
-      { label: "Users",       href: "/users",       permission: "users.read" },
-      { label: "Roles",       href: "/roles",       permission: "roles.read" },
-      { label: "Permissions", href: "/permissions", permission: "permissions.read" },
+      { label: "Patients",      href: "/users/patients", permission: "users.read" },
+      { label: "Staff Members", href: "/users/staff",    permission: "users.read" },
+      { label: "Roles",         href: "/roles",          permission: "roles.read" },
+      { label: "Permissions",   href: "/permissions",    permission: "permissions.read" },
     ],
   }] : []),
   ...(NAV_FLAGS.commerce ? [{

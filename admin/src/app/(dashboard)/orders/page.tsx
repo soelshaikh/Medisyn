@@ -41,18 +41,23 @@ export default function OrdersPage() {
             {o.orderNumber}
           </p>
           <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">
-            {o.guestInfo?.email ?? "—"}
+            {o.guestInfo?.email ?? (typeof o.userId === "object" && o.userId ? o.userId.email : "—")}
           </p>
         </div>
       ),
     },
     {
       key: "customer", header: "Customer",
-      render: (o) => (
-        <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
-          {o.guestInfo?.fullName ?? "—"}
-        </span>
-      ),
+      render: (o) => {
+        const name  = o.guestInfo?.fullName ?? (typeof o.userId === "object" && o.userId ? o.userId.fullName : null) ?? "—";
+        const email = o.guestInfo?.email    ?? (typeof o.userId === "object" && o.userId ? o.userId.email    : null);
+        return (
+          <div>
+            <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{name}</span>
+            {email && <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{email}</p>}
+          </div>
+        );
+      },
     },
     {
       key: "total", header: "Total", width: "100px",

@@ -2,19 +2,18 @@
 
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { MessageCircle } from "lucide-react";
 import { askPharmacistApi } from "@/api/ask-pharmacist.api";
-import { DetailCard } from "@/components/common/DetailCard";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusHistory } from "@/components/common/StatusHistory";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
+import { SecureDocumentLink } from "@/components/common/SecureDocumentLink";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
-import { MessageCircle } from "lucide-react";
-import { SecureDocumentLink } from "@/components/common/SecureDocumentLink";
 import { Select } from "@/components/ui/Select";
 import { fmtDate, fmtDateTime } from "@/lib/format";
-import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 
 const ASK_STATUSES = ["open", "answered", "closed"];
 
@@ -53,7 +52,7 @@ export default function AskPharmacistDetailPage({ params }: { params: Promise<{ 
   if (!ask)      return <p className="text-[var(--color-text-muted)]">Question not found.</p>;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-4">
       <PageHeader
         title={ask.subject}
         description={`Asked ${fmtDate(ask.createdAt)}`}
@@ -77,38 +76,48 @@ export default function AskPharmacistDetailPage({ params }: { params: Promise<{ 
         }
       />
 
-      {/* Question */}
-      <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] p-6">
-        <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-3">Patient Question</p>
-        <p className="text-[var(--font-size-sm)] text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed">
-          {ask.question}
-        </p>
-        {ask.fileUrl && (
-          <SecureDocumentLink fileUrl={ask.fileUrl} className="mt-3" />
-        )}
-      </div>
+      <div className="flex gap-5 items-start">
+        {/* ── Left column ── */}
+        <div className="flex-1 min-w-0 space-y-4">
 
-      {/* Pharmacist response */}
-      {ask.responseText && (
-        <div className="bg-[var(--color-primary-light)] rounded-[var(--radius-lg)] border border-[var(--color-primary)] p-6">
-          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-primary)] mb-3">Pharmacist Response</p>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed">
-            {ask.responseText}
-          </p>
-          {ask.respondedAt && (
-            <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] mt-2">
-              Responded {fmtDateTime(ask.respondedAt)}
+          {/* Patient question */}
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-5 py-4">
+            <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-2">Patient Question</p>
+            <p className="text-[var(--font-size-sm)] text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed">
+              {ask.question}
             </p>
+            {ask.fileUrl && (
+              <SecureDocumentLink fileUrl={ask.fileUrl} className="mt-3" />
+            )}
+          </div>
+
+          {/* Pharmacist response */}
+          {ask.responseText && (
+            <div className="bg-[var(--color-primary-light)] rounded-[var(--radius-lg)] border border-[var(--color-primary)] px-5 py-4">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-primary)] mb-2">Pharmacist Response</p>
+              <p className="text-[var(--font-size-sm)] text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed">
+                {ask.responseText}
+              </p>
+              {ask.respondedAt && (
+                <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] mt-2">
+                  Responded {fmtDateTime(ask.respondedAt)}
+                </p>
+              )}
+            </div>
           )}
+
+          {/* Status history */}
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-5 py-4">
+            <h2 className="text-[var(--font-size-sm)] font-semibold text-[var(--color-text-primary)] mb-3">Status History</h2>
+            <StatusHistory history={ask.statusHistory} />
+          </div>
         </div>
-      )}
 
-      <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] p-6">
-        <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)] mb-4">Status History</h2>
-        <StatusHistory history={ask.statusHistory} />
+        {/* ── Right column: thread ── */}
+        <div className="w-[380px] shrink-0 sticky top-4">
+          <AdminThreadPanel entityType="ask_pharmacist" entityId={id} defaultOpen />
+        </div>
       </div>
-
-      <AdminThreadPanel entityType="ask_pharmacist" entityId={id} />
 
       {/* Respond modal */}
       <Modal open={respondModal} onClose={() => setRespondModal(false)} title="Respond to Question" width="max-w-2xl">

@@ -3,20 +3,29 @@
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { User, Mail, Phone, Stethoscope, Clock, Calendar, Layers, Users, CheckCircle, XCircle, MessageSquare } from "lucide-react";
 import { appointmentsApi } from "@/api/appointments.api";
-import { DetailCard } from "@/components/common/DetailCard";
 import { StatusHistory } from "@/components/common/StatusHistory";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
-import { ArrowLeft, CheckCircle, XCircle, MessageSquare } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import type { AppointmentSlot, VaccineService } from "@/types/admin";
 import { fmtDate, fmtDateTime } from "@/lib/format";
-import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 
 const ADMIN_STATUSES = ["confirmed", "cancelled", "completed", "no_show"];
+
+function InfoRow({ icon, label, value }: { icon: React.ReactNode; label?: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+      <span className="text-[var(--color-text-muted)] shrink-0">{icon}</span>
+      {label && <span className="text-[var(--color-text-muted)] shrink-0 text-[var(--font-size-xs)]">{label}</span>}
+      <span className="text-[var(--color-text-secondary)] truncate">{value ?? "—"}</span>
+    </div>
+  );
+}
 
 export default function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -56,15 +65,14 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
   const patient  = typeof booking.patientId        === "object" ? booking.patientId        : null;
   const vaccine  = typeof booking.vaccineServiceId === "object" ? booking.vaccineServiceId as VaccineService : null;
   const slot     = typeof booking.slotId           === "object" ? booking.slotId           as AppointmentSlot : null;
-
   const isPending = booking.status === "pending";
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-start gap-3">
         <button onClick={() => router.back()} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mt-1">
-          <ArrowLeft size={18} />
+          ←
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
@@ -77,23 +85,14 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             Requested {fmtDateTime(booking.createdAt)}
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap justify-end">
+        <div className="flex gap-2 flex-wrap justify-end shrink-0">
           {isPending && (
             <>
-              <Button
-                size="sm"
-                onClick={() => { setNewStatus("confirmed"); setStatusModal(true); }}
-              >
-                <CheckCircle size={14} className="mr-1.5" />
-                Approve
+              <Button size="sm" onClick={() => { setNewStatus("confirmed"); setStatusModal(true); }}>
+                <CheckCircle size={14} className="mr-1.5" /> Approve
               </Button>
-              <Button
-                size="sm"
-                variant="danger"
-                onClick={() => { setNewStatus("cancelled"); setStatusModal(true); }}
-              >
-                <XCircle size={14} className="mr-1.5" />
-                Reject
+              <Button size="sm" variant="danger" onClick={() => { setNewStatus("cancelled"); setStatusModal(true); }}>
+                <XCircle size={14} className="mr-1.5" /> Reject
               </Button>
             </>
           )}
@@ -103,8 +102,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => { setReplyText(booking.adminReply ?? ""); setReplyModal(true); }}>
-            <MessageSquare size={14} className="mr-1.5" />
-            Reply to Patient
+            <MessageSquare size={14} className="mr-1.5" /> Reply to Patient
           </Button>
           <Button variant="outline" size="sm" onClick={() => setNoteModal(true)}>
             Add Note
@@ -112,88 +110,97 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      {/* Patient info */}
-      <DetailCard
-        title="Patient"
-        fields={[
-          { label: "Name",  value: patient?.fullName },
-          { label: "Email", value: patient?.email },
-          { label: "Phone", value: patient?.phone },
-        ]}
-      />
+      <div className="flex gap-5 items-start">
+        {/* ── Left column ── */}
+        <div className="flex-1 min-w-0 space-y-4">
 
-      {/* Appointment info */}
-      <DetailCard
-        title="Appointment Details"
-        cols={2}
-        fields={[
-          { label: "Vaccine",      value: vaccine?.name },
-          { label: "Duration",     value: vaccine ? `${vaccine.durationMinutes} min` : "—" },
-          { label: "Date",         value: slot ? fmtDate(slot.date) : "—" },
-          { label: "Time",         value: slot ? `${slot.startTime} – ${slot.endTime}` : "—" },
-          { label: "Slot Type",    value: slot ? (slot.capacityType === "strict" ? "Fixed Capacity" : "Open Capacity") : "—" },
-          { label: "Capacity",     value: slot ? `${slot.bookedCount} / ${slot.capacity} booked` : "—" },
-        ]}
-      />
+          {/* Patient + Appointment side by side */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-4 py-3 space-y-2">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Patient</p>
+              <div className="space-y-1.5">
+                <InfoRow icon={<User size={13} />}  value={patient?.fullName} />
+                <InfoRow icon={<Mail size={13} />}  value={patient?.email} />
+                <InfoRow icon={<Phone size={13} />} value={patient?.phone} />
+              </div>
+            </div>
 
-      {/* Eligibility */}
-      {vaccine?.eligibilityNotes && (
-        <div className="bg-[var(--color-info-light)] border border-[var(--color-info)] rounded-[var(--radius-lg)] px-5 py-4">
-          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-info)] mb-1">
-            Eligibility Requirements
-          </p>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{vaccine.eligibilityNotes}</p>
-        </div>
-      )}
-
-      {/* Patient notes */}
-      {booking.patientNotes && (
-        <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] px-5 py-4">
-          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Patient Notes</p>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{booking.patientNotes}</p>
-        </div>
-      )}
-
-      {/* Admin reply (visible to patient) */}
-      {booking.adminReply && (
-        <div className="bg-[var(--color-primary-light)] border border-[var(--color-primary)] rounded-[var(--radius-lg)] px-5 py-4">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-primary)]">
-              Reply to Patient <span className="normal-case font-normal text-[var(--color-text-muted)]">(visible to patient)</span>
-            </p>
-            <button
-              onClick={() => { setReplyText(booking.adminReply ?? ""); setReplyModal(true); }}
-              className="text-[var(--font-size-xs)] text-[var(--color-primary)] hover:underline"
-            >
-              Edit
-            </button>
+            <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-4 py-3 space-y-2">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Appointment</p>
+              <div className="space-y-1.5">
+                <InfoRow icon={<Stethoscope size={13} />} value={vaccine?.name} />
+                <InfoRow icon={<Clock size={13} />}       value={vaccine ? `${vaccine.durationMinutes} min` : "—"} />
+                <InfoRow icon={<Calendar size={13} />}    value={slot ? fmtDate(slot.date) : "—"} />
+                <InfoRow icon={<Clock size={13} />}       value={slot ? `${slot.startTime} – ${slot.endTime}` : "—"} />
+                <InfoRow icon={<Layers size={13} />}      value={slot ? (slot.capacityType === "strict" ? "Fixed Capacity" : "Open Capacity") : "—"} />
+                <InfoRow icon={<Users size={13} />}       value={slot ? `${slot.bookedCount} / ${slot.capacity} booked` : "—"} />
+              </div>
+            </div>
           </div>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)] whitespace-pre-wrap">{booking.adminReply}</p>
-        </div>
-      )}
 
-      {/* Cancellation info */}
-      {booking.cancelledAt && (
-        <div className="bg-[var(--color-error-light)] border border-[var(--color-error)] rounded-[var(--radius-lg)] px-5 py-4">
-          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-error)] mb-1">Cancelled</p>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
-            By: {booking.cancelledBy ?? "—"} · {fmtDateTime(booking.cancelledAt)}
-          </p>
-          {booking.cancellationReason && (
-            <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)] mt-1">
-              Reason: {booking.cancellationReason}
-            </p>
+          {/* Eligibility */}
+          {vaccine?.eligibilityNotes && (
+            <div className="bg-[var(--color-info-light)] border border-[var(--color-info)] rounded-[var(--radius-lg)] px-4 py-3">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-info)] mb-1">
+                Eligibility Requirements
+              </p>
+              <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{vaccine.eligibilityNotes}</p>
+            </div>
           )}
+
+          {/* Patient notes */}
+          {booking.patientNotes && (
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] px-4 py-3">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Patient Notes</p>
+              <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{booking.patientNotes}</p>
+            </div>
+          )}
+
+          {/* Admin reply */}
+          {booking.adminReply && (
+            <div className="bg-[var(--color-primary-light)] border border-[var(--color-primary)] rounded-[var(--radius-lg)] px-4 py-3">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-primary)]">
+                  Reply to Patient <span className="normal-case font-normal text-[var(--color-text-muted)]">(visible to patient)</span>
+                </p>
+                <button
+                  onClick={() => { setReplyText(booking.adminReply ?? ""); setReplyModal(true); }}
+                  className="text-[var(--font-size-xs)] text-[var(--color-primary)] hover:underline"
+                >
+                  Edit
+                </button>
+              </div>
+              <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)] whitespace-pre-wrap">{booking.adminReply}</p>
+            </div>
+          )}
+
+          {/* Cancellation */}
+          {booking.cancelledAt && (
+            <div className="bg-[var(--color-error-light)] border border-[var(--color-error)] rounded-[var(--radius-lg)] px-4 py-3">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-error)] mb-1">Cancelled</p>
+              <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
+                By: {booking.cancelledBy ?? "—"} · {fmtDateTime(booking.cancelledAt)}
+              </p>
+              {booking.cancellationReason && (
+                <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)] mt-1">
+                  Reason: {booking.cancellationReason}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Status history */}
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-5 py-4">
+            <h2 className="text-[var(--font-size-sm)] font-semibold text-[var(--color-text-primary)] mb-3">Status History</h2>
+            <StatusHistory history={booking.statusHistory} />
+          </div>
         </div>
-      )}
 
-      {/* Status history */}
-      <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] p-6">
-        <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)] mb-4">Status History</h2>
-        <StatusHistory history={booking.statusHistory} />
+        {/* ── Right column: thread ── */}
+        <div className="w-[380px] shrink-0 sticky top-4">
+          <AdminThreadPanel entityType="appointment" entityId={id} defaultOpen />
+        </div>
       </div>
-
-      <AdminThreadPanel entityType="appointment" entityId={id} />
 
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title={isPending ? "Review Booking" : "Update Status"}>
@@ -205,9 +212,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             options={ADMIN_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }))}
           />
           <div>
-            <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] mb-1.5">
-              Note (optional)
-            </label>
+            <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] mb-1.5">Note (optional)</label>
             <textarea
               value={statusNote}
               onChange={(e) => setStatusNote(e.target.value)}
@@ -244,9 +249,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
           />
           <div className="flex gap-3 justify-end">
             <Button variant="ghost" onClick={() => setReplyModal(false)}>Cancel</Button>
-            <Button loading={replyMut.isPending} onClick={() => replyMut.mutate()}>
-              Save Reply
-            </Button>
+            <Button loading={replyMut.isPending} onClick={() => replyMut.mutate()}>Save Reply</Button>
           </div>
         </div>
       </Modal>

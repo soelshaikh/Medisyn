@@ -136,9 +136,13 @@ router.get("/", requirePermission("users.read"), asyncHandler(async (req, res) =
   }
   if (req.query.status) filter.status = req.query.status;
   if (req.query.role)   filter.role   = req.query.role;
+  if (req.query.hasRoles === "true")  filter["roles.0"] = { $exists: true };
+  if (req.query.hasRoles === "false") filter["roles.0"] = { $exists: false };
 
   const [users, total] = await Promise.all([
-    UserModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    UserModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit)
+      .populate("roles", "name slug")
+      .lean(),
     UserModel.countDocuments(filter),
   ]);
 
@@ -148,6 +152,7 @@ router.get("/", requirePermission("users.read"), asyncHandler(async (req, res) =
     email:    u.email,
     fullName: u.fullName,
     role:     u.role,
+    roles:    ((u.roles ?? []) as unknown as Array<{ _id: unknown; name: string; slug: string }>).map((r) => ({ _id: String(r._id), name: r.name, slug: r.slug })),
     status:   u.status,
     emailVerified: u.emailVerified,
     createdAt: u.createdAt,

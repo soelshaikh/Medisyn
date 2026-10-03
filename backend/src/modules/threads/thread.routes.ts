@@ -275,4 +275,30 @@ router.get(
   }),
 );
 
+/* POST /threads/:entityType/:entityId/patient/messages — patient replies to entity thread */
+router.post(
+  "/threads/:entityType/:entityId/patient/messages",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const parsed = messageBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return sendError(res, "Validation failed", 400, parsed.error.flatten().fieldErrors as Record<string, string[]>);
+    }
+
+    const entityType = parseEntityType(req.params["entityType"] as string);
+    const entityId   = req.params["entityId"] as string;
+    const { body, parentMessageId } = parsed.data;
+
+    const message = await postMessage(
+      entityType,
+      entityId,
+      "patient",
+      { id: req.user!._id, name: req.user!.fullName, role: "patient" },
+      body,
+      parentMessageId,
+    );
+    return sendSuccess(res, message, "Message sent", 201);
+  }),
+);
+
 export default router;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   MessageCircle, ChevronDown, ChevronUp,
   Reply, Pencil, Trash2, Lock,
@@ -72,6 +72,7 @@ function getTabConfig(entityType: ThreadEntityType): TabConfig[] {
 interface BubbleProps {
   msg:           ThreadMessage;
   isInternal:    boolean;
+  isUnread:      boolean;
   currentUserId: string;
   onReply:       (msg: ThreadMessage) => void;
   onEdit:        (msg: ThreadMessage) => void;
@@ -79,12 +80,14 @@ interface BubbleProps {
   isDeleting:    boolean;
 }
 
-function MessageBubble({ msg, isInternal, currentUserId, onReply, onEdit, onDelete, isDeleting }: BubbleProps) {
+function MessageBubble({ msg, isInternal, isUnread, currentUserId, onReply, onEdit, onDelete, isDeleting }: BubbleProps) {
   const isOwn     = msg.authorId === currentUserId;
   const isDeleted = !!msg.deletedAt;
 
   const bg = isInternal
     ? "bg-amber-50 border-amber-200"
+    : isUnread
+    ? "bg-[var(--color-info-light)] border-[var(--color-info)]"
     : "bg-[var(--color-primary-light)] border-[var(--color-border)]";
 
   return (
@@ -101,6 +104,11 @@ function MessageBubble({ msg, isInternal, currentUserId, onReply, onEdit, onDele
           {msg.authorRole === "patient" && (
             <span className="rounded-full bg-[var(--color-info-light)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-info)] shrink-0">
               Patient
+            </span>
+          )}
+          {isUnread && !isDeleted && (
+            <span className="rounded-full bg-[var(--color-info)] px-1.5 py-0.5 text-[10px] font-bold text-white shrink-0 uppercase tracking-wide">
+              New
             </span>
           )}
         </div>
@@ -260,6 +268,7 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
   const [body,         setBody]         = useState("");
   const [editingId,    setEditingId]    = useState<string | null>(null);
   const [deletingId,   setDeletingId]   = useState<string | null>(null);
+  const [localReadIds, setLocalReadIds] = useState(() => new Set<string>());
 
   const activeTab  = tabs[activeTabIdx];
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
@@ -271,6 +280,35 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
   const deleteMut = useDeleteMessage(entityType, entityId, activeTab.channel);
 
   const messages = data?.messages ?? [];
+
+  /* A message is unread if it came from a patient and this admin hasn't read it */
+  const isUnreadMsg = useCallback((msg: ThreadMessage): boolean => {
+    if (msg.authorRole !== "patient" || !!msg.deletedAt) return false;
+    if (localReadIds.has(msg._id)) return false;
+    return !msg.readBy.some((r) => r.userId === (user?.id ?? ""));
+  }, [localReadIds, user?.id]);
+
+  const unreadCount = messages.filter(isUnreadMsg).length;
+
+  /* Auto-mark unread patient messages as read when panel is open on the patient tab */
+  useEffect(() => {
+    if (!isOpen || activeTab.channel === "internal" || !user?.id) return;
+    const userId = user.id;
+    const unread = messages.filter((m) => {
+      if (m.authorRole !== "patient" || !!m.deletedAt) return false;
+      if (localReadIds.has(m._id)) return false;
+      return !m.readBy.some((r) => r.userId === userId);
+    });
+    if (!unread.length) return;
+    const ids = unread.map((m) => m._id);
+    setLocalReadIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
+    ids.forEach((id) => void threadsApi.markRead(id));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, messages.length, activeTabIdx, user?.id]);
 
   /* Scroll to bottom on open / new messages */
   useEffect(() => {
@@ -330,7 +368,8 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
   const count = data?.messageCount ?? 0;
   const headerSummary = count === 0
     ? "No messages"
-    : `${count} ${count === 1 ? "message" : "messages"}`;
+    : `${count} ${count === 1 ? "message" : "messages"}`
+    + (unreadCount > 0 ? ` · ${unreadCount} unread` : "");
 
   const sendLabel = activeTab.isInternal
     ? "Add Note"
@@ -356,6 +395,11 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
           <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">
             {headerSummary}
           </span>
+          {unreadCount > 0 && !isOpen && (
+            <span className="rounded-full bg-[var(--color-error)] px-1.5 py-0.5 text-[10px] font-bold text-white">
+              {unreadCount} new
+            </span>
+          )}
         </div>
         {isOpen
           ? <ChevronUp  size={15} className="text-[var(--color-text-muted)] shrink-0" />
@@ -380,6 +424,11 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
               >
                 {tab.isInternal && <Lock size={12} />}
                 {tab.label}
+                {!tab.isInternal && unreadCount > 0 && activeTabIdx !== i && (
+                  <span className="rounded-full bg-[var(--color-error)] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    {unreadCount}
+                  </span>
+                )}
                 {activeTabIdx === i && count > 0 && (
                   <span className="rounded-full bg-[var(--color-primary-light)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]">
                     {count}
@@ -448,6 +497,7 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
                         <MessageBubble
                           msg={msg}
                           isInternal={activeTab.isInternal}
+                          isUnread={isUnreadMsg(msg)}
                           currentUserId={user?.id ?? ""}
                           onReply={setReplyingTo}
                           onEdit={(m) => setEditingId(m._id)}

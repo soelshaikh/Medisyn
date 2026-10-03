@@ -2,11 +2,12 @@
 
 import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { FileText, Tag, Zap, Hash, Calendar, User, Shield } from "lucide-react";
 import { compoundingApi } from "@/api/compounding.api";
-import { DetailCard } from "@/components/common/DetailCard";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusHistory } from "@/components/common/StatusHistory";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
@@ -14,10 +15,8 @@ import { Spinner } from "@/components/ui/Spinner";
 import { SecureDocumentLink } from "@/components/common/SecureDocumentLink";
 import { Select } from "@/components/ui/Select";
 import { fmtDate } from "@/lib/format";
-import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
-/** Forward-only transitions per compounding status, with required permission per move. */
 const COMPOUNDING_TRANSITIONS: Record<string, Array<{ to: string; permission: string }>> = {
   submitted:     [
     { to: "reviewing",     permission: "compounding.status.update" },
@@ -44,6 +43,15 @@ const COMPOUNDING_TRANSITIONS: Record<string, Array<{ to: string; permission: st
   ],
 };
 
+function InfoRow({ icon, value }: { icon: React.ReactNode; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+      <span className="text-[var(--color-text-muted)] shrink-0">{icon}</span>
+      <span className="text-[var(--color-text-secondary)] truncate">{value ?? "—"}</span>
+    </div>
+  );
+}
+
 export default function CompoundingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id }            = use(params);
   const qc                = useQueryClient();
@@ -63,9 +71,7 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
 
   const statusMut = useMutation({
     mutationFn: () => compoundingApi.updateStatus(
-      id,
-      newStatus,
-      statusNote,
+      id, newStatus, statusNote,
       quoteAmount !== "" ? Math.round(Number(quoteAmount) * 100) : null,
       quoteNote,
     ),
@@ -80,18 +86,16 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
   if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
   if (!req)      return <p className="text-[var(--color-text-muted)]">Request not found.</p>;
 
-  const availableTransitions = (COMPOUNDING_TRANSITIONS[req.status] ?? [])
-    .filter((t) => hasPermission(t.permission));
+  const availableTransitions = (COMPOUNDING_TRANSITIONS[req.status] ?? []).filter((t) => hasPermission(t.permission));
   const canUpdateStatus = availableTransitions.length > 0;
 
   function openStatusModal() {
-    const first = availableTransitions[0]?.to ?? "";
-    setNewStatus(first);
+    setNewStatus(availableTransitions[0]?.to ?? "");
     setStatusModal(true);
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-4">
       <PageHeader
         title={req.medicationName}
         description={`${req.form} · ${req.strength || "—"} · qty ${req.quantity}`}
@@ -109,59 +113,73 @@ export default function CompoundingDetailPage({ params }: { params: Promise<{ id
         }
       />
 
-      <DetailCard
-        title="Compounding Details"
-        cols={2}
-        fields={[
-          { label: "Medication",  value: req.medicationName },
-          { label: "Form",        value: req.form },
-          { label: "Strength",    value: req.strength || "—" },
-          { label: "Quantity",    value: req.quantity },
-          { label: "Submitted",   value: fmtDate(req.createdAt) },
-          { label: "Status",      value: <StatusBadge status={req.status} /> },
-        ]}
-      />
+      <div className="flex gap-5 items-start">
+        {/* ── Left column ── */}
+        <div className="flex-1 min-w-0 space-y-4">
 
-      <DetailCard
-        title="Prescriber"
-        fields={[
-          { label: "Name",      value: req.prescriberName },
-          { label: "License #", value: req.prescriberLicense },
-        ]}
-      />
+          {/* Compounding details + Prescriber side by side */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-4 py-3 space-y-2">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Compounding Details</p>
+              <div className="space-y-1.5">
+                <InfoRow icon={<FileText size={13} />} value={req.medicationName} />
+                <InfoRow icon={<Tag size={13} />}      value={req.form} />
+                <InfoRow icon={<Zap size={13} />}      value={req.strength || "—"} />
+                <InfoRow icon={<Hash size={13} />}     value={`Qty: ${req.quantity}`} />
+                <InfoRow icon={<Calendar size={13} />} value={fmtDate(req.createdAt)} />
+              </div>
+            </div>
 
-      {(req.quoteAmount !== null || req.quoteNote) && (
-        <div className="bg-[var(--color-primary-light)] border border-[var(--color-primary)] rounded-[var(--radius-lg)] px-5 py-4">
-          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-primary)] mb-1">Quote</p>
-          {req.quoteAmount !== null && (
-            <p className="text-xl font-bold text-[var(--color-text-primary)]">${(req.quoteAmount / 100).toFixed(2)} CAD</p>
+            <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-4 py-3 space-y-2">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Prescriber</p>
+              <div className="space-y-1.5">
+                <InfoRow icon={<User size={13} />}   value={req.prescriberName} />
+                <InfoRow icon={<Shield size={13} />} value={req.prescriberLicense} />
+              </div>
+            </div>
+          </div>
+
+          {/* Quote */}
+          {(req.quoteAmount !== null || req.quoteNote) && (
+            <div className="bg-[var(--color-primary-light)] border border-[var(--color-primary)] rounded-[var(--radius-lg)] px-4 py-3">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-primary)] mb-1">Quote</p>
+              {req.quoteAmount !== null && (
+                <p className="text-xl font-bold text-[var(--color-text-primary)]">${(req.quoteAmount / 100).toFixed(2)} CAD</p>
+              )}
+              {req.quoteNote && (
+                <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)] mt-1">{req.quoteNote}</p>
+              )}
+            </div>
           )}
-          {req.quoteNote && (
-            <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)] mt-1">{req.quoteNote}</p>
+
+          {/* Patient notes */}
+          {req.notes && (
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] px-4 py-3">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Patient Notes</p>
+              <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{req.notes}</p>
+            </div>
           )}
-        </div>
-      )}
 
-      {req.notes && (
-        <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] px-5 py-4">
-          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Patient Notes</p>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{req.notes}</p>
-        </div>
-      )}
+          {/* Attached document */}
+          {req.fileUrl && (
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] px-4 py-3 flex items-center gap-3">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Attached Document</p>
+              <SecureDocumentLink fileUrl={req.fileUrl} label="View Document" />
+            </div>
+          )}
 
-      {req.fileUrl && (
-        <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] px-5 py-4 flex items-center gap-3">
-          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Attached Document</p>
-          <SecureDocumentLink fileUrl={req.fileUrl} label="View Document" />
+          {/* Status history */}
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-5 py-4">
+            <h2 className="text-[var(--font-size-sm)] font-semibold text-[var(--color-text-primary)] mb-3">Status History</h2>
+            <StatusHistory history={req.statusHistory} />
+          </div>
         </div>
-      )}
 
-      <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] p-6">
-        <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)] mb-4">Status History</h2>
-        <StatusHistory history={req.statusHistory} />
+        {/* ── Right column: thread ── */}
+        <div className="w-[380px] shrink-0 sticky top-4">
+          <AdminThreadPanel entityType="compounding" entityId={id} defaultOpen />
+        </div>
       </div>
-
-      <AdminThreadPanel entityType="compounding" entityId={id} />
 
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Update Compounding Status">

@@ -187,7 +187,9 @@ export async function listAdminOrders(filters: {
   }
   const [total, data] = await Promise.all([
     OrderModel.countDocuments(query),
-    OrderModel.find(query).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    OrderModel.find(query).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)
+      .populate("userId", "email fullName phone")
+      .lean(),
   ]);
   return { data, total, page, limit };
 }

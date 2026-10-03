@@ -38,4 +38,16 @@ export const patientThreadsApi = {
   /* POST /threads/my/messages/:id/read */
   markRead: (messageId: string) =>
     apiClient.post(`/threads/my/messages/${messageId}/read`),
+
+  /* GET /threads/:entityType/:entityId/patient/messages */
+  getEntityMessages: (entityType: string, entityId: string, opts?: { limit?: number; before?: string }) =>
+    apiClient
+      .get<{ data: ThreadResult }>(`/threads/${entityType}/${entityId}/patient/messages`, { params: opts })
+      .then((r) => r.data.data),
+
+  /* POST /threads/:entityType/:entityId/patient/messages */
+  postEntityMessage: (entityType: string, entityId: string, payload: { body: string; parentMessageId?: string }) =>
+    apiClient
+      .post<{ data: ThreadMessage }>(`/threads/${entityType}/${entityId}/patient/messages`, payload)
+      .then((r) => r.data.data),
 };

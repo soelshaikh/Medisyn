@@ -1,14 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageCircle } from "lucide-react";
 import { askPharmacistApi } from "@/api/ask-pharmacist.api";
 import AskPharmacistForm from "@/components/patient/AskPharmacistForm";
+import PatientThreadPanel from "@/components/patient/PatientThreadPanel";
 import StatusBadge from "@/components/StatusBadge";
 import { useAuthStore } from "@/stores/authStore";
 
 export default function AskPharmacistPage() {
   const { user } = useAuthStore();
+  const [openThread, setOpenThread] = useState<string | null>(null);
+
   const { data, isLoading } = useQuery({
     queryKey: ["ask-pharmacist", "my"],
     queryFn: () => askPharmacistApi.list(1, 50),
@@ -35,24 +39,56 @@ export default function AskPharmacistPage() {
             No questions submitted yet.
           </p>
         ) : (
-          data.docs.map((ask) => (
-            <div key={ask._id} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">{ask.subject}</p>
-                  <p className="mt-1 text-sm text-ink-900">{ask.question}</p>
+          data.docs.map((ask) => {
+            const isOpen = openThread === ask._id;
+            return (
+              <div key={ask._id} className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                {/* Request card */}
+                <div className="p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">{ask.subject}</p>
+                      <p className="mt-1 text-sm text-ink-900">{ask.question}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={ask.status} />
+                      <button
+                        type="button"
+                        onClick={() => setOpenThread(isOpen ? null : ask._id)}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          isOpen
+                            ? "border-brand-300 bg-brand-50 text-brand-700"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                        }`}
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        {isOpen ? "Hide messages" : "Messages"}
+                      </button>
+                    </div>
+                  </div>
+                  {ask.responseText && (
+                    <div className="mt-4 rounded-lg bg-brand-50 p-4 text-sm text-brand-900">
+                      <p className="font-semibold">Pharmacist response:</p>
+                      <p className="mt-1">{ask.responseText}</p>
+                    </div>
+                  )}
+                  <p className="mt-3 text-xs text-slate-400">Submitted {new Date(ask.createdAt).toLocaleString()}</p>
                 </div>
-                <StatusBadge status={ask.status} />
+
+                {/* Inline thread */}
+                {isOpen && (
+                  <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
+                    <PatientThreadPanel
+                      entityType="ask_pharmacist"
+                      entityId={ask._id}
+                      title="Chat with Pharmacist"
+                      className="rounded-xl"
+                    />
+                  </div>
+                )}
               </div>
-              {ask.responseText && (
-                <div className="mt-4 rounded-lg bg-brand-50 p-4 text-sm text-brand-900">
-                  <p className="font-semibold">Pharmacist response:</p>
-                  <p className="mt-1">{ask.responseText}</p>
-                </div>
-              )}
-              <p className="mt-3 text-xs text-slate-400">Submitted {new Date(ask.createdAt).toLocaleString()}</p>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

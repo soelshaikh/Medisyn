@@ -116,19 +116,13 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
         actions={
           <Button
             loading={saveMut.isPending}
-            disabled={!isDirty || role.isSystem}
+            disabled={!isDirty}
             onClick={() => saveMut.mutate()}
           >
             Save Changes
           </Button>
         }
       />
-
-      {role.isSystem && (
-        <div className="bg-[var(--color-info-light)] border border-[var(--color-info)] rounded-[var(--radius-md)] px-4 py-3 text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
-          This is a system role. Permissions can be viewed but not edited.
-        </div>
-      )}
 
       {/* ── Toolbar ── */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -225,9 +219,8 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
                     type="checkbox"
                     checked={allSelected}
                     ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                    onChange={() => !role.isSystem && toggleGroup(groupKeys)}
-                    disabled={role.isSystem}
-                    className="w-4 h-4 accent-[var(--color-primary)] cursor-pointer disabled:cursor-default"
+                    onChange={() => toggleGroup(groupKeys)}
+                    className="w-4 h-4 accent-[var(--color-primary)] cursor-pointer"
                   />
                   <span className="text-[var(--font-size-sm)] font-semibold text-[var(--color-text-primary)] capitalize">
                     {group.replace(/-/g, " ")}
@@ -256,17 +249,15 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
                     <label
                       key={p.key}
                       className={[
-                        "flex items-center gap-4 px-5 py-3 transition-colors",
-                        role.isSystem ? "cursor-default" : "cursor-pointer hover:bg-[var(--color-surface)]",
+                        "flex items-center gap-4 px-5 py-3 transition-colors cursor-pointer hover:bg-[var(--color-surface)]",
                         isEnabled ? "bg-[var(--color-primary-light)]/30" : "",
                       ].join(" ")}
                     >
                       <input
                         type="checkbox"
                         checked={isEnabled}
-                        onChange={() => !role.isSystem && toggle(p.key)}
-                        disabled={role.isSystem}
-                        className="w-4 h-4 accent-[var(--color-primary)] shrink-0 disabled:cursor-default"
+                        onChange={() => toggle(p.key)}
+                        className="w-4 h-4 accent-[var(--color-primary)] shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <p className={[

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { Select } from "@/components/ui/Select";
-import { Layers, AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
+import { Layers, AlertTriangle, Pencil, Plus, Trash2, User, Mail, Phone, CreditCard, MapPin, Building2, Hash } from "lucide-react";
 import type { BatchAllocation, ProductBatch } from "@/types/admin";
 import { AdminThreadPanel } from "@/components/common/AdminThreadPanel";
 
@@ -74,7 +74,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const customerPhone = populatedUser?.phone      ?? order.guestInfo?.phone;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-4">
       <PageHeader
         title={order.orderNumber}
         description={`Placed ${fmtDateTime(order.createdAt)}`}
@@ -92,147 +92,178 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         }
       />
 
-      {/* Customer */}
-      <DetailCard
-        title="Customer"
-        fields={[
-          { label: "Name",    value: customerName },
-          { label: "Email",   value: customerEmail },
-          { label: "Phone",   value: customerPhone },
-          { label: "Payment", value: order.paymentMethod.replace(/_/g, " ") },
-        ]}
-      />
+      {/* ── Two-column layout ── */}
+      <div className="flex gap-5 items-start">
 
-      {/* Shipping */}
-      <DetailCard
-        title="Shipping Address"
-        fields={[
-          { label: "Name",     value: order.shippingAddress.fullName },
-          { label: "City",     value: order.shippingAddress.city },
-          { label: "Province", value: order.shippingAddress.province },
-          { label: "Postal",   value: order.shippingAddress.postalCode },
-        ]}
-      />
+        {/* ── LEFT: order details ── */}
+        <div className="flex-1 min-w-0 space-y-4">
 
-      {/* Line items */}
-      <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] overflow-hidden">
-        <div className="px-6 py-4 border-b border-[var(--color-border)]">
-          <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)]">Items</h2>
-        </div>
-        <table className="w-full text-[var(--font-size-sm)]">
-          <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-            <tr>
-              <th className="px-6 py-3 text-left text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Product</th>
-              <th className="px-6 py-3 text-right text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Qty</th>
-              <th className="px-6 py-3 text-right text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Price</th>
-              <th className="px-6 py-3 text-right text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--color-border)]">
-            {order.items.map((item, i) => (
-              <tr key={i} className="hover:bg-[var(--color-surface)]">
-                <td className="px-6 py-3">
-                  <p className="font-medium text-[var(--color-text-primary)]">{item.name}</p>
-                  <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] font-mono">{item.sku}</p>
-                </td>
-                <td className="px-6 py-3 text-right text-[var(--color-text-secondary)]">{item.quantity}</td>
-                <td className="px-6 py-3 text-right text-[var(--color-text-secondary)]">{formatCAD(item.price)}</td>
-                <td className="px-6 py-3 text-right font-semibold text-[var(--color-text-primary)]">{formatCAD(item.lineTotal)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="ml-auto max-w-xs space-y-1.5 text-[var(--font-size-sm)]">
-            <div className="flex justify-between text-[var(--color-text-secondary)]">
-              <span>Subtotal</span><span>{formatCAD(order.subtotal)}</span>
-            </div>
-            {order.discountAmount > 0 && (
-              <div className="flex justify-between text-[var(--color-success)]">
-                <span>Discount {order.couponCode && `(${order.couponCode})`}</span>
-                <span>-{formatCAD(order.discountAmount)}</span>
+          {/* Customer + Shipping — compact side-by-side */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Customer */}
+            <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-4 py-3 space-y-2">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Customer</p>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+                  <User size={13} className="text-[var(--color-text-muted)] shrink-0" />
+                  <span className="text-[var(--color-text-primary)] font-medium truncate">{customerName ?? "—"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+                  <Mail size={13} className="text-[var(--color-text-muted)] shrink-0" />
+                  <span className="text-[var(--color-text-secondary)] truncate">{customerEmail ?? "—"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+                  <Phone size={13} className="text-[var(--color-text-muted)] shrink-0" />
+                  <span className="text-[var(--color-text-secondary)]">{customerPhone ?? "—"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+                  <CreditCard size={13} className="text-[var(--color-text-muted)] shrink-0" />
+                  <span className="text-[var(--color-text-secondary)] capitalize">{order.paymentMethod.replace(/_/g, " ")}</span>
+                </div>
               </div>
-            )}
-            <div className="flex justify-between text-[var(--color-text-secondary)]">
-              <span>Tax</span><span>{formatCAD(order.taxTotal)}</span>
             </div>
-            <div className="flex justify-between font-bold text-[var(--color-text-primary)] border-t border-[var(--color-border)] pt-1.5">
-              <span>Total</span><span>{formatCAD(order.total)}</span>
+
+            {/* Shipping */}
+            <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-4 py-3 space-y-2">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Shipping</p>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+                  <User size={13} className="text-[var(--color-text-muted)] shrink-0" />
+                  <span className="text-[var(--color-text-primary)] font-medium truncate">{order.shippingAddress.fullName}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+                  <MapPin size={13} className="text-[var(--color-text-muted)] shrink-0" />
+                  <span className="text-[var(--color-text-secondary)] truncate">{order.shippingAddress.city}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+                  <Building2 size={13} className="text-[var(--color-text-muted)] shrink-0" />
+                  <span className="text-[var(--color-text-secondary)]">{order.shippingAddress.province}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[var(--font-size-sm)]">
+                  <Hash size={13} className="text-[var(--color-text-muted)] shrink-0" />
+                  <span className="text-[var(--color-text-secondary)] font-mono">{order.shippingAddress.postalCode}</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Internal notes */}
-      {order.notes && (
-        <div className="bg-[var(--color-warning-light)] border border-[var(--color-warning)] rounded-[var(--radius-lg)] px-5 py-4">
-          <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-warning)] mb-1">Internal Note</p>
-          <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{order.notes}</p>
-        </div>
-      )}
-
-      {/* Batch Allocations (shown when any batch-tracked items exist) */}
-      {order.batchAllocations?.length > 0 && (
-        <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] overflow-hidden">
-          <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center gap-2">
-            <Layers size={16} className="text-[var(--color-primary)]" />
-            <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)]">Batch Allocations</h2>
-            <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">FEFO — auto-allocated at checkout</span>
-            {!["delivered", "cancelled"].includes(order.status) && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="ml-auto"
-                onClick={() => {
-                  setOverrideLines((order.batchAllocations as BatchAllocation[]).map((a) => ({ ...a })));
-                  setOverrideProductId(null);
-                  setBatchModal(true);
-                }}
-              >
-                <Pencil size={12} className="mr-1.5" /> Override Batches
-              </Button>
-            )}
-          </div>
-          <table className="w-full text-[var(--font-size-sm)]">
-            <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-              <tr>
-                <th className="px-6 py-3 text-left text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Product</th>
-                <th className="px-6 py-3 text-left text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Batch #</th>
-                <th className="px-6 py-3 text-left text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Expiry</th>
-                <th className="px-6 py-3 text-right text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Qty</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--color-border)]">
-              {(order.batchAllocations as BatchAllocation[]).map((a, i) => {
-                const daysLeft = Math.ceil((new Date(a.expiryDate).getTime() - Date.now()) / 86400000);
-                const isNear   = daysLeft > 0 && daysLeft <= 90;
-                return (
+          {/* Line items */}
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] overflow-hidden">
+            <div className="px-5 py-3 border-b border-[var(--color-border)]">
+              <h2 className="text-[var(--font-size-sm)] font-semibold text-[var(--color-text-primary)]">Items</h2>
+            </div>
+            <table className="w-full text-[var(--font-size-sm)]">
+              <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+                <tr>
+                  <th className="px-5 py-2.5 text-left text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Product</th>
+                  <th className="px-5 py-2.5 text-right text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Qty</th>
+                  <th className="px-5 py-2.5 text-right text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Price</th>
+                  <th className="px-5 py-2.5 text-right text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]">
+                {order.items.map((item, i) => (
                   <tr key={i} className="hover:bg-[var(--color-surface)]">
-                    <td className="px-6 py-3 text-[var(--color-text-secondary)]">{a.productName}</td>
-                    <td className="px-6 py-3 font-mono font-semibold text-[var(--color-text-primary)]">{a.batchNumber}</td>
-                    <td className="px-6 py-3">
-                      <span className={isNear ? "text-[var(--color-warning)] font-semibold" : "text-[var(--color-text-secondary)]"}>
-                        {new Date(a.expiryDate).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" })}
-                      </span>
-                      {isNear && <AlertTriangle size={12} className="inline ml-1 text-[var(--color-warning)]" />}
+                    <td className="px-5 py-2.5">
+                      <p className="font-medium text-[var(--color-text-primary)]">{item.name}</p>
+                      <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] font-mono">{item.sku}</p>
                     </td>
-                    <td className="px-6 py-3 text-right font-semibold text-[var(--color-text-primary)]">{a.allocatedQty}</td>
+                    <td className="px-5 py-2.5 text-right text-[var(--color-text-secondary)]">{item.quantity}</td>
+                    <td className="px-5 py-2.5 text-right text-[var(--color-text-secondary)]">{formatCAD(item.price)}</td>
+                    <td className="px-5 py-2.5 text-right font-semibold text-[var(--color-text-primary)]">{formatCAD(item.lineTotal)}</td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+            <div className="px-5 py-3 border-t border-[var(--color-border)] bg-[var(--color-surface)]">
+              <div className="ml-auto max-w-[220px] space-y-1 text-[var(--font-size-sm)]">
+                <div className="flex justify-between text-[var(--color-text-secondary)]">
+                  <span>Subtotal</span><span>{formatCAD(order.subtotal)}</span>
+                </div>
+                {order.discountAmount > 0 && (
+                  <div className="flex justify-between text-[var(--color-success)]">
+                    <span>Discount {order.couponCode && `(${order.couponCode})`}</span>
+                    <span>-{formatCAD(order.discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-[var(--color-text-secondary)]">
+                  <span>Tax</span><span>{formatCAD(order.taxTotal)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-[var(--color-text-primary)] border-t border-[var(--color-border)] pt-1">
+                  <span>Total</span><span>{formatCAD(order.total)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Internal notes */}
+          {order.notes && (
+            <div className="bg-[var(--color-warning-light)] border border-[var(--color-warning)] rounded-[var(--radius-lg)] px-4 py-3">
+              <p className="text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-warning)] mb-1">Internal Note</p>
+              <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{order.notes}</p>
+            </div>
+          )}
+
+          {/* Batch Allocations */}
+          {order.batchAllocations?.length > 0 && (
+            <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] overflow-hidden">
+              <div className="px-5 py-3 border-b border-[var(--color-border)] flex items-center gap-2">
+                <Layers size={14} className="text-[var(--color-primary)]" />
+                <h2 className="text-[var(--font-size-sm)] font-semibold text-[var(--color-text-primary)]">Batch Allocations</h2>
+                <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">FEFO</span>
+                {!["delivered", "cancelled"].includes(order.status) && (
+                  <Button size="sm" variant="outline" className="ml-auto"
+                    onClick={() => { setOverrideLines((order.batchAllocations as BatchAllocation[]).map((a) => ({ ...a }))); setOverrideProductId(null); setBatchModal(true); }}
+                  >
+                    <Pencil size={12} className="mr-1.5" /> Override
+                  </Button>
+                )}
+              </div>
+              <table className="w-full text-[var(--font-size-sm)]">
+                <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+                  <tr>
+                    <th className="px-5 py-2.5 text-left text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Product</th>
+                    <th className="px-5 py-2.5 text-left text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Batch #</th>
+                    <th className="px-5 py-2.5 text-left text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Expiry</th>
+                    <th className="px-5 py-2.5 text-right text-[var(--font-size-xs)] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Qty</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {(order.batchAllocations as BatchAllocation[]).map((a, i) => {
+                    const daysLeft = Math.ceil((new Date(a.expiryDate).getTime() - Date.now()) / 86400000);
+                    const isNear   = daysLeft > 0 && daysLeft <= 90;
+                    return (
+                      <tr key={i} className="hover:bg-[var(--color-surface)]">
+                        <td className="px-5 py-2.5 text-[var(--color-text-secondary)]">{a.productName}</td>
+                        <td className="px-5 py-2.5 font-mono font-semibold text-[var(--color-text-primary)]">{a.batchNumber}</td>
+                        <td className="px-5 py-2.5">
+                          <span className={isNear ? "text-[var(--color-warning)] font-semibold" : "text-[var(--color-text-secondary)]"}>
+                            {new Date(a.expiryDate).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" })}
+                          </span>
+                          {isNear && <AlertTriangle size={12} className="inline ml-1 text-[var(--color-warning)]" />}
+                        </td>
+                        <td className="px-5 py-2.5 text-right font-semibold text-[var(--color-text-primary)]">{a.allocatedQty}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Status history */}
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-5 py-4">
+            <h2 className="text-[var(--font-size-sm)] font-semibold text-[var(--color-text-primary)] mb-3">Status History</h2>
+            <StatusHistory history={order.statusHistory} />
+          </div>
         </div>
-      )}
 
-      {/* Status history */}
-      <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] p-6">
-        <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)] mb-4">Status History</h2>
-        <StatusHistory history={order.statusHistory} />
+        {/* ── RIGHT: thread panel (sticky) ── */}
+        <div className="w-[380px] shrink-0 sticky top-4">
+          <AdminThreadPanel entityType="order" entityId={id} defaultOpen />
+        </div>
+
       </div>
-
-      {/* Communications */}
-      <AdminThreadPanel entityType="order" entityId={id} />
 
       {/* Status modal */}
       <Modal open={statusModal} onClose={() => setStatusModal(false)} title="Update Order Status">
