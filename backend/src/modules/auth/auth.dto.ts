@@ -8,6 +8,11 @@ export const RegisterDto = z.object({
   fullName: z.string().min(2, "Full name required").max(160),
   phone:    z.string().optional(),
   role:     z.enum(["patient", "clinic", "pharmacy_partner"]).optional().default("patient"),
+  /* PHIPA / PIPEDA — consent fields (required for patient registration) */
+  termsAccepted:        z.literal(true, { errorMap: () => ({ message: "You must accept the Terms of Service" }) }),
+  privacyAccepted:      z.literal(true, { errorMap: () => ({ message: "You must accept the Privacy Policy" }) }),
+  marketingConsent:     z.boolean().optional().default(false),
+  privacyPolicyVersion: z.string().optional().default("1.0"),
 });
 
 export const LoginDto = z.object({

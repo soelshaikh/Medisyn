@@ -4,6 +4,27 @@ This file is the cumulative project history. Each session is also recorded in `w
 
 ---
 
+## Session: 2026-10-04 — PHIPA/PIPEDA/CASL Compliance Implementation
+
+**What was done:**
+- `backend/src/modules/users/users.schema.ts` — added consent fields (termsAcceptedAt, privacyPolicyAcceptedAt, privacyPolicyVersion, marketingConsent, marketingConsentAt) + lockout fields (failedLoginAttempts, lockedUntil)
+- `backend/src/modules/auth/auth.dto.ts` — RegisterDto now requires termsAccepted + privacyAccepted (both z.literal(true)), optional marketingConsent
+- `backend/src/modules/auth/auth.service.ts` — register() saves consent + logs audit; login() enforces per-user lockout (5 failures → 15 min lock); added unsubscribeMarketing()
+- `backend/src/modules/auth/auth.controller.ts` + `auth.routes.ts` — passes req.ip to service; added POST /unsubscribe (CASL)
+- `backend/src/config/index.ts` — added PRIVACY_OFFICER_EMAIL, PRIVACY_POLICY_VERSION, LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT_MINUTES
+- `backend/src/modules/prescriptions/prescriptions.routes.ts` — PHI read audit on GET /admin/:id
+- `backend/src/modules/compounding/compounding.routes.ts` — PHI read audit on GET /admin/:id
+- `backend/src/modules/ask-pharmacist/ask-pharmacist.routes.ts` — PHI read audit on GET /admin/:id
+- `backend/src/modules/minor-ailments/ailment-request.routes.ts` — PHI read audit on GET /admin/:id
+- `frontend/src/types/auth.ts` — added consent fields to RegisterRequest
+- `frontend/src/components/auth/RegisterPatientForm.tsx` — split into required terms+privacy checkbox + optional marketing opt-in
+- `frontend/src/app/privacy-policy/page.tsx` — CREATED: full PHIPA/PIPEDA/CASL-compliant privacy policy (15 sections)
+- `frontend/src/app/terms/page.tsx` — CREATED: Terms of Service page
+
+**Still pending:** MFA/2FA, patient data export, data retention job, email unsubscribe links, footer links to legal pages
+
+---
+
 ## Session: 2026-10-02 (E) — Admin Detail Pages Two-Column Redesign + Prescription Service Types
 
 **What was done:**

@@ -7,6 +7,7 @@ import { sendSuccess } from "@/common/utils/response";
 import type { Request } from "express";
 import * as svc from "./ask-pharmacist.service";
 import type { AskPharmacistStatus } from "./ask-pharmacist.schema";
+import { logAction } from "@/modules/audit/audit.service";
 
 function actor(req: Request) {
   return { id: req.user!._id, email: req.user!.email, name: req.user!.fullName, ip: req.ip };
@@ -56,7 +57,10 @@ router.get("/admin", requirePermission("ask-pharmacist.read"), asyncHandler(asyn
 }));
 
 router.get("/admin/:id", requirePermission("ask-pharmacist.read"), asyncHandler(async (req, res) => {
-  sendSuccess(res, await svc.getAdminAskRequest(String(req.params.id)));
+  const result = await svc.getAdminAskRequest(String(req.params.id));
+  /* PHIPA — log every staff read of patient health consultation */
+  logAction({ action: "phi.read", resource: "ask_pharmacist_request", resourceId: String(req.params.id), userId: String(req.user!._id), userEmail: req.user!.email, actorName: req.user!.fullName, ipAddress: req.ip });
+  sendSuccess(res, result);
 }));
 
 router.post("/admin/:id/respond", requirePermission("ask-pharmacist.respond"), asyncHandler(async (req, res) => {

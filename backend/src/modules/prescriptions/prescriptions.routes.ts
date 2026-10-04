@@ -6,6 +6,7 @@ import { sendSuccess } from "@/common/utils/response";
 import type { Request } from "express";
 import * as svc from "./prescriptions.service";
 import type { PrescriptionStatus } from "./prescriptions.schema";
+import { logAction } from "@/modules/audit/audit.service";
 
 function actor(req: Request) {
   return { id: req.user!._id, email: req.user!.email, name: req.user!.fullName, ip: req.ip };
@@ -76,7 +77,10 @@ router.get("/admin", requirePermission("prescriptions.read"), asyncHandler(async
 }));
 
 router.get("/admin/:id", requirePermission("prescriptions.read"), asyncHandler(async (req, res) => {
-  sendSuccess(res, await svc.getAdminPrescription(String(req.params.id)));
+  const result = await svc.getAdminPrescription(String(req.params.id));
+  /* PHIPA — log every staff read of patient prescription data */
+  logAction({ action: "phi.read", resource: "prescription", resourceId: String(req.params.id), userId: String(req.user!._id), userEmail: req.user!.email, actorName: req.user!.fullName, ipAddress: req.ip });
+  sendSuccess(res, result);
 }));
 
 router.patch("/admin/:id/status", requirePermission("prescriptions.status.update"), asyncHandler(async (req, res) => {

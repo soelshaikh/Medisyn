@@ -33,6 +33,15 @@ export interface IUser extends Document {
   resetToken?: string;
   resetTokenExpires?: Date;
   savedAddresses: mongoose.Types.DocumentArray<ISavedAddress>;
+  /* PHIPA / PIPEDA consent */
+  termsAcceptedAt?: Date;
+  privacyPolicyAcceptedAt?: Date;
+  privacyPolicyVersion?: string;
+  marketingConsent: boolean;
+  marketingConsentAt?: Date;
+  /* Account lockout (PIPEDA Safeguards) */
+  failedLoginAttempts: number;
+  lockedUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +68,15 @@ const schema = new mongoose.Schema<IUser>(
     verificationTokenExpires: { type: Date,   select: false },
     resetToken:               { type: String, select: false },
     resetTokenExpires:        { type: Date,   select: false },
+    /* PHIPA / PIPEDA consent fields */
+    termsAcceptedAt:          { type: Date },
+    privacyPolicyAcceptedAt:  { type: Date },
+    privacyPolicyVersion:     { type: String },
+    marketingConsent:         { type: Boolean, default: false },
+    marketingConsentAt:       { type: Date },
+    /* Account lockout */
+    failedLoginAttempts:      { type: Number, default: 0 },
+    lockedUntil:              { type: Date, select: false },
     savedAddresses: {
       type: [{
         label:      { type: String, default: "Home" },

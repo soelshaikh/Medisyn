@@ -30,5 +30,7 @@ router.post("/refresh",                        authController.refresh);
 router.post("/verify-email",    authLimiter,   authController.verifyEmail);
 router.post("/forgot-password", forgotLimiter, authController.forgotPassword);
 router.post("/reset-password",  authLimiter,   authController.resetPassword);
+/* CASL — no auth required so anyone with an email can unsubscribe */
+router.post("/unsubscribe",     authLimiter,   authController.unsubscribeMarketing);
 
 export default router;

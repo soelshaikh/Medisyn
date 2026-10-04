@@ -19,10 +19,13 @@ export default function RegisterPatientForm() {
     const fd = new FormData(e.currentTarget);
     try {
       await register.mutateAsync({
-        fullName: fd.get("fullName") as string,
-        email:    fd.get("email") as string,
-        phone:    fd.get("phone") as string,
-        password: fd.get("password") as string,
+        fullName:         fd.get("fullName") as string,
+        email:            fd.get("email") as string,
+        phone:            fd.get("phone") as string,
+        password:         fd.get("password") as string,
+        termsAccepted:    true,
+        privacyAccepted:  true,
+        marketingConsent: fd.get("marketingConsent") === "on",
       });
       setSuccess(true);
       setTimeout(() => router.push("/login"), 3000);
@@ -80,10 +83,22 @@ export default function RegisterPatientForm() {
           </button>
         </div>
       </div>
-      <label className="flex items-start gap-2 text-sm text-slate-600">
-        <input required type="checkbox" name="consentGiven" className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600" />
-        I consent to MediSyn collecting my health information to provide pharmacy services, in accordance with the Privacy Policy.
-      </label>
+      <div className="space-y-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+        <label className="flex items-start gap-2.5">
+          <input required type="checkbox" name="termsPrivacy" className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-brand-600" />
+          <span>
+            I have read and agree to the{" "}
+            <a href="/terms" target="_blank" className="font-semibold text-brand-700 hover:underline">Terms of Service</a>
+            {" "}and{" "}
+            <a href="/privacy-policy" target="_blank" className="font-semibold text-brand-700 hover:underline">Privacy Policy</a>,
+            and I consent to MediSyn collecting my health information to provide pharmacy services as described therein.
+          </span>
+        </label>
+        <label className="flex items-start gap-2.5">
+          <input type="checkbox" name="marketingConsent" className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-brand-600" />
+          <span>I would like to receive email updates, health tips, and promotional offers from MediSyn. <span className="text-slate-400">(Optional — you can unsubscribe at any time.)</span></span>
+        </label>
+      </div>
       {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
       <button
         type="submit"

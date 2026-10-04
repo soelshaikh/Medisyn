@@ -8,6 +8,11 @@ export interface RegisterRequest {
   password: string;
   fullName: string;
   phone?: string;
+  /* PHIPA / PIPEDA / CASL consent */
+  termsAccepted: true;
+  privacyAccepted: true;
+  marketingConsent?: boolean;
+  privacyPolicyVersion?: string;
 }
 
 export interface AuthTokens {

@@ -9,6 +9,7 @@ import type { RegisterDtoType, LoginDtoType, ResetPasswordDtoType } from "./auth
 import { EmailService } from "@/modules/email/email.service";
 import { nextUHID } from "@/lib/counter";
 import { getSettings } from "@/modules/settings/settings.service";
+import { logAction } from "@/modules/audit/audit.service";
 
 /* ── Token helpers ── */
 function generateAccessToken(userId: string, email: string, role: string) {
@@ -51,7 +52,7 @@ function mapUser(
 }
 
 /* ── Register ── */
-export async function register(data: RegisterDtoType) {
+export async function register(data: RegisterDtoType, ip?: string) {
   const exists = await UserModel.findOne({ email: data.email.toLowerCase() });
   if (exists) throw new AppError("Email already registered", 409);
 
@@ -60,6 +61,7 @@ export async function register(data: RegisterDtoType) {
 
   const passwordHash = await argon2.hash(data.password);
   const uhid = await nextUHID();
+  const now  = new Date();
 
   let verificationToken: string | undefined;
   let verificationTokenExpires: Date | undefined;
@@ -80,6 +82,29 @@ export async function register(data: RegisterDtoType) {
     emailVerified: !verificationRequired,
     verificationToken,
     verificationTokenExpires,
+    /* PHIPA / PIPEDA consent */
+    termsAcceptedAt:         data.termsAccepted     ? now : undefined,
+    privacyPolicyAcceptedAt: data.privacyAccepted   ? now : undefined,
+    privacyPolicyVersion:    data.privacyPolicyVersion ?? config.PRIVACY_POLICY_VERSION,
+    marketingConsent:        data.marketingConsent  ?? false,
+    marketingConsentAt:      data.marketingConsent  ? now : undefined,
+  });
+
+  await logAction({
+    userId:    String(user._id),
+    userEmail: user.email,
+    actorName: user.fullName,
+    action:    "user.register",
+    resource:  "user",
+    resourceId: String(user._id),
+    after: {
+      role:                    user.role,
+      termsAccepted:           !!data.termsAccepted,
+      privacyAccepted:         !!data.privacyAccepted,
+      marketingConsent:        data.marketingConsent ?? false,
+      privacyPolicyVersion:    data.privacyPolicyVersion ?? config.PRIVACY_POLICY_VERSION,
+    },
+    ipAddress: ip,
   });
 
   if (verificationRequired && verificationToken) {
@@ -90,14 +115,37 @@ export async function register(data: RegisterDtoType) {
 }
 
 /* ── Login ── */
-export async function login(data: LoginDtoType) {
-  const user = await UserModel.findOne({ email: data.email.toLowerCase() }).select("+passwordHash");
+export async function login(data: LoginDtoType, ip?: string) {
+  const user = await UserModel.findOne({ email: data.email.toLowerCase() })
+    .select("+passwordHash +lockedUntil");
   if (!user) throw new AppError("Invalid email or password", 401);
 
-  const valid = await argon2.verify(user.passwordHash, data.password);
-  if (!valid) throw new AppError("Invalid email or password", 401);
+  /* Account lockout check */
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+    await logAction({ action: "auth.login.blocked_locked", resource: "user", resourceId: String(user._id), userEmail: user.email, actorName: user.fullName, ipAddress: ip });
+    throw new AppError(`Account temporarily locked. Try again in ${minutesLeft} minute${minutesLeft !== 1 ? "s" : ""}.`, 423);
+  }
 
-  if (user.status === "suspended")  throw new AppError("Account suspended", 403);
+  const valid = await argon2.verify(user.passwordHash, data.password);
+  if (!valid) {
+    const attempts = (user.failedLoginAttempts ?? 0) + 1;
+    const lockout: Record<string, unknown> = { failedLoginAttempts: attempts };
+    if (attempts >= config.LOGIN_MAX_ATTEMPTS) {
+      lockout.lockedUntil = new Date(Date.now() + config.LOGIN_LOCKOUT_MINUTES * 60 * 1000);
+      lockout.failedLoginAttempts = 0;
+    }
+    await UserModel.findByIdAndUpdate(user._id, { $set: lockout });
+    await logAction({ action: "auth.login.failed", resource: "user", resourceId: String(user._id), userEmail: user.email, actorName: user.fullName, after: { attempts }, ipAddress: ip });
+    throw new AppError("Invalid email or password", 401);
+  }
+
+  /* Reset lockout on successful password verification */
+  if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+    await UserModel.findByIdAndUpdate(user._id, { $set: { failedLoginAttempts: 0 }, $unset: { lockedUntil: 1 } });
+  }
+
+  if (user.status === "suspended")   throw new AppError("Account suspended", 403);
   if (user.status === "deactivated") throw new AppError("Account deactivated", 403);
 
   const settings = await getSettings();
@@ -111,6 +159,8 @@ export async function login(data: LoginDtoType) {
 
   const accessToken  = generateAccessToken(String(user._id), user.email, user.role);
   const refreshToken = await generateRefreshToken(String(user._id));
+
+  await logAction({ action: "auth.login.success", resource: "user", resourceId: String(user._id), userEmail: user.email, actorName: user.fullName, ipAddress: ip });
 
   return { user: mapUser(user, roles as Array<{ _id: unknown; name: string; slug: string; permissions: string[] }>), accessToken, refreshToken };
 }
@@ -168,6 +218,22 @@ export async function forgotPassword(email: string) {
   await UserModel.findByIdAndUpdate(user._id, { resetToken, resetTokenExpires });
 
   EmailService.sendPasswordResetEmail(user, resetToken).catch(() => null);
+}
+
+/* ── Unsubscribe from marketing emails (CASL) ── */
+export async function unsubscribeMarketing(email: string, ip?: string) {
+  const user = await UserModel.findOne({ email: email.toLowerCase() });
+  if (!user) return; // always succeed — don't reveal whether email exists
+  await UserModel.findByIdAndUpdate(user._id, {
+    $set: { marketingConsent: false },
+    $unset: { marketingConsentAt: 1 },
+  });
+  await logAction({
+    userId: String(user._id), userEmail: user.email, actorName: user.fullName,
+    action: "user.marketing.unsubscribe", resource: "user", resourceId: String(user._id),
+    after: { marketingConsent: false },
+    ipAddress: ip,
+  });
 }
 
 /* ── Reset password ── */

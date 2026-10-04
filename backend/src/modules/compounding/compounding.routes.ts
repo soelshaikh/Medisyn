@@ -7,6 +7,7 @@ import { sendSuccess } from "@/common/utils/response";
 import type { Request } from "express";
 import * as svc from "./compounding.service";
 import type { CompoundingStatus } from "./compounding.schema";
+import { logAction } from "@/modules/audit/audit.service";
 
 function actor(req: Request) {
   return { id: req.user!._id, email: req.user!.email, name: req.user!.fullName, ip: req.ip };
@@ -62,7 +63,10 @@ router.get("/admin", requirePermission("compounding.read"), asyncHandler(async (
 }));
 
 router.get("/admin/:id", requirePermission("compounding.read"), asyncHandler(async (req, res) => {
-  sendSuccess(res, await svc.getAdminCompoundingRequest(String(req.params.id)));
+  const result = await svc.getAdminCompoundingRequest(String(req.params.id));
+  /* PHIPA — log every staff read of patient compounding request */
+  logAction({ action: "phi.read", resource: "compounding_request", resourceId: String(req.params.id), userId: String(req.user!._id), userEmail: req.user!.email, actorName: req.user!.fullName, ipAddress: req.ip });
+  sendSuccess(res, result);
 }));
 
 router.patch("/admin/:id/status", requirePermission("compounding.status.update"), asyncHandler(async (req, res) => {

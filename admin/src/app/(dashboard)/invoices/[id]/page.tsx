@@ -151,7 +151,7 @@ export default function InvoiceDetailPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--color-border)]">
-            {inv.items.map((item, i) => (
+            {(inv.lineItems ?? []).map((item, i) => (
               <tr key={i} className="hover:bg-[var(--color-surface)]">
                 <td className="px-5 py-3 font-medium text-[var(--color-text-primary)]">{item.name}</td>
                 <td className="px-5 py-3 font-mono text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{item.sku}</td>
@@ -174,7 +174,7 @@ export default function InvoiceDetailPage() {
                 muted
               />
             )}
-            {inv.taxLines.map((t, i) => (
+            {(inv.taxLines ?? []).map((t, i) => (
               <TotalRow key={i} label={t.label} value={cad(t.amount)} muted />
             ))}
             <div className="border-t border-[var(--color-border)] pt-1.5">

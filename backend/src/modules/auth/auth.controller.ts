@@ -18,13 +18,13 @@ const REFRESH_COOKIE_OPTIONS = {
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const dto = RegisterDto.parse(req.body);
-  const result = await authService.register(dto);
+  const result = await authService.register(dto, req.ip);
   sendSuccess(res, { user: result.user }, "Registration successful — check your email to verify your account", 201);
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const dto = LoginDto.parse(req.body);
-  const result = await authService.login(dto);
+  const result = await authService.login(dto, req.ip);
   res.cookie("medisyn_refresh", result.refreshToken, REFRESH_COOKIE_OPTIONS);
   sendSuccess(res, { user: result.user, accessToken: result.accessToken }, "Login successful");
 });
@@ -61,3 +61,12 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
   await authService.resetPassword(dto);
   sendSuccess(res, null, "Password reset successfully — you can now log in");
 });
+
+/* CASL — unsubscribe from marketing emails via signed token or authenticated request */
+export const unsubscribeMarketing = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = z.object({ email: z.string().email() }).parse(req.body);
+  await authService.unsubscribeMarketing(email, req.ip);
+  sendSuccess(res, null, "You have been unsubscribed from marketing emails");
+});
+
+import { z } from "zod";

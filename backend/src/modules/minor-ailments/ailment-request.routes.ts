@@ -6,6 +6,7 @@ import { sendSuccess } from "@/common/utils/response";
 import type { Request } from "express";
 import * as svc from "./ailment-request.service";
 import type { AilmentRequestStatus } from "./ailment-request.schema";
+import { logAction } from "@/modules/audit/audit.service";
 
 function actor(req: Request) {
   return { id: req.user!._id, email: req.user!.email, name: req.user!.fullName, ip: req.ip };
@@ -52,7 +53,10 @@ router.get("/admin", requirePermission("minor-ailments.requests.read"), asyncHan
 }));
 
 router.get("/admin/:id", requirePermission("minor-ailments.requests.read"), asyncHandler(async (req, res) => {
-  sendSuccess(res, await svc.getAdminAilmentRequest(String(req.params.id)));
+  const result = await svc.getAdminAilmentRequest(String(req.params.id));
+  /* PHIPA — log every staff read of patient minor ailment health data */
+  logAction({ action: "phi.read", resource: "ailment_request", resourceId: String(req.params.id), userId: String(req.user!._id), userEmail: req.user!.email, actorName: req.user!.fullName, ipAddress: req.ip });
+  sendSuccess(res, result);
 }));
 
 router.patch("/admin/:id/status", requirePermission("minor-ailments.requests.update"), asyncHandler(async (req, res) => {

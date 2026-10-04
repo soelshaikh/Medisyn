@@ -50,6 +50,13 @@ const schema = z.object({
 
   APP_TIMEZONE:               z.string().default("America/Toronto"),
   INVOICE_GUEST_TOKEN_TTL_DAYS: z.coerce.number().default(30),
+
+  /* PHIPA / PIPEDA compliance */
+  PRIVACY_OFFICER_EMAIL:   z.string().email().optional(),
+  PRIVACY_POLICY_VERSION:  z.string().default("1.0"),
+  /* Login lockout (PIPEDA Safeguards) */
+  LOGIN_MAX_ATTEMPTS:      z.coerce.number().default(5),
+  LOGIN_LOCKOUT_MINUTES:   z.coerce.number().default(15),
 });
 
 const parsed = schema.safeParse(process.env);

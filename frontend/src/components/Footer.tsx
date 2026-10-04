@@ -106,7 +106,12 @@ export default function Footer() {
 
         <div className="mt-12 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {new Date().getFullYear()} Medisyn Compounding Pharmacy. All rights reserved.</p>
-          <p>Licensed by the Ontario College of Pharmacists · Compounded medications prepared to PCAB-aligned standards.</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <p>Licensed by the Ontario College of Pharmacists · PCAB-aligned standards</p>
+            <span className="hidden sm:inline text-white/20">|</span>
+            <Link href="/privacy-policy" className="hover:text-slate-300 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-slate-300 transition-colors">Terms of Service</Link>
+          </div>
         </div>
       </div>
     </footer>
