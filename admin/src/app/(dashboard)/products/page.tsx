@@ -330,7 +330,7 @@ export default function ProductsPage() {
           </div>
 
           {/* Requires Prescription toggle */}
-          <label className="flex items-center gap-3 cursor-pointer select-none">
+          {/* <label className="flex items-center gap-3 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={form.requiresPrescription}
@@ -340,7 +340,7 @@ export default function ProductsPage() {
             <span className="text-[var(--font-size-sm)] text-[var(--color-text-primary)]">
               Requires prescription (Rx)
             </span>
-          </label>
+          </label> */}
 
           {/* Error */}
           {formError && (
