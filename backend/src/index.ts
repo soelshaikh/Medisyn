@@ -1,57 +1,33 @@
-import http from "http";
-import mongoose from "mongoose";
-import { config } from "./config";
-import { app } from "./app";
-import { connectDatabase } from "./database/connection";
-import { logger } from "./common/utils/logger";
+import * as dotenv from 'dotenv';
+dotenv.config();
 
-async function bootstrap() {
-  await connectDatabase();
+import http from 'http';
+import { createApp } from './app';
 
-  const server = http.createServer(app);
+const PORT = process.env.PORT ?? 3001;
+const app = createApp();
+const server = http.createServer(app);
 
-  server.listen(config.PORT, () => {
-    logger.info(`MediSyn API running on http://localhost:${config.PORT}`);
-    logger.info(`Environment: ${config.NODE_ENV}`);
-    logger.info(`Health:      http://localhost:${config.PORT}/health`);
-    logger.info(`API Docs:    http://localhost:${config.PORT}/api/docs`);
+server.listen(PORT, () => {
+  console.log(`Vtech-Med API running on http://localhost:${PORT}`);
+  console.log(`Health: http://localhost:${PORT}/health`);
+});
+
+async function shutdown(signal: string) {
+  console.log(`${signal} received — shutting down`);
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
   });
-
-  /* ── Graceful shutdown ── */
-  async function shutdown(signal: string) {
-    logger.info(`${signal} received — shutting down gracefully`);
-
-    server.close(async () => {
-      logger.info("HTTP server closed");
-      try {
-        await mongoose.connection.close();
-        logger.info("MongoDB connection closed");
-      } catch (err) {
-        logger.error("Error closing MongoDB connection", err);
-      }
-      process.exit(0);
-    });
-
-    /* Force exit if graceful shutdown takes too long */
-    setTimeout(() => {
-      logger.error("Graceful shutdown timed out — forcing exit");
-      process.exit(1);
-    }, 15_000).unref();
-  }
-
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT",  () => shutdown("SIGINT"));
-
-  process.on("unhandledRejection", (reason) => {
-    logger.error("Unhandled promise rejection", { reason });
-  });
-  process.on("uncaughtException", (err) => {
-    logger.error("Uncaught exception", { err });
-    process.exit(1);
-  });
+  setTimeout(() => process.exit(1), 15_000).unref();
 }
 
-bootstrap().catch((err) => {
-  logger.error("Failed to start server", { err });
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
   process.exit(1);
 });

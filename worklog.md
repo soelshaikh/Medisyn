@@ -4,6 +4,114 @@ This file is the cumulative project history. Each session is also recorded in `w
 
 ---
 
+## Session: 2026-10-06g — Phase 2 Auth: All Test Files Written
+
+**What was done:**
+- `backend/tests/auth/register.test.ts` — CREATED: 8 integration tests (REG-001–008) for `POST /api/v1/auth/register`
+- `backend/tests/auth/login.test.ts` — CREATED: 9 integration tests (LOG-001–009) for `POST /api/v1/auth/login`
+- `backend/tests/auth/refresh.test.ts` — CREATED: 8 integration tests (REF-001–008) for `POST /api/v1/auth/refresh` including theft detection (REF-006)
+- `backend/tests/auth/logout.test.ts` — CREATED: 6 integration tests (OUT-001–006) for logout + logout-all
+- `backend/tests/auth/password-reset-verify.test.ts` — CREATED: 13 integration tests (PW-001–007, EV-001–006)
+- `backend/src/core/auth/auth.service.ts` — FIXED: removed unused `getUserById` import
+- `specs/002-auth-endpoints/tasks.md` — updated: T001–T016, T018–T020, T022–T033, T035–T036 marked [X] complete
+- TypeScript: zero errors. ESLint (Phase 2 files): zero errors.
+
+**Still pending (blocked — Docker not installed):**
+- T017, T021, T025, T034 — run integration tests (requires PostgreSQL + Redis via Docker)
+- T037 — quickstart smoke tests
+- T038 — nodemailer dev delivery verification
+
+---
+
+## Session: 2026-10-06f — spec-kit /speckit-tasks: Phase 2 Auth Task List
+
+**What was done:**
+- `specs/002-auth-endpoints/tasks.md` — CREATED: 38 tasks across 9 phases (Setup → Foundational → US1-Register → US2-Login → US3-Refresh → US4-Logout → US5-PasswordReset → US6-EmailVerify → Polish)
+- 44 named test cases defined across 6 user stories (REG-001–008, LOG-001–009, REF-001–008, OUT-001–006, PW-001–007, EV-001–006)
+- Refresh token rotation design finalized: creates new session row on each refresh (not update-in-place) to enable clean theft detection (`revokedReason='rotated'`)
+
+**Still pending (blocked — Docker not installed):**
+- T026, T039, T042, T043 (Phase 1 tests + validation) — user will install Docker Desktop
+
+---
+
+## Session: 2026-10-06e — /speckit-implement: Phase 1 Source Code Complete
+
+**What was done:**
+- `backend/.env` — updated from MongoDB → PostgreSQL env vars
+- `specs/001-multitenant-pg-foundation/tasks.md` — marked T001–T038, T040–T041 as [x] complete
+- All 43 backend source files written (prev session — recap): schema, RLS, seeds, errors, Redis, tenant-context, audit, super-admin, full 7-step auth middleware chain, test fixtures + 20 gate tests
+- TypeScript: zero errors. ESLint: zero errors.
+
+**Still pending (blocked — Docker not installed):**
+- T026, T039 — `npm run test` (requires PostgreSQL + Redis via Docker)
+- T042 — quickstart manual validation
+- T043 — seed idempotency check
+
+---
+
+## Session: 2026-10-06d — spec-kit /speckit-tasks: Phase 1 Implementation Task List
+
+**What was done:**
+- `specs/001-multitenant-pg-foundation/tasks.md` — CREATED: 43 tasks across 7 phases
+
+**Task breakdown**: T001–T006 setup, T007–T021 foundation, T022–T026 US1 (tenant isolation + ISO tests), T027–T033 US2 (super admin + AUX tests + middleware skeleton), T034–T035 US3 (module gating), T036–T038 US4 (session revocation + REV tests), T039–T043 polish/gate.
+
+**Still pending:**
+- `/speckit-implement` — implementation is the next step (T001 is the first task: MongoDB clean break)
+
+---
+
+## Session: 2026-10-06c — spec-kit /speckit-plan: Phase 1 Design Artifacts
+
+**What was done:**
+- `specs/001-multitenant-pg-foundation/plan.md` — filled: Technical Context, Constitution Check (pre+post), Project Structure, Phase 0/1 summaries
+- `specs/001-multitenant-pg-foundation/research.md` — CREATED: 8 confirmed arch decisions with rationale + alternatives
+- `specs/001-multitenant-pg-foundation/data-model.md` — CREATED: all 16 tables, fields, RLS coverage list, relationships, state transitions
+- `specs/001-multitenant-pg-foundation/contracts/middleware-chain.md` — CREATED: 7-step chain, per-step failure modes + error codes
+- `specs/001-multitenant-pg-foundation/contracts/tenant-context.md` — CREATED: withTenantContext() full behaviour contract
+- `specs/001-multitenant-pg-foundation/contracts/db-roles.md` — CREATED: two roles, two pools, ESLint rule DDL, PgBouncer notes
+- `specs/001-multitenant-pg-foundation/quickstart.md` — CREATED: 9-step validation guide, 20 named Phase 1 gate tests, gate checklist
+
+**Still pending:**
+- `/speckit-tasks` — run next to generate tasks.md before implementation begins
+- MongoDB clean break — existing backend/ Mongoose code not yet removed
+- Phase 1 source code not yet written
+
+---
+
+## Session: 2026-10-06b — Architecture V2.1: Session Revocation + 5 Clarifications
+
+**What was done:**
+- `docs/MediSyn_SaaS_Platform_Architecture_V2.md` — updated in-place with all V2.1 changes
+- Section 8 fully replaced: sessions table, 3-key Redis revocation state, fail-closed Redis fallback for both session and auth_version checks, revocation functions, refresh token revocation, BullMQ job cancellation
+- Section 10 (patient model): patients confirmed as authenticated platform users, same JWT system as staff
+- Section 11 (audit log): RLS added — app_user reads own facility only, app_super_admin bypasses
+- Section 13 (middleware): canonical two-stage pattern — auth middleware outside transaction, withTenantContext() wraps handler, services receive tx as parameter
+- Section 18: 14 new acceptance criteria (session revocation + canonical transaction pattern)
+- Section 20: R3 updated, R8 (Redis P0) and R9 (Argon2 cost) added
+- Section 21: 12 new confirmed decisions
+
+**Still pending:** Phase 1 implementation not started; 8 open questions from 2026-10-06 session
+
+---
+
+## Session: 2026-10-06 — Vtech-Med SaaS Platform Architecture V2
+
+**What was done:**
+- Platform renamed: **Vtech-Med** is the SaaS platform; **MediSyn** is one facility/tenant on it
+- `docs/MediSyn_SaaS_Platform_Architecture_V2.md` — CREATED: full approved architecture document
+- `docs/MediSyn_SaaS_Platform_Architecture.md` — MARKED superseded
+- Architecture V2 covers: RLS (fail-closed, two DB roles, PgBouncer safety), JWT auth_version staleness, API key full lifecycle, patient domain model (facility-scoped), audit_log (append-only), plan entitlements (quantitative limits), Phase 1 acceptance criteria, 7 risks to accept
+- `uv` and `specify-cli` (spec-kit) installed globally — blocked by Windows App Control
+
+**Still pending:**
+- spec-kit CLI unblocked (Windows App Control)
+- 10 open questions in worklog/2026-10-06.md need user confirmation before phases begin
+- Phase 1 implementation not started
+
+---
+
 ## Session: 2026-10-04 — PHIPA/PIPEDA/CASL Compliance Implementation
 
 **What was done:**

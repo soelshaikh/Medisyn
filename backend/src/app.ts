@@ -1,176 +1,118 @@
-import express from "express";
-import path from "path";
-import helmet from "helmet";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import compression from "compression";
-import mongoSanitize from "express-mongo-sanitize";
-import swaggerUi from "swagger-ui-express";
-import { config } from "./config";
-import { requestIdMiddleware } from "./common/middleware/requestId.middleware";
-import { errorMiddleware } from "./common/middleware/error.middleware";
-import { globalApiLimiter } from "./common/middleware/rate-limit.middleware";
-import { logger } from "./common/utils/logger";
-import { openapiSpec } from "./docs/openapi";
+import express, { NextFunction, Request, Response } from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
+import { v4 as uuidv4 } from 'uuid';
+import { AppError } from './lib/errors';
+import { authRouter } from './core/auth/auth.router';
 
-import authRoutes        from "./modules/auth/auth.routes";
-import usersRoutes       from "./modules/users/users.routes";
-import rolesRoutes       from "./modules/roles/roles.routes";
-import permissionsRoutes from "./modules/permissions/permissions.routes";
-import clinicsRoutes     from "./modules/clinics/clinics.routes";
-import partnersRoutes    from "./modules/partners/partners.routes";
-import faqsRoutes        from "./modules/faqs/faqs.routes";
-import auditRoutes       from "./modules/audit/audit.routes";
-import dashboardRoutes   from "./modules/dashboard/dashboard.routes";
-import categoriesRoutes  from "./modules/categories/categories.routes";
-import brandsRoutes      from "./modules/brands/brands.routes";
-import productsRoutes    from "./modules/products/products.routes";
-import inventoryRoutes   from "./modules/inventory/inventory.routes";
-import couponsRoutes     from "./modules/coupons/coupons.routes";
-import cartRoutes        from "./modules/cart/cart.routes";
-import ordersRoutes      from "./modules/orders/orders.routes";
+// Auth middleware chain — Steps 2–7 are stubs until Phase 2 implementation
+import { parseJWT } from './core/auth/middleware/parse-jwt';
+import { checkSession } from './core/auth/middleware/check-session';
+import { verifyAuthVersion } from './core/auth/middleware/verify-auth-version';
+import { checkFacilityStatus } from './core/auth/middleware/check-facility-status';
+import { requireModule } from './core/auth/middleware/require-module';
+import { requirePermission } from './core/auth/middleware/require-permission';
 
-import ailmentCatalogRoutes  from "./modules/minor-ailments/ailment-catalog.routes";
-import ailmentRequestRoutes  from "./modules/minor-ailments/ailment-request.routes";
-import compoundingRoutes     from "./modules/compounding/compounding.routes";
-import prescriptionsRoutes   from "./modules/prescriptions/prescriptions.routes";
-import askPharmacistRoutes        from "./modules/ask-pharmacist/ask-pharmacist.routes";
-import askPharmacistTopicsRoutes  from "./modules/ask-pharmacist/ask-pharmacist-topics.routes";
+export const authMiddleware = [
+  parseJWT,
+  checkSession,
+  verifyAuthVersion,
+  checkFacilityStatus,
+];
 
-import vaccineServicesRoutes        from "./modules/vaccine-services/vaccine-services.routes";
-import appointmentSlotsRoutes       from "./modules/appointment-slots/appointment-slots.routes";
-import appointmentsRoutes           from "./modules/appointments/appointments.routes";
-import appointmentInterestRoutes    from "./modules/appointments/appointment-interest.routes";
-import notificationsRoutes     from "./modules/notifications/notifications.routes";
-import reportsRoutes           from "./modules/reports/reports.routes";
-import filesRoutes             from "./modules/files/files.routes";
-import settingsRoutes          from "./modules/settings/settings.routes";
-import invoicesRoutes              from "./modules/invoices/invoices.routes";
-import threadRoutes               from "./modules/threads/thread.routes";
-import emailTriggerConfigRoutes   from "./modules/email/email-trigger-config.routes";
+export { requireModule, requirePermission };
 
-export const app = express();
+export function createApp() {
+  const app = express();
 
-/* ── Security headers ── */
-app.use(helmet({
-  /* Allow cross-origin image loading (admin/frontend load images from backend origin) */
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-}));
-app.use(cors({
-  origin:      [config.FRONTEND_URL, config.ADMIN_URL],
-  credentials: true,
-}));
+  // ── Security headers ─────────────────────────────────────────────────
+  app.use(helmet());
+  app.use(
+    cors({
+      origin: [
+        process.env.FRONTEND_URL ?? 'http://localhost:3000',
+        process.env.ADMIN_URL ?? 'http://localhost:3002',
+      ],
+      credentials: true,
+    }),
+  );
 
-/* ── Local file uploads (dev only — production uses S3) ── */
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+  // ── Parsing ──────────────────────────────────────────────────────────
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+  app.use(cookieParser());
 
-/* ── Compression ── */
-app.use(compression());
-
-/* ── Parsing ── (1 MB limit — files go through multer memoryStorage, not JSON body) */
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
-app.use(cookieParser());
-
-/* ── MongoDB injection sanitization — strips $ and . from req.body, query, params ── */
-app.use(mongoSanitize({ replaceWith: "_" }));
-
-/* ── Request ID ── */
-app.use(requestIdMiddleware);
-
-/* ── Request logging (mask sensitive headers) ── */
-app.use((req, _res, next) => {
-  logger.info("Request", {
-    method:    req.method,
-    path:      req.path,
-    requestId: req.requestId,
-    ip:        req.ip,
-    /* Intentionally omitting: Authorization value, Cookie content */
+  // ── Request ID ───────────────────────────────────────────────────────
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    (req as Request & { id: string }).id = uuidv4();
+    next();
   });
-  next();
-});
 
-/* ── Health (no rate limit) ── */
-app.get("/health", (_req, res) => {
-  res.json({ success: true, data: { status: "ok", timestamp: new Date().toISOString() } });
-});
+  // ── Global rate limit ────────────────────────────────────────────────
+  app.use(
+    '/api/v1',
+    rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 min
+      max: 300,
+      standardHeaders: true,
+      legacyHeaders: false,
+    }),
+  );
 
-/* ── API Docs ── */
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapiSpec, {
-  customSiteTitle: "MediSyn API Docs",
-  swaggerOptions:  { persistAuthorization: true },
-}));
+  // ── Auth routes ───────────────────────────────────────────────────────
+  app.use('/api/v1/auth', authRouter);
 
-/* ── Global rate limit on all /api/v1 routes ── */
-app.use("/api/v1", globalApiLimiter);
+  // ── Health (no auth) ─────────────────────────────────────────────────
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
 
-/* ── API Routes ── */
-app.use("/api/v1/auth",              authRoutes);
-app.use("/api/v1/users",            usersRoutes);
-app.use("/api/v1/admin/roles",      rolesRoutes);
-app.use("/api/v1/admin/permissions",permissionsRoutes);
+  // ── Ping (auth chain smoke test) ─────────────────────────────────────
+  app.get(
+    '/api/v1/ping',
+    ...authMiddleware,
+    (req: Request, res: Response) => {
+      const auth = (req as Request & { auth?: Record<string, unknown> }).auth;
+      res.json({ userId: auth?.userId, facilityId: auth?.facilityId });
+    },
+  );
 
-/* Phase 2 — Admin Management */
-app.use("/api/v1/admin/clinics",    clinicsRoutes);
-app.use("/api/v1/admin/partners",   partnersRoutes);
-app.use("/api/v1/admin/faqs",       faqsRoutes);
-app.use("/api/v1/faqs",             faqsRoutes);
-app.use("/api/v1/admin/audit",      auditRoutes);
-app.use("/api/v1/admin/dashboard",  dashboardRoutes);
+  // ── 404 ───────────────────────────────────────────────────────────────
+  app.use((_req: Request, res: Response) => {
+    res.status(404).json({
+      error: { code: 'NOT_FOUND', message: 'Route not found' },
+    });
+  });
 
-/* Phase 3 — Ecommerce Catalogue */
-app.use("/api/v1/categories", categoriesRoutes);
-app.use("/api/v1/brands",     brandsRoutes);
-app.use("/api/v1/products",   productsRoutes);
-app.use("/api/v1/admin/inventory", inventoryRoutes);
-app.use("/api/v1/coupons",    couponsRoutes);
+  // ── Global error handler ─────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+    const reqId = (req as Request & { id?: string }).id;
 
-/* Phase 4 — Ecommerce Commerce */
-app.use("/api/v1/cart",   cartRoutes);
-app.use("/api/v1/orders", ordersRoutes);
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json({
+        error: {
+          code: err.code,
+          message: err.message,
+          requestId: reqId,
+        },
+      });
+    }
 
-/* Phase 5 — Healthcare Workflows */
-app.use("/api/v1/ailments",         ailmentCatalogRoutes);
-app.use("/api/v1/ailment-requests", ailmentRequestRoutes);
-app.use("/api/v1/compounding",      compoundingRoutes);
-app.use("/api/v1/prescriptions",    prescriptionsRoutes);
-app.use("/api/v1/ask-pharmacist",         askPharmacistRoutes);
-app.use("/api/v1/ask-pharmacist-topics",  askPharmacistTopicsRoutes);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(err);
+    }
 
-/* Phase 6 — Appointments */
-app.use("/api/v1/vaccine-services",        vaccineServicesRoutes);
-app.use("/api/v1/appointment-slots",       appointmentSlotsRoutes);
-app.use("/api/v1/appointments",            appointmentsRoutes);
-app.use("/api/v1/appointment-interest",    appointmentInterestRoutes);
+    return res.status(500).json({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred',
+        requestId: reqId,
+      },
+    });
+  });
 
-/* Phase 7 — Notifications */
-app.use("/api/v1/notifications", notificationsRoutes);
-
-/* Phase 8 — Reports */
-app.use("/api/v1/admin/reports", reportsRoutes);
-
-/* Phase 9 — File Storage */
-app.use("/api/v1/files", filesRoutes);
-
-/* Pharmacy Settings */
-app.use("/api/v1/settings", settingsRoutes);
-
-/* Invoices */
-app.use("/api/v1/invoices", invoicesRoutes);
-
-/* Threads */
-app.use("/api/v1", threadRoutes);
-
-/* Email trigger configuration */
-app.use("/api/v1/admin/email-triggers", emailTriggerConfigRoutes);
-
-/* Serve local uploads in development (no-op in production when using S3) */
-app.use("/uploads", express.static("uploads"));
-
-/* ── 404 ── */
-app.use((_req, res) => {
-  res.status(404).json({ success: false, error: "Route not found", statusCode: 404 });
-});
-
-/* ── Error handler ── */
-app.use(errorMiddleware);
+  return app;
+}
