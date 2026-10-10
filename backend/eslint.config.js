@@ -51,9 +51,9 @@ module.exports = [
       ],
     },
   },
-  // ALLOW superAdminDb import inside src/core/super-admin/
+  // ALLOW superAdminDb in src/core/super-admin/ and resolve-facility middleware
   {
-    files: ['src/core/super-admin/**/*.ts'],
+    files: ['src/core/super-admin/**/*.ts', 'src/middleware/resolve-facility.ts'],
     rules: {
       'no-restricted-imports': 'off',
     },

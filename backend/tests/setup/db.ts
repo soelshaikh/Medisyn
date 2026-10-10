@@ -6,6 +6,10 @@ import * as plansSchema from '@/db/schema/plans';
 import * as rbacSchema from '@/db/schema/rbac';
 import * as auditSchema from '@/db/schema/audit';
 import * as patientSchema from '@/db/schema/patient';
+import * as catalogueSchema from '@/db/schema/catalogue';
+import * as commerceSchema from '@/db/schema/commerce';
+import * as healthcareSchema from '@/db/schema/healthcare';
+import * as appointmentsSchema from '@/db/schema/appointments';
 
 dotenv.config({ path: '.env.test' });
 dotenv.config();
@@ -16,6 +20,10 @@ const schema = {
   ...rbacSchema,
   ...auditSchema,
   ...patientSchema,
+  ...catalogueSchema,
+  ...commerceSchema,
+  ...healthcareSchema,
+  ...appointmentsSchema,
 };
 
 // ── Test DB client (regular app_user role) ─────────────────────────────

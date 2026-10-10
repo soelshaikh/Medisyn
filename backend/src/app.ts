@@ -6,23 +6,13 @@ import rateLimit from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 import { AppError } from './lib/errors';
 import { authRouter } from './core/auth/auth.router';
+import { authMiddleware, requireModule, requirePermission } from './core/auth/auth.middleware';
+import { catalogueRouter } from './modules/catalogue/catalogue.router';
+import { commerceRouter } from './modules/commerce.router';
+import { healthcareRouter } from './modules/healthcare/healthcare.router';
+import { appointmentsRouter } from './modules/appointments/appointments.router';
 
-// Auth middleware chain — Steps 2–7 are stubs until Phase 2 implementation
-import { parseJWT } from './core/auth/middleware/parse-jwt';
-import { checkSession } from './core/auth/middleware/check-session';
-import { verifyAuthVersion } from './core/auth/middleware/verify-auth-version';
-import { checkFacilityStatus } from './core/auth/middleware/check-facility-status';
-import { requireModule } from './core/auth/middleware/require-module';
-import { requirePermission } from './core/auth/middleware/require-permission';
-
-export const authMiddleware = [
-  parseJWT,
-  checkSession,
-  verifyAuthVersion,
-  checkFacilityStatus,
-];
-
-export { requireModule, requirePermission };
+export { authMiddleware, requireModule, requirePermission };
 
 export function createApp() {
   const app = express();
@@ -63,6 +53,18 @@ export function createApp() {
 
   // ── Auth routes ───────────────────────────────────────────────────────
   app.use('/api/v1/auth', authRouter);
+
+  // ── Catalogue routes ──────────────────────────────────────────────────
+  app.use('/api/v1/catalogue', catalogueRouter);
+
+  // ── Commerce routes (cart, shipping, checkout, orders) ───────────────
+  app.use('/api/v1', commerceRouter);
+
+  // ── Healthcare routes (prescriptions, compounding, minor ailments, ask-pharmacist) ──
+  app.use('/api/v1', healthcareRouter);
+
+  // ── Appointments routes (vaccine services, availability slots, bookings) ─
+  app.use('/api/v1', appointmentsRouter);
 
   // ── Health (no auth) ─────────────────────────────────────────────────
   app.get('/health', (_req: Request, res: Response) => {

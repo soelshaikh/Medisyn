@@ -1,10 +1,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { authMiddleware } from '@/app';
+import { authMiddleware } from './auth.middleware';
 import { authService } from './auth.service';
 import {
   RegisterBodySchema,
   LoginBodySchema,
+  SuperAdminLoginBodySchema,
   ForgotPasswordBodySchema,
   ResetPasswordBodySchema,
   VerifyEmailBodySchema,
@@ -90,6 +91,24 @@ authRouter.post('/refresh', async (req: Request, res: Response, next: NextFuncti
     );
     setRefreshCookie(res, result.rawRefreshToken);
     return res.status(200).json({ data: { accessToken: result.accessToken } });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ── POST /super-admin/login ────────────────────────────────────────────────
+authRouter.post('/super-admin/login', async (req: Request, res: Response, next: NextFunction) => {
+  const parsed = SuperAdminLoginBodySchema.safeParse(req.body);
+  if (!parsed.success) return next(zodError(parsed.error));
+
+  try {
+    const result = await authService.superAdminLogin(
+      parsed.data,
+      req.ip ?? '',
+      req.headers['user-agent'] ?? '',
+    );
+    setRefreshCookie(res, result.rawRefreshToken);
+    return res.status(200).json({ data: { accessToken: result.accessToken, user: result.user } });
   } catch (err) {
     return next(err);
   }

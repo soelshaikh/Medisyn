@@ -34,8 +34,14 @@ export const ResendVerificationBodySchema = z.object({
   email: z.string().email(),
 });
 
+export const SuperAdminLoginBodySchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1).max(128),
+});
+
 export type RegisterBody = z.infer<typeof RegisterBodySchema>;
 export type LoginBody = z.infer<typeof LoginBodySchema>;
+export type SuperAdminLoginBody = z.infer<typeof SuperAdminLoginBodySchema>;
 export type ForgotPasswordBody = z.infer<typeof ForgotPasswordBodySchema>;
 export type ResetPasswordBody = z.infer<typeof ResetPasswordBodySchema>;
 export type VerifyEmailBody = z.infer<typeof VerifyEmailBodySchema>;

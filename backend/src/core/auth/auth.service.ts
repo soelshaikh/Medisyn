@@ -34,6 +34,7 @@ import { AppError, AuthError, ForbiddenError, ValidationError } from '@/lib/erro
 import type {
   RegisterBody,
   LoginBody,
+  SuperAdminLoginBody,
   ForgotPasswordBody,
   ResetPasswordBody,
   VerifyEmailBody,
@@ -455,6 +456,90 @@ export const authService = {
       actorId: user.id,
       action: 'auth.email_verify',
     });
+  },
+
+  // ── Super Admin Login ──────────────────────────────────────────────────
+  async superAdminLogin(
+    dto: SuperAdminLoginBody,
+    ipAddress: string,
+    userAgent: string,
+  ): Promise<{
+    accessToken: string;
+    rawRefreshToken: string;
+    user: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+    };
+  }> {
+    const user = await getUserByEmail(dto.email);
+    if (!user) {
+      throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
+    }
+
+    if (!user.isPlatformSuperAdmin) {
+      throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
+    }
+
+    const passwordMatch = await argon2.verify(user.passwordHash, dto.password);
+    if (!passwordMatch) {
+      await writeAuthAuditEntry({
+        action: 'auth.super_admin_login_failed',
+        actorId: user.id,
+        metadata: { reason: 'wrong_password' },
+        ipAddress,
+        userAgent,
+      });
+      throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
+    }
+
+    if (!user.emailVerified) {
+      throw new AppError('EMAIL_NOT_VERIFIED', 'Please verify your email before logging in', 403);
+    }
+
+    const sessionId = uuidv4();
+    const rawRefreshToken = randomBytes(32).toString('hex');
+    const refreshTokenHash = await argon2.hash(rawRefreshToken);
+
+    await createSession({
+      id: sessionId,
+      userId: user.id,
+      facilityId: null,
+      refreshTokenHash,
+      userAgent,
+      ipAddress,
+      expiresAt: addDays(new Date(), 30),
+    });
+
+    const accessToken = signAccessToken({
+      sub: user.id,
+      sessionId,
+      facilityId: null,
+      authVersion: user.authVersion,
+      role: 'super_admin',
+      isSuperAdmin: true,
+    });
+
+    await updateLastLoginAt(user.id);
+
+    await writeAuthAuditEntry({
+      actorId: user.id,
+      action: 'auth.super_admin_login',
+      ipAddress,
+      userAgent,
+    });
+
+    return {
+      accessToken,
+      rawRefreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    };
   },
 
   // ── Resend Verification ────────────────────────────────────────────────

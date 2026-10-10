@@ -106,7 +106,7 @@ export default function AdminLoginPage() {
 
   const login = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post("/auth/login", { email, password });
+      const res = await apiClient.post("/auth/super-admin/login", { email, password });
       return res.data.data;
     },
     onSuccess: (data) => {

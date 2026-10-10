@@ -11,18 +11,16 @@
  *
  * Run: npm run test -- tests/isolation/cross-tenant.test.ts
  */
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { sql, eq, and, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import * as argon2 from 'argon2';
-import postgres from 'postgres';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.test' });
 dotenv.config();
 
 import {
-  getTestDb,
   getSuperAdminTestDb,
   getRawRegularClient,
   getRawSuperAdminClient,
@@ -34,7 +32,7 @@ import { withTenantContext } from '@/lib/tenant-context';
 import * as coreSchema from '@/db/schema/core';
 import * as rbacSchema from '@/db/schema/rbac';
 import * as auditSchema from '@/db/schema/audit';
-import { redisGet, redisSet, redis } from '@/lib/redis';
+import { redisGet, redisSet } from '@/lib/redis';
 
 // ── Test state ────────────────────────────────────────────────────────────
 
@@ -178,7 +176,7 @@ describe('ISO: Cross-Tenant Isolation', () => {
 
   it('ISO-008: tenant context is cleared after transaction commits', async () => {
     // Run a transaction to set context
-    await withTenantContext(facilityA.id, async (_tx) => {
+    await withTenantContext(facilityA.id, async () => {
       // context is set here
     });
 
@@ -191,7 +189,7 @@ describe('ISO: Cross-Tenant Isolation', () => {
 
   it('ISO-009: tenant context is cleared after transaction rolls back', async () => {
     try {
-      await withTenantContext(facilityA.id, async (_tx) => {
+      await withTenantContext(facilityA.id, async () => {
         throw new Error('intentional rollback');
       });
     } catch {

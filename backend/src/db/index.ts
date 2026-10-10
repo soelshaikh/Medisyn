@@ -1,3 +1,4 @@
+import * as dotenv from 'dotenv';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as coreSchema from './schema/core';
@@ -5,6 +6,12 @@ import * as plansSchema from './schema/plans';
 import * as rbacSchema from './schema/rbac';
 import * as auditSchema from './schema/audit';
 import * as patientSchema from './schema/patient';
+import * as catalogueSchema from './schema/catalogue';
+import * as commerceSchema from './schema/commerce';
+import * as healthcareSchema from './schema/healthcare';
+import * as appointmentsSchema from './schema/appointments';
+
+dotenv.config();
 
 const schema = {
   ...coreSchema,
@@ -12,6 +19,10 @@ const schema = {
   ...rbacSchema,
   ...auditSchema,
   ...patientSchema,
+  ...catalogueSchema,
+  ...commerceSchema,
+  ...healthcareSchema,
+  ...appointmentsSchema,
 };
 
 // ── Regular pool — app_user role, RLS enforced ────────────────────────────

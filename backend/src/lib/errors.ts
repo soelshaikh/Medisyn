@@ -18,6 +18,7 @@ export type ErrorCode =
   | 'USER_SUSPENDED'
   | 'ACCOUNT_INACTIVE'
   | 'EMAIL_IN_USE'
+  | 'EMAIL_NOT_VERIFIED'
   | 'ACCOUNT_EXISTS_LOGIN'
   | 'INVALID_CREDENTIALS'
   | 'REFRESH_TOKEN_MISSING'
@@ -30,7 +31,76 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'INTERNAL_ERROR'
-  | 'VALIDATION_ERROR';
+  | 'VALIDATION_ERROR'
+  // Facility resolution (public catalogue endpoints)
+  | 'MISSING_FACILITY_ID'
+  | 'INVALID_FACILITY_ID'
+  // Catalogue — products
+  | 'PRODUCT_NOT_FOUND'
+  | 'SKU_CONFLICT'
+  | 'SLUG_CONFLICT'
+  | 'PRODUCT_ALREADY_INACTIVE'
+  | 'VARIANT_NOT_FOUND'
+  | 'VARIANT_SKU_CONFLICT'
+  | 'VARIANT_DIMENSION_REQUIRED'
+  // Catalogue — categories
+  | 'CATEGORY_NOT_FOUND'
+  | 'PARENT_NOT_FOUND'
+  | 'CYCLE_DETECTED'
+  | 'CATEGORY_HAS_ACTIVE_CHILDREN'
+  // Catalogue — inventory
+  | 'INVENTORY_RECORD_NOT_FOUND'
+  | 'INSUFFICIENT_STOCK'
+  // Catalogue — coupons
+  | 'COUPON_NOT_FOUND'
+  | 'COUPON_CODE_CONFLICT'
+  | 'COUPON_CODE_EXISTS'
+  | 'COUPON_ALREADY_INACTIVE'
+  | 'IMMUTABLE_FIELD'
+  // Commerce — cart
+  | 'CART_EMPTY'
+  | 'CART_ITEM_NOT_FOUND'
+  | 'CART_ITEM_LIMIT_EXCEEDED'
+  | 'CART_TOKEN_NOT_FOUND'
+  // Commerce — checkout
+  | 'PREVIEW_TOKEN_REQUIRED'
+  | 'PREVIEW_TOKEN_EXPIRED'
+  | 'PREVIEW_TOKEN_INVALID'
+  // Commerce — orders
+  | 'INVALID_STATUS_TRANSITION'
+  | 'ORDER_NOT_FOUND'
+  // Commerce — tax
+  | 'INVALID_PROVINCE'
+  // Commerce — shipping methods
+  | 'SHIPPING_METHOD_NOT_FOUND'
+  | 'SHIPPING_METHOD_NAME_EXISTS'
+  | 'SHIPPING_METHOD_ALREADY_INACTIVE'
+  // Healthcare — prescriptions
+  | 'PRESCRIPTION_REQUEST_NOT_FOUND'
+  // Healthcare — compounding
+  | 'COMPOUNDING_REQUEST_NOT_FOUND'
+  // Healthcare — minor ailments
+  | 'AILMENT_NOT_FOUND'
+  | 'AILMENT_INACTIVE'
+  | 'AILMENT_NAME_EXISTS'
+  // Healthcare — ask-a-pharmacist
+  | 'CONVERSATION_NOT_FOUND'
+  | 'CONVERSATION_CLOSED'
+  // Healthcare — shared
+  | 'HEALTHCARE_INVALID_STATUS_TRANSITION'
+  // Appointments — vaccine services
+  | 'VACCINE_SERVICE_NOT_FOUND'
+  | 'VACCINE_SERVICE_INACTIVE'
+  | 'VACCINE_SERVICE_NAME_EXISTS'
+  // Appointments — availability slots
+  | 'SLOT_NOT_FOUND'
+  | 'SLOT_FULL'
+  | 'SLOT_INACTIVE'
+  | 'SLOT_CAPACITY_BELOW_BOOKED'
+  // Appointments — bookings
+  | 'APPOINTMENT_NOT_FOUND'
+  | 'APPOINTMENT_INVALID_STATUS_TRANSITION'
+  | 'APPOINTMENT_DUPLICATE_BOOKING';
 
 export class AppError extends Error {
   constructor(

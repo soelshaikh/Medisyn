@@ -1,5 +1,5 @@
 # MediSyn — Resume Point
-_Last updated: 2026-10-06_
+_Last updated: 2026-10-09_
 
 ---
 
@@ -7,42 +7,38 @@ _Last updated: 2026-10-06_
 
 | App | Status |
 |-----|--------|
-| `backend/` Express API | Phase 1 ✅ + Phase 2 ✅ (code done, tests need Docker to run) |
+| `backend/` Express API | Phase 1 ✅ + Phase 2 ✅ (44/44 auth tests) + Phase 3 🔶 (code complete, tests pending live DB) |
 | `admin/` Next.js admin panel | Old code exists — not yet rebuilt/wired to API |
 | `frontend/` Next.js patient app | Old code exists — not yet rebuilt/wired to API |
 
 ---
 
-## Immediate Next Step — Close Phase 2 (15 min)
+## Phase 3 — Final Step Before Closing
 
-Install **Docker Desktop**, then:
+All Phase 3 code is written and `typecheck` + `lint` both pass. Only the integration test run is pending.
 
+Docker + Postgres + Redis must be running:
 ```bash
-# 1. Start Postgres + Redis
+cd backend/
 docker compose up -d
-
-# 2. Run migrations + seeds (from backend/)
 npm run db:migrate
 npm run db:seed
-npm run db:seed:facilities
-
-# 3. Run all Phase 2 auth tests
-npm run test -- tests/auth/
 ```
 
-Expected: **38 tests green** across register / login / refresh / logout / password-reset / email-verify.
+Then run the test suite to close Phase 3:
+```bash
+npm run test -- tests/catalogue/
+```
 
-If any fail → fix and rerun before moving to Phase 3.
+All tests should pass (products, categories, browsing, inventory, coupons). If anything fails, see `worklog/2026-10-09c.md` for fixture details.
 
----
+## Phase 4 — Start Here (after Phase 3 tests pass)
 
-## Phase 3 — Start Here After Phase 2 Tests Pass
-
-**Ecommerce Catalogue** — products, categories, inventory, coupons.
+**Cart + Checkout + Orders** — guest cart, authenticated cart, checkout flow, order management.
 
 Run spec-kit to begin:
 ```
-/speckit-specify Phase 3 — Ecommerce Catalogue. Products with variants (size/strength), categories (hierarchical), inventory tracking per facility, coupons (fixed/percent, usage limits, expiry). Admin CRUD for all. Uses Phase 1 foundation: Express + PostgreSQL + RLS + JWT auth.
+/speckit-specify Phase 4 — Cart, Checkout, Orders. Guest cart (cookie-based), authenticated cart (merged on login), checkout (address, shipping method selection), order creation (line items, totals calculated server-side), order management (status history, cancellation). Builds on Phase 3 catalogue.
 ```
 
 ---
@@ -51,8 +47,8 @@ Run spec-kit to begin:
 
 | Phase | What Gets Built | Depends On |
 |-------|----------------|------------|
-| **2** *(close out)* | Run auth tests in Docker | Docker Desktop installed |
-| **3** | Products, categories, inventory, coupons | Phase 2 auth ✅ |
+| **2** ✅ | Auth tests (44/44 green) | Done |
+| **3** 🔶 | Products, categories, inventory, coupons — code done, run tests | Phase 2 auth ✅ |
 | **4** | Cart (guest + auth), checkout, orders, order management | Phase 3 |
 | **5** | Compounding requests, prescriptions (enhanced), ask-pharmacist, minor ailments, status histories | Phase 2 auth ✅ |
 | **6** | Appointments — vaccine services, availability slots, STRICT/OPEN booking, concurrency-safe | Phase 2 auth ✅ |
@@ -105,7 +101,7 @@ Both `admin/` and `frontend/` are **separate Next.js apps** (own `package.json`)
 |------|-----------|
 | `CLAUDE.md` | Project rules, tech stack, confirmed decisions, open questions |
 | `worklog.md` | Running session history |
-| `worklog/2026-10-06g.md` | Most recent session detail |
-| `backend/specs/002-auth-endpoints/tasks.md` | Phase 2 task checklist (T017, T021, T034, T037, T038 still open) |
+| `worklog/2026-10-09c.md` | Most recent session detail (Phase 3 catalogue implementation) |
+| `specs/003-ecommerce-catalogue/tasks.md` | Phase 3 task checklist (T057, T060–T062 still need live DB) |
 | `docs/MediSyn_Backend_Master_Prompt_Claude.md` | Full backend scope + module specs |
 | `docs/MediSyn_Claude_Design_Requirements_Handoff.md` | UX + design requirements |

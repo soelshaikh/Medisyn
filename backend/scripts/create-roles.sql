@@ -36,8 +36,9 @@ BEGIN
 
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_super_admin_login') THEN
     -- Password must be changed before production use
+    -- BYPASSRLS must be on the login role directly; it is NOT inherited via membership.
     CREATE ROLE app_super_admin_login
-      LOGIN INHERIT PASSWORD 'super_admin_pass_CHANGE_ME';
+      LOGIN INHERIT BYPASSRLS PASSWORD 'super_admin_pass_CHANGE_ME';
   END IF;
   GRANT app_super_admin TO app_super_admin_login;
 END

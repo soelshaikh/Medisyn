@@ -1,6 +1,7 @@
 import { eq, and, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import * as argon2 from 'argon2';
+import * as jwt from 'jsonwebtoken';
 import { getSuperAdminTestDb } from './db';
 import * as coreSchema from '@/db/schema/core';
 import * as rbacSchema from '@/db/schema/rbac';
@@ -157,6 +158,48 @@ export async function deleteTestUsersByEmailPrefix(prefix: string): Promise<void
       await sa.delete(coreSchema.users).where(eq(coreSchema.users.id, u.id));
     }
   }
+}
+
+/**
+ * Creates a test user+session and signs a JWT token suitable for Bearer auth in tests.
+ * Returns { token, userId, cleanup } where cleanup removes the user (cascade deletes session).
+ */
+export async function createAuthedAdminToken(
+  facilityId: string,
+): Promise<{ token: string; userId: string; cleanup: () => Promise<void> }> {
+  const sa = getSuperAdminTestDb();
+  const { userId } = await createTestUser(facilityId, 'staff');
+
+  const [session] = await sa
+    .select({ id: coreSchema.sessions.id, authVersion: coreSchema.users.authVersion })
+    .from(coreSchema.sessions)
+    .innerJoin(coreSchema.users, eq(coreSchema.users.id, coreSchema.sessions.userId))
+    .where(eq(coreSchema.sessions.userId, userId))
+    .limit(1);
+
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET not set in test environment');
+
+  const token = jwt.sign(
+    {
+      sub: userId,
+      sessionId: session.id,
+      facilityId,
+      authVersion: session.authVersion,
+      role: 'staff',
+      isSuperAdmin: false,
+    },
+    secret,
+    { expiresIn: '1h' },
+  );
+
+  return {
+    token,
+    userId,
+    cleanup: async () => {
+      await sa.delete(coreSchema.users).where(eq(coreSchema.users.id, userId));
+    },
+  };
 }
 
 /** Get the most recent non-revoked session for a userId. */
