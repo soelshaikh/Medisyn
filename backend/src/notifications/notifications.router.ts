@@ -34,6 +34,13 @@ notificationsRouter.get(
     }
 
     if (!auth.facilityId) {
+      // Super admin has no facility context — return empty notifications
+      if (auth.isSuperAdmin) {
+        return res.json({
+          success: true,
+          data: { items: [], unreadCount: 0, pagination: { page: 1, limit: parsed.data.limit, total: 0 } },
+        });
+      }
       return next(new AppError('FORBIDDEN', 'Facility context required', 403));
     }
 

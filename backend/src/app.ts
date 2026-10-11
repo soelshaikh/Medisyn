@@ -42,6 +42,24 @@ export function createApp() {
 
   const allowedOrigins = parseAllowedOrigins();
 
+  // ── CORS (MUST be before Helmet so OPTIONS preflight gets the right headers) ──
+  const corsOptions: cors.CorsOptions = {
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. curl, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS: origin '${origin}' not allowed`));
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 204,
+  };
+
+  app.use(cors(corsOptions));
+  // Explicitly handle OPTIONS preflight for every route
+  app.options('*', cors(corsOptions));
+
   // ── Swagger UI (BEFORE global Helmet — needs relaxed CSP for inline scripts) ──
   app.use('/api/docs', helmet({ contentSecurityPolicy: false }), swaggerRouter);
 
@@ -68,13 +86,6 @@ export function createApp() {
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       xContentTypeOptions: true,
       xXssProtection: false,
-    }),
-  );
-
-  app.use(
-    cors({
-      origin: allowedOrigins,
-      credentials: true,
     }),
   );
 

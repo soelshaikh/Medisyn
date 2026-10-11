@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { withTenantContext } from '@/lib/tenant-context';
+import { superAdminDb } from '@/db';
 import type { AuthContext } from '@/core/auth/middleware/parse-jwt';
 import type { ReportQuery } from './reports.validator';
 import type {
@@ -11,6 +12,7 @@ import type {
   TopProduct,
   TopPatient,
 } from './reports.types';
+
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -168,9 +170,75 @@ export async function getSalesReport(
 // ── getDashboard ──────────────────────────────────────────────────────────
 
 export async function getDashboard(auth: AuthContext): Promise<DashboardResult> {
-  const facilityId = auth.facilityId!;
   const now = new Date();
   const midnightUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  // postgres driver needs a string, not a Date — ISO string works for both pools
+  const midnightIso = midnightUtc.toISOString();
+
+  // Super admin has no facilityId — query platform-wide via BYPASSRLS pool
+  if (auth.isSuperAdmin || !auth.facilityId) {
+    const [
+      revenueRows,
+      patientRows,
+      convRows,
+      prescRows,
+      stockRows,
+    ] = await Promise.all([
+      superAdminDb.execute<{ revenue: string; cnt: number }>(sql`
+        SELECT
+          COALESCE(SUM(total), 0)::text AS revenue,
+          COUNT(*)::int                 AS cnt
+        FROM orders
+        WHERE created_at >= ${midnightIso}
+          AND status IN ('shipped', 'delivered')
+      `),
+      superAdminDb.execute<{ cnt: number }>(sql`
+        SELECT COUNT(*)::int AS cnt
+        FROM users u
+        JOIN facility_users fu ON fu.user_id = u.id
+        JOIN facility_roles  fr ON fr.id     = fu.role_id
+        WHERE fr.name = 'patient'
+          AND u.created_at >= ${midnightIso}
+      `),
+      superAdminDb.execute<{ cnt: number }>(sql`
+        SELECT COUNT(*)::int AS cnt
+        FROM pharmacist_conversations
+        WHERE status = 'open'
+      `),
+      superAdminDb.execute<{ cnt: number }>(sql`
+        SELECT COUNT(*)::int AS cnt
+        FROM prescription_requests
+        WHERE status IN ('submitted', 'under_review')
+      `),
+      superAdminDb.execute<{ cnt: number }>(sql`
+        SELECT COUNT(*)::int AS cnt
+        FROM inventory_records ir
+        JOIN products p ON p.id = ir.product_id
+        WHERE ir.quantity      <= p.low_stock_threshold
+          AND p.low_stock_threshold > 0
+          AND p.is_active = true
+      `),
+    ]);
+
+    const rev   = Array.from(revenueRows)[0];
+    const pat   = Array.from(patientRows)[0];
+    const conv  = Array.from(convRows)[0];
+    const presc = Array.from(prescRows)[0];
+    const stock = Array.from(stockRows)[0];
+
+    return {
+      asOf: now.toISOString(),
+      todayRevenue: rev?.revenue ?? '0.00',
+      todayOrderCount: rev?.cnt ?? 0,
+      newPatientsToday: pat?.cnt ?? 0,
+      openConversations: conv?.cnt ?? 0,
+      pendingPrescriptions: presc?.cnt ?? 0,
+      lowStockCount: stock?.cnt ?? 0,
+    };
+  }
+
+  // Facility-scoped query via tenant context (RLS enforced)
+  const facilityId = auth.facilityId;
 
   return withTenantContext(facilityId, async (tx) => {
     const [
@@ -216,9 +284,9 @@ export async function getDashboard(auth: AuthContext): Promise<DashboardResult> 
       `),
     ]);
 
-    const rev = Array.from(revenueRows)[0];
-    const pat = Array.from(patientRows)[0];
-    const conv = Array.from(convRows)[0];
+    const rev   = Array.from(revenueRows)[0];
+    const pat   = Array.from(patientRows)[0];
+    const conv  = Array.from(convRows)[0];
     const presc = Array.from(prescRows)[0];
     const stock = Array.from(stockRows)[0];
 
