@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -51,7 +51,7 @@ export default function RolesPage() {
         </div>
       ),
     },
-    { key: "desc",  header: "Description", render: (r) => <span className="text-[var(--color-text-secondary)]">{r.description || "—"}</span> },
+    { key: "desc",  header: "Description", render: (r) => <span className="text-[var(--color-text-secondary)]">{r.description || "â€”"}</span> },
     { key: "perms", header: "Permissions",  render: (r) => (
       <span className="inline-flex items-center px-2.5 py-0.5 rounded-[var(--radius-full)] bg-[var(--color-primary-light)] text-[var(--color-primary)] text-[var(--font-size-xs)] font-semibold">
         {r.permissions.length}
@@ -72,7 +72,7 @@ export default function RolesPage() {
       render: (r) => (
         <div className="flex items-center gap-1">
           <Link
-            href={`/roles/${r._id}`}
+            href={`/roles/${r.id}`}
             title="Edit permissions"
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-md)] text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-colors"
           >
@@ -103,7 +103,7 @@ export default function RolesPage() {
         actions={<Button size="sm" onClick={() => setCreateOpen(true)}>Create Role</Button>}
       />
 
-      <DataTable columns={columns} data={roles ?? []} loading={isLoading} keyFn={(r) => r._id} />
+      <DataTable columns={columns} data={roles ?? []} loading={isLoading} keyFn={(r) => r.id} />
 
       {/* Create modal */}
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create Role">
@@ -137,7 +137,7 @@ export default function RolesPage() {
             <Button
               variant="danger"
               loading={deleteMut.isPending}
-              onClick={() => deleteTarget && deleteMut.mutate(deleteTarget._id)}
+              onClick={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}
             >
               Delete
             </Button>

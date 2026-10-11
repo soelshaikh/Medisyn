@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -81,7 +81,7 @@ export default function NewAdhocInvoicePage() {
 
   const mut = useMutation({
     mutationFn: (payload: AdhocInvoicePayload) => invoicesApi.createAdhoc(payload),
-    onSuccess:  (inv) => router.push(`/invoices/${inv._id}`),
+    onSuccess:  (inv) => router.push(`/invoices/${inv.id}`),
     onError:    () => setError("Failed to create invoice. Please check the form and try again."),
   });
 
@@ -152,7 +152,7 @@ export default function NewAdhocInvoicePage() {
       <form onSubmit={handleSubmit}>
         <div className="flex gap-5 items-start">
 
-          {/* ── Left column: Customer + Billing (sticky) ── */}
+          {/* â”€â”€ Left column: Customer + Billing (sticky) â”€â”€ */}
           <div className="w-[360px] shrink-0 space-y-4 sticky top-4">
 
             <Section title="Customer">
@@ -211,7 +211,7 @@ export default function NewAdhocInvoicePage() {
 
           </div>
 
-          {/* ── Right column: Items + Tax + Adjustments + Totals ── */}
+          {/* â”€â”€ Right column: Items + Tax + Adjustments + Totals â”€â”€ */}
           <div className="flex-1 min-w-0 space-y-4">
 
             {/* Line items */}
@@ -296,7 +296,7 @@ export default function NewAdhocInvoicePage() {
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Any additional notes to print on the invoice…"
+                  placeholder="Any additional notes to print on the invoiceâ€¦"
                   className={INPUT_CLS + " resize-none"}
                 />
               </div>
@@ -322,7 +322,7 @@ export default function NewAdhocInvoicePage() {
                 <Button type="button" variant="outline" size="sm">Cancel</Button>
               </Link>
               <Button type="submit" size="sm" disabled={mut.isPending}>
-                {mut.isPending ? "Creating…" : "Create Invoice"}
+                {mut.isPending ? "Creatingâ€¦" : "Create Invoice"}
               </Button>
             </div>
 
@@ -384,7 +384,7 @@ function AcField({
       {open && results.length > 0 && (
         <ul className="absolute z-50 mt-1 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white shadow-[var(--shadow-md)] overflow-hidden">
           {results.map((u) => (
-            <li key={u._id}>
+            <li key={u.id}>
               <button
                 type="button"
                 onMouseDown={() => onPick(u)}
@@ -396,7 +396,7 @@ function AcField({
                   )}
                   <span className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] truncate">{u.fullName}</span>
                 </div>
-                <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] truncate mt-0.5">{u.email}{u.phone ? ` · ${u.phone}` : ""}</p>
+                <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] truncate mt-0.5">{u.email}{u.phone ? ` Â· ${u.phone}` : ""}</p>
               </button>
             </li>
           ))}

@@ -82,7 +82,7 @@ export default function SlotDetailPage({ params }: { params: Promise<{ id: strin
     {
       key: "actions", header: "", width: "60px",
       render: (b) => (
-        <Link href={`/appointments/bookings/${b._id}`} className="text-[var(--font-size-xs)] font-semibold text-[var(--color-primary)] hover:underline">
+        <Link href={`/appointments/bookings/${b.id}`} className="text-[var(--font-size-xs)] font-semibold text-[var(--color-primary)] hover:underline">
           View
         </Link>
       ),
@@ -169,7 +169,7 @@ export default function SlotDetailPage({ params }: { params: Promise<{ id: strin
         <h2 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)]">
           Bookings ({bookings?.total ?? 0})
         </h2>
-        <DataTable columns={bookingCols} data={bookings?.data ?? []} keyFn={(b) => b._id} emptyTitle="No bookings yet" emptyDescription="No one has booked this slot yet." />
+        <DataTable columns={bookingCols} data={bookings?.data ?? []} keyFn={(b) => b.id} emptyTitle="No bookings yet" emptyDescription="No one has booked this slot yet." />
       </div>
 
       {/* Edit modal */}

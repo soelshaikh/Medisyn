@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -123,7 +123,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="space-y-8">
-        <PageHeader title="Dashboard" description="Live overview — refreshes every 60 seconds" />
+        <PageHeader title="Dashboard" description="Live overview â€” refreshes every 60 seconds" />
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] px-6 py-5 h-24 animate-pulse">
@@ -140,7 +140,7 @@ export default function DashboardPage() {
   if (isError || !m) {
     return (
       <div className="space-y-8">
-        <PageHeader title="Dashboard" description="Live overview — refreshes every 60 seconds" />
+        <PageHeader title="Dashboard" description="Live overview â€” refreshes every 60 seconds" />
         <div className="bg-[var(--color-error-light)] border border-[var(--color-error)] rounded-[var(--radius-lg)] px-6 py-5 flex items-start gap-3">
           <AlertTriangle size={18} className="text-[var(--color-error)] shrink-0 mt-0.5" />
           <div>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <PageHeader
         title="Dashboard"
-        description="Live overview — refreshes every 60 seconds"
+        description="Live overview â€” refreshes every 60 seconds"
       />
 
       {/* KPI row */}
@@ -175,7 +175,7 @@ export default function DashboardPage() {
         <StatCard
           label="Total Orders"
           value={m.orders.total.toLocaleString()}
-          sub={`${m.orders.today} today · ${m.orders.pending} pending`}
+          sub={`${m.orders.today} today Â· ${m.orders.pending} pending`}
           icon={ShoppingCart}
           href="/orders"
         />
@@ -207,7 +207,7 @@ export default function DashboardPage() {
                   {m.approvals.pendingClinics} clinic{m.approvals.pendingClinics !== 1 ? "s" : ""}
                 </Link>
               )}
-              {m.approvals.pendingClinics > 0 && m.approvals.pendingPartners > 0 && " · "}
+              {m.approvals.pendingClinics > 0 && m.approvals.pendingPartners > 0 && " Â· "}
               {m.approvals.pendingPartners > 0 && (
                 <Link href="/partners?status=pending_approval" className="underline hover:text-[var(--color-primary)]">
                   {m.approvals.pendingPartners} partner{m.approvals.pendingPartners !== 1 ? "s" : ""}
@@ -230,7 +230,7 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-3">
             {(m.orders.byStatus ?? []).map((s) => (
-              <MiniBar key={s._id} label={s._id} count={s.count} max={maxOrderStatus} />
+              <MiniBar key={s.status} label={s.status} count={s.count} max={maxOrderStatus} />
             ))}
             {(m.orders.byStatus ?? []).length === 0 && (
               <p className="text-[var(--font-size-sm)] text-[var(--color-text-muted)]">No order data yet.</p>
@@ -238,12 +238,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Daily orders — last 7 days */}
+        {/* Daily orders â€” last 7 days */}
         <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] p-6">
           <div className="flex items-center gap-2 mb-5">
             <TrendingUp size={16} className="text-[var(--color-primary)]" />
             <h3 className="text-[var(--font-size-md)] font-semibold text-[var(--color-text-primary)]">
-              Orders — Last 7 Days
+              Orders â€” Last 7 Days
             </h3>
           </div>
           {(m.charts.dailyOrders ?? []).length === 0 ? (
@@ -253,13 +253,13 @@ export default function DashboardPage() {
               {m.charts.dailyOrders.map((d) => {
                 const barHeight = maxDailyOrders > 0 ? Math.round((d.count / maxDailyOrders) * 100) : 0;
                 return (
-                  <div key={d._id} className="flex flex-col items-center gap-1.5 flex-1 min-w-0 group relative">
+                  <div key={d.date} className="flex flex-col items-center gap-1.5 flex-1 min-w-0 group relative">
                     <div
                       className="w-full bg-[var(--color-primary)] rounded-t-sm opacity-80 group-hover:opacity-100 transition-opacity"
                       style={{ height: `${Math.max(barHeight, 4)}%` }}
                     />
                     <span className="text-[10px] text-[var(--color-text-muted)] truncate w-full text-center">
-                      {d._id.slice(5)}
+                      {d.date.slice(5)}
                     </span>
                   </div>
                 );

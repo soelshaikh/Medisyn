@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,7 +21,7 @@ export default function BrandsPage() {
     queryFn:  brandsApi.list as () => Promise<AdminBrand[]>,
   });
 
-  /* ── Create / Edit modal ── */
+  /* â”€â”€ Create / Edit modal â”€â”€ */
   const [modal,     setModal]     = useState(false);
   const [editBrand, setEditBrand] = useState<AdminBrand | null>(null);
   const [name,      setName]      = useState("");
@@ -42,15 +42,15 @@ export default function BrandsPage() {
   const saveMut = useMutation({
     mutationFn: () =>
       editBrand
-        ? brandsApi.update(editBrand._id, { name, description: desc, logoUrl, website })
+        ? brandsApi.update(editBrand.id, { name, description: desc, logoUrl, website })
         : brandsApi.create({ name, description: desc, logoUrl, website }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-brands"] }); setModal(false); },
   });
 
-  /* ── Delete modal ── */
+  /* â”€â”€ Delete modal â”€â”€ */
   const [deleteTarget, setDeleteTarget] = useState<AdminBrand | null>(null);
   const deleteMut = useMutation({
-    mutationFn: () => brandsApi.delete(deleteTarget!._id),
+    mutationFn: () => brandsApi.delete(deleteTarget!.id),
     onSuccess:  () => { qc.invalidateQueries({ queryKey: ["admin-brands"] }); setDeleteTarget(null); },
   });
 
@@ -78,7 +78,7 @@ export default function BrandsPage() {
       key: "description", header: "Description",
       render: (b) => (
         <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] line-clamp-1 max-w-xs">
-          {b.description || "—"}
+          {b.description || "â€”"}
         </span>
       ),
     },
@@ -86,7 +86,7 @@ export default function BrandsPage() {
       key: "website", header: "Website", width: "150px",
       render: (b) => b.website
         ? <a href={b.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[var(--font-size-xs)] text-[var(--color-primary)] hover:underline"><Globe size={11} /> {b.website.replace(/^https?:\/\//, "")}</a>
-        : <span className="text-[var(--color-text-muted)]">—</span>,
+        : <span className="text-[var(--color-text-muted)]">â€”</span>,
     },
     {
       key: "status", header: "Status", width: "90px",
@@ -129,7 +129,7 @@ export default function BrandsPage() {
         }
       />
 
-      <DataTable columns={columns} data={brands ?? []} loading={isLoading} keyFn={(b) => b._id} />
+      <DataTable columns={columns} data={brands ?? []} loading={isLoading} keyFn={(b) => b.id} />
 
       {/* Create / Edit modal */}
       <Modal
@@ -151,7 +151,7 @@ export default function BrandsPage() {
               onChange={(e) => setDesc(e.target.value)}
               rows={5}
               maxLength={5000}
-              placeholder="Brand description…"
+              placeholder="Brand descriptionâ€¦"
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-2 text-[var(--font-size-sm)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] resize-y"
             />
             <p className="text-right text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{desc.length}/5000</p>

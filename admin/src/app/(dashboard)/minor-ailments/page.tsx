@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +23,7 @@ import { Plus, Edit2, Trash2, GripVertical } from "lucide-react";
 
 const BLANK = { name: "", description: "", isActive: true, sortOrder: 0 };
 
-/* ── Sortable table row ── */
+/* â”€â”€ Sortable table row â”€â”€ */
 
 interface SortableRowProps {
   item:    AilmentCatalogItem;
@@ -35,7 +35,7 @@ function SortableRow({ item, onEdit, onDelete }: SortableRowProps) {
   const {
     attributes, listeners, setNodeRef,
     transform, transition, isDragging,
-  } = useSortable({ id: item._id });
+  } = useSortable({ id: item.id });
 
   const style: React.CSSProperties = {
     transform:  CSS.Transform.toString(transform),
@@ -75,7 +75,7 @@ function SortableRow({ item, onEdit, onDelete }: SortableRowProps) {
       {/* Description */}
       <td className="py-3 px-4 max-w-sm">
         <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] line-clamp-2">
-          {item.description || <span className="italic">—</span>}
+          {item.description || <span className="italic">â€”</span>}
         </span>
       </td>
 
@@ -110,7 +110,7 @@ function SortableRow({ item, onEdit, onDelete }: SortableRowProps) {
   );
 }
 
-/* ── Page ── */
+/* â”€â”€ Page â”€â”€ */
 
 export default function MinorAilmentsPage() {
   const qc = useQueryClient();
@@ -139,7 +139,7 @@ export default function MinorAilmentsPage() {
   const saveMut = useMutation({
     mutationFn: () =>
       editing
-        ? ailmentsApi.update(editing._id, { name: form.name, description: form.description, isActive: form.isActive, sortOrder: form.sortOrder })
+        ? ailmentsApi.update(editing.id, { name: form.name, description: form.description, isActive: form.isActive, sortOrder: form.sortOrder })
         : ailmentsApi.create({ name: form.name, description: form.description, isActive: form.isActive, sortOrder: form.sortOrder }),
     onSuccess: () => {
       toast.success(editing ? "Ailment updated" : "Ailment created");
@@ -150,7 +150,7 @@ export default function MinorAilmentsPage() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: () => ailmentsApi.delete(deleteTarget!._id),
+    mutationFn: () => ailmentsApi.delete(deleteTarget!.id),
     onSuccess:  () => {
       toast.success("Ailment deleted");
       qc.invalidateQueries({ queryKey: ["admin-ailments"] });
@@ -182,11 +182,11 @@ export default function MinorAilmentsPage() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setItems((prev) => {
-      const oldIdx = prev.findIndex((a) => a._id === String(active.id));
-      const newIdx = prev.findIndex((a) => a._id === String(over.id));
+      const oldIdx = prev.findIndex((a) => a.id === String(active.id));
+      const newIdx = prev.findIndex((a) => a.id === String(over.id));
       if (oldIdx === -1 || newIdx === -1) return prev;
       const next = arrayMove(prev, oldIdx, newIdx).map((a, i) => ({ ...a, sortOrder: i }));
-      sortMut.mutate(next.map((a) => ({ id: a._id, sortOrder: a.sortOrder })));
+      sortMut.mutate(next.map((a) => ({ id: a.id, sortOrder: a.sortOrder })));
       return next;
     });
   }
@@ -197,7 +197,7 @@ export default function MinorAilmentsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Minor Ailments Catalog"
-        description={`${total} service${total !== 1 ? "s" : ""}${total > 1 ? " · drag rows to reorder" : ""}`}
+        description={`${total} service${total !== 1 ? "s" : ""}${total > 1 ? " Â· drag rows to reorder" : ""}`}
         onRefresh={() => qc.invalidateQueries({ queryKey: ["admin-ailments"] })}
         refreshing={isFetching}
         actions={
@@ -245,11 +245,11 @@ export default function MinorAilmentsPage() {
                   <th className="w-28" />
                 </tr>
               </thead>
-              <SortableContext items={items.map((a) => a._id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
                 <tbody>
                   {items.map((a) => (
                     <SortableRow
-                      key={a._id}
+                      key={a.id}
                       item={a}
                       onEdit={openEdit}
                       onDelete={setDeleteTarget}
@@ -285,7 +285,7 @@ export default function MinorAilmentsPage() {
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               rows={3}
               maxLength={500}
-              placeholder="Brief description of the ailment service…"
+              placeholder="Brief description of the ailment serviceâ€¦"
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none"
             />
             <p className="text-right text-[var(--font-size-xs)] text-[var(--color-text-muted)]">

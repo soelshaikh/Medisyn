@@ -43,6 +43,13 @@
       "when": 1791960000000,
       "tag": "0005_appointment_booking",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791970000000,
+      "tag": "0006_async_email_notifications",
+      "breakpoints": true
     }
   ]
 }

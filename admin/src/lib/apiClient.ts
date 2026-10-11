@@ -2,7 +2,7 @@ import axios from "axios";
 import type { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1";
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -10,11 +10,22 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
-/* ── Attach access token from memory on every request ── */
+/* ── Attach access token + facility context on every request ── */
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (typeof window !== "undefined") {
     const token = sessionStorage.getItem("access_token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      // Inject X-Facility-ID for catalogue endpoints that use resolveFacility middleware
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]!)) as { facilityId?: string | null };
+        if (payload.facilityId) {
+          config.headers["X-Facility-ID"] = payload.facilityId;
+        }
+      } catch {
+        // ignore malformed token
+      }
+    }
   }
   return config;
 });

@@ -4,6 +4,244 @@ This file is the cumulative project history. Each session is also recorded in `w
 
 ---
 
+## Session: 2026-10-11g — Phase 12 Backend Route Modules: Users, Roles, Permissions, Audit
+
+**What was done:**
+- `backend/src/core/super-admin/admin-users.service.ts` — CREATED: `adminListUsers`, `adminSearchUsers`, `adminGetUserById`, `adminSetUserStatus`, `adminSetUserRoles` (all using `superAdminDb`; user status derived from `isActive`/`emailVerified`; phone from `patientProfiles`)
+- `backend/src/core/super-admin/admin-roles.service.ts` — CREATED: `adminListRoles`, `adminGetRoleById`, `adminCreateRole`, `adminUpdateRole`, `adminDeleteRole`, `adminSetRolePermissions`, `adminListPermissions` (permission keys resolved via `inArray`; slug computed from name)
+- `backend/src/core/super-admin/admin-users.router.ts` — CREATED: `GET /users/search`, `GET /users`, `GET /users/:id`, `PATCH /users/:id/status`, `PATCH /users/:id/roles`
+- `backend/src/core/super-admin/admin-roles.router.ts` — CREATED: `GET /admin/roles`, `POST /admin/roles`, `GET /admin/roles/:id`, `PATCH /admin/roles/:id`, `DELETE /admin/roles/:id`, `PUT /admin/roles/:id/permissions`
+- `backend/src/core/super-admin/admin-permissions.router.ts` — CREATED: `GET /admin/permissions`
+- `backend/src/core/super-admin/admin-audit.router.ts` — CREATED: `GET /admin/audit` (bigserial id → string, joins users for actorEmail)
+- `backend/src/app.ts` — MODIFIED: imported and mounted all 4 new routers at `/api/v1`
+- `admin/src/api/audit.api.ts` — FIXED: was doubly-nested `{ data: ListResponse<AuditLog> }` → standard `{ data: AuditLog[], pagination: {...} }` extraction
+- `admin/src/api/users.api.ts` — FIXED: was using `meta` key → changed to `pagination` to match backend standard
+
+**Decisions:**
+- CONFIRMED: `facilityRoles` has no `slug`/`description` — slug computed with `toSlug()`, description defaults to `''`
+- CONFIRMED: User status is derived: `!isActive` → `suspended`, `!emailVerified` → `pending_verification`, otherwise → `active`
+- CONFIRMED: `hasRoles=false` filters by `facilityRoles.name = 'patient'`; `hasRoles=true` filters name != 'patient'
+- CONFIRMED: `AdminRole.permissions` = array of permission key strings (not IDs)
+- CONFIRMED: `superAdminDb` used for all reads in these services (ESLint-restricted to `src/core/super-admin/`)
+- CONFIRMED: Audit router lives in `src/core/super-admin/` (imports `superAdminDb` directly for paginated reads)
+
+**TypeScript status:** 0 errors in both `backend/` and `admin/` after all changes.
+
+**Still pending:**
+- T019–T025: permission guards on admin action buttons (all currently pass-through stubs)
+- T040–T048: stub remaining placeholder pages (clinics, partners, FAQs, settings/email-triggers)
+- End-to-end runtime validation against live backend
+- `facilityRolePermissions` — `setRolePermissions` replaces all; no partial update endpoint
+
+---
+
+## Session: 2026-10-11f — Phase 11 Admin Panel Scaffold Audit + TypeScript Fixes
+
+**What was done:**
+- `specs/011-admin-panel-scaffold/spec.md` — CREATED: 5 user stories (Login P1, Route Guard P1, Logout P2, Dashboard Shell P2, Persistence P3), 13 FRs, 6 SCs
+- `specs/011-admin-panel-scaffold/plan.md` — CREATED: technical context, constitution check, full admin/ src structure
+- `specs/011-admin-panel-scaffold/research.md` — CREATED: 8 CONFIRMED decisions (super-admin login endpoint, client-side guard, localStorage persist, atob decode, etc.)
+- `specs/011-admin-panel-scaffold/data-model.md` — CREATED: AdminUser, AuthState, JwtPayload, LoginFormData, LoginApiResponse, MeApiResponse interfaces
+- `specs/011-admin-panel-scaffold/contracts/auth.md` — CREATED: backend auth endpoint contracts
+- `specs/011-admin-panel-scaffold/quickstart.md` — CREATED: 10 validation scenarios
+- `specs/011-admin-panel-scaffold/tasks.md` — CREATED: 35 tasks; T001–T016, T020–T034 [X]; T003, T017–T019, T035 deferred
+- `specs/011-admin-panel-scaffold/checklists/requirements.md` — CREATED: all 16 items pass
+- `admin/.env.local` — FIXED: NEXT_PUBLIC_API_URL port 4000 → 3001
+- `admin/.env.example` — CREATED: NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+- `admin/src/app/(auth)/layout.tsx` — CREATED: minimal auth layout (was missing)
+- `admin/src/app/not-found.tsx` — CREATED: 404 page with link to /dashboard
+- `admin/src/app/error.tsx` — CREATED: Next.js error boundary with reset button
+- `admin/src/lib/decodeJwt.ts` — CREATED: atob-based JWT payload decoder + isTokenExpired helper
+- `admin/src/types/auth.ts` — REPLACED: corrected to match actual backend response shape (firstName/lastName not fullName)
+- `admin/src/lib/apiClient.ts` — FIXED: fallback URL localhost:4000 → localhost:3001
+- `admin/src/app/(auth)/login/page.tsx` — FIXED: `data.user.fullName` → `` `${data.user.firstName ?? ''} ${data.user.lastName ?? ''}`.trim() ``
+- `admin/src/types/admin.ts` — FIXED: added "issued" | "void" to InvoiceStatus; added voidReason?, voidedAt?, customerPhone? to AdminInvoice
+- `admin/src/api/invoices.api.ts` — FIXED: added void() method (PATCH /invoices/admin/${id}/void); added customerPhone? to AdhocInvoicePayload
+- `admin/src/app/(dashboard)/invoices/page.tsx` — FIXED: onChange={setPage} → onPage={setPage} on Pagination
+- `admin/src/app/(dashboard)/inventory/movements/page.tsx` — FIXED: onChange={setPage} → onPage={setPage} on Pagination
+- `admin/src/app/(dashboard)/invoices/[id]/page.tsx` — FIXED: fmtDate(inv.issuedAt) → inv.issuedAt ? fmtDate(inv.issuedAt) : '—' (2 occurrences)
+- TypeScript: `npx tsc --noEmit` → 0 errors (clean)
+
+**Key discovery**: admin/ was already substantially built (~80 pages, 20+ API files, full UI component library). Session became an audit-and-fix operation rather than a greenfield scaffold.
+
+**Still pending:**
+- T003: admin/next.config.ts (not critical — Next.js works without it)
+- T017: admin/src/api/auth.ts (login calls apiClient inline; refactor to separate auth api module deferred)
+- T018: admin/src/hooks/useLogin.ts (login logic inline in page; hook extraction deferred)
+- T019: admin/src/components/features/auth/LoginForm.tsx (login form inline in page; extraction deferred)
+- T035: quickstart.md manual validation (all 10 scenarios — requires running backend + admin dev servers)
+
+---
+
+## Session: 2026-10-11e — Phase 10 API Hardening Full Implementation
+
+**What was done:**
+- `specs/010-api-hardening/spec.md` — CREATED: 4 user stories, 15 FRs, 8 success criteria
+- `specs/010-api-hardening/plan.md`, `research.md`, `contracts/hardening.md`, `quickstart.md` — CREATED
+- `specs/010-api-hardening/tasks.md` — CREATED: 29 tasks; T001–T027 [X]; T028/T029 deferred
+- `backend/src/middleware/rate-limit.ts` — CREATED: globalLimiter (200/min), authStrictLimiter (5/min), healthcareLimiter (10/min)
+- `backend/src/lib/swagger/swagger.config.ts` — CREATED: swagger-jsdoc OpenAPI 3.0.0 config
+- `backend/src/lib/swagger/swagger.router.ts` — CREATED: Swagger UI + swagger.json endpoint
+- `backend/src/app.ts` — REWRITTEN: ALLOWED_ORIGINS CORS, explicit Helmet CSP/HSTS/frameguard, rate limiters applied, 413 handler, swagger mounted before global Helmet
+- `backend/.env.example` — UPDATED: ALLOWED_ORIGINS replaces FRONTEND_URL/ADMIN_URL
+- `backend/package.json` — UPDATED: swagger-jsdoc + swagger-ui-express + @types added
+- `backend/src/core/auth/auth.router.ts` — UPDATED: @openapi JSDoc on 5 routes
+- `backend/src/modules/healthcare/prescriptions/prescription.router.ts` — UPDATED: @openapi JSDoc
+- `backend/src/modules/appointments/appointments/appointment.router.ts` — UPDATED: @openapi JSDoc
+- `backend/src/modules/checkout/checkout.router.ts` — UPDATED: @openapi JSDoc
+- `backend/tests/healthcare/prescriptions.test.ts` — CREATED: 6 test cases
+- `backend/tests/appointments/appointments.test.ts` — CREATED: 5 test cases
+- `backend/tests/commerce/checkout.test.ts` — CREATED: 5 test cases
+- `backend/tests/security/headers.test.ts` — CREATED: 8 test cases
+- typecheck ✓ (0 errors) | lint ✓ (0 errors)
+
+**Still pending:**
+- T017: @openapi JSDoc for compounding.router.ts
+- T018: @openapi JSDoc for product.router.ts
+- T028: Quickstart Scenarios S1–S8 manual validation (requires dev server)
+- T029: `npm test` full run (requires TEST_DATABASE_URL)
+- Phase 7/8/9 migration/seed/quickstart items (require running environment)
+
+---
+
+## Session: 2026-10-11d — Phase 9 File Storage Plan + Implementation (T001–T019)
+
+**What was done:**
+- `specs/009-file-storage/plan.md` — FILLED: technical context, constitution check, source code layout
+- `specs/009-file-storage/research.md` — CREATED: 11 technical decisions
+- `specs/009-file-storage/data-model.md` — CREATED: schema changes, FileStorageService interface, env vars
+- `specs/009-file-storage/contracts/files.md` — CREATED: upload + signed URL routes for prescriptions + compounding
+- `specs/009-file-storage/quickstart.md` — CREATED: 9 validation scenarios
+- `specs/009-file-storage/tasks.md` — CREATED: 20 tasks; T001–T019 completed [X]
+- `backend/src/lib/file-storage/file-storage.types.ts` — CREATED: types, allowlists, MIME→ext map
+- `backend/src/lib/file-storage/file-storage.service.ts` — CREATED: FileStorageService singleton (S3/R2, upload, signedURL, delete)
+- `backend/src/db/migrations/0007_file_keys.sql` — CREATED: adds file_keys text[] to prescription_requests + compounding_requests
+- `backend/src/db/seeds/file-storage-permissions.ts` — CREATED: seeds files.upload + files.download
+- `backend/src/scripts/migrate-base64-files.ts` — CREATED: one-shot base64→S3 migration
+- `backend/src/db/schema/healthcare.ts` — UPDATED: fileKeys column on both healthcare tables
+- `backend/src/lib/errors.ts` — UPDATED: 6 new file-related ErrorCode values
+- `backend/src/modules/healthcare/prescriptions/prescription.queries.ts` — UPDATED: appendPrescriptionFileKey
+- `backend/src/modules/healthcare/prescriptions/prescription.service.ts` — UPDATED: uploadPrescriptionFile + getPrescriptionFileUrl
+- `backend/src/modules/healthcare/prescriptions/prescription.router.ts` — UPDATED: 2 new file routes + multer middleware
+- `backend/src/modules/healthcare/compounding/compounding.queries.ts` — UPDATED: appendCompoundingFileKey
+- `backend/src/modules/healthcare/compounding/compounding.service.ts` — UPDATED: uploadCompoundingFile + getCompoundingFileUrl
+- `backend/src/modules/healthcare/compounding/compounding.router.ts` — UPDATED: 2 new file routes + multer middleware
+- `backend/package.json` — UPDATED: @aws-sdk/client-s3, @aws-sdk/s3-request-presigner, multer, @types/multer installed
+- typecheck ✓ (0 errors) | lint ✓ (0 errors)
+
+**Still pending:**
+- T007: `npm run db:migrate` to apply 0007_file_keys.sql (requires running PostgreSQL)
+- T008: Run file-storage-permissions seed (requires running PostgreSQL)
+- T020: Quickstart Scenarios 1–9 manual validation (requires running backend + S3/R2)
+
+---
+
+## Session: 2026-10-11c — Phase 8 Implementation Complete (T001–T015)
+
+**What was done:**
+- `backend/src/modules/reports/reports.types.ts` — CREATED: result interfaces (SalesReportResult, OrderReportResult, PatientReportResult, DashboardResult, TrendBucket, TopProduct, TopPatient)
+- `backend/src/modules/reports/reports.validator.ts` — CREATED: ReportQuerySchema with date range validation
+- `backend/src/db/seeds/reports-permissions.ts` — CREATED: seeds reports.read permission
+- `backend/src/modules/reports/reports.service.ts` — CREATED: getSalesReport, getDashboard, getOrderReport, getPatientReport
+- `backend/src/modules/reports/reports.router.ts` — CREATED: GET /sales, /orders, /patients, /dashboard — all require reports.read
+- `backend/src/app.ts` — UPDATED: registered reportsRouter at /api/v1/admin/reports
+- `backend/src/email/email.queue.ts` — FIXED: removed unused redis import (pre-existing lint error)
+- typecheck ✓ (0 errors) | lint ✓ (0 errors)
+
+**Still pending:**
+- T004: Run permission seed (requires running PostgreSQL)
+- T016: Quickstart Scenarios 1–8 manual validation (requires running backend)
+
+---
+
+## Session: 2026-10-11b — Phase 8 + Phase 9 Specs Written
+
+**What was done:**
+- `specs/008-admin-reports-dashboard/spec.md` — CREATED: 4 user stories, 12 FRs, 6 SCs (sales reports, order reports, patient reports, dashboard summary)
+- `specs/008-admin-reports-dashboard/checklists/requirements.md` — CREATED: all 16 quality items pass
+- `specs/009-file-storage/spec.md` — CREATED: 4 user stories, 12 FRs, 6 SCs (upload, signed URLs, compounding attachments, base64 migration)
+- `specs/009-file-storage/checklists/requirements.md` — CREATED: all 16 quality items pass
+- `.specify/feature.json` — UPDATED: now points to `specs/008-admin-reports-dashboard`
+
+**Still pending:**
+- `/speckit-plan` for Phase 8 and Phase 9
+- T045 (Phase 7 quickstart validation) — deferred
+- `npm run db:migrate` migration 0006 — deferred
+
+---
+
+## Session: 2026-10-11 — Phase 7 Implementation Complete (T018–T044)
+
+**What was done:**
+- `backend/src/app.ts` — UPDATED: registered `emailLogRouter` at `/api/v1/admin/email-log` and `notificationsRouter` at `/api/v1`
+- `backend/src/db/seeds/async-infra-permissions.ts` — CREATED: seeds `email_log.read`, `email_log.retry`, `notifications.broadcast`
+- `backend/src/email/template-loader.ts` — IMPLEMENTED: Handlebars template renderer with partition caching, strict mode, partials registration
+- `backend/src/email/templates/partials/header.hbs` — CREATED: branded HTML email header (MediSyn blue #1677A8)
+- `backend/src/email/templates/partials/footer.hbs` — CREATED: legal footer with copyright
+- `backend/src/email/templates/welcome/` — CREATED: subject.txt + body.hbs
+- `backend/src/email/templates/verify-email/` — CREATED: subject.txt + body.hbs
+- `backend/src/email/templates/forgot-password/` — CREATED: subject.txt + body.hbs
+- `backend/src/email/templates/order-confirmation/` — CREATED: subject.txt + body.hbs
+- `backend/src/email/templates/prescription-status-changed/` — CREATED: subject.txt + body.hbs
+- `backend/src/email/templates/appointment-confirmed/` — CREATED: subject.txt + body.hbs
+- `backend/src/email/templates/appointment-reminder/` — CREATED: subject.txt + body.hbs
+- `backend/src/email/templates/ask-pharmacist-replied/` — CREATED: subject.txt + body.hbs
+- `backend/src/email/email.worker.ts` — UPDATED: stub `renderEmail()` replaced with `renderTemplate()` from template-loader
+- `backend/src/notifications/notifications.service.ts` — IMPLEMENTED: createNotification, broadcastNotifications, getUnreadCount (Redis+DB fallback), listNotifications, markNotificationRead, markAllNotificationsRead, softDeleteNotification, pruneOldNotifications
+- `backend/src/notifications/notifications.validator.ts` — IMPLEMENTED: ListNotificationsQuerySchema, NotificationParamsSchema, BroadcastNotificationBodySchema
+- `backend/src/notifications/notifications.router.ts` — IMPLEMENTED: GET /notifications, PATCH /notifications/:id/read, POST /notifications/read-all, DELETE /notifications/:id, POST /admin/notifications/broadcast
+- `backend/src/core/auth/auth.router.ts` — UPDATED: added GET /api/v1/auth/me with unread_count
+- `backend/src/core/auth/auth.service.ts` — UPDATED: added getMe(), imported getUserById
+- `backend/src/modules/appointments/appointments/appointment.service.ts` — UPDATED: createNotification on appointment booking
+- `backend/src/modules/healthcare/prescriptions/prescription.service.ts` — UPDATED: createNotification on status change
+- `backend/src/modules/orders/order.service.ts` — UPDATED: createNotification on order status change
+- `backend/src/modules/healthcare/ask-pharmacist/ask-pharmacist.service.ts` — UPDATED: createNotification on staff reply
+- `backend/src/workers/index.ts` — IMPLEMENTED: appointment-reminder hourly cron (Queue+Worker), notification-prune daily cron (03:00 UTC)
+- `specs/007-async-email-notifications/tasks.md` — UPDATED: T018–T044 marked [X]
+- typecheck ✓ (0 errors) | lint ✓ (0 errors)
+
+**Decisions made:**
+- CONFIRMED: template files use `.txt` extension for subject lines, `.hbs` for bodies (different from spec which said `.hbs` for both — pragmatic change)
+- CONFIRMED: `workerDb` (BYPASSRLS) used in notifications.service.ts for all reads/writes (avoids RLS filter issues in broadcast/prune contexts)
+- CONFIRMED: GET /auth/me added directly in auth.router.ts (no existing /me endpoint existed)
+- CONFIRMED: appointment-reminder scan queries raw appointments table via `workerDb` (BYPASSRLS) using raw SQL join across availability_slots + vaccine_services + users
+
+**Still pending:**
+- T045: quickstart.md Scenarios 1–8 integration validation (manual — requires running server)
+- `npm run db:migrate` (manual — requires running PostgreSQL) for migration 0006
+
+---
+
+## Session: 2026-10-10f — Phase 7 Spec + Plan (async email, notifications)
+
+**What was done:**
+- `specs/007-async-email-notifications/spec.md` — CREATED: Phase 7 spec (3 user stories, 19 FRs, 7 SCs)
+- `specs/007-async-email-notifications/checklists/requirements.md` — CREATED: all 16 items pass
+- `specs/007-async-email-notifications/plan.md` — CREATED: full implementation plan
+- `specs/007-async-email-notifications/research.md` — CREATED: 8 technical decisions (BullMQ, Handlebars, cron, Redis cache, email_log scoping, notification insert strategy, Redis fallback, worker architecture)
+- `specs/007-async-email-notifications/data-model.md` — CREATED: `email_log` + `notifications` table schemas with RLS, indexes, grants, state machines, Redis key schema
+- `specs/007-async-email-notifications/contracts/email-log.md` — CREATED: admin email log list + retry endpoints
+- `specs/007-async-email-notifications/contracts/notifications.md` — CREATED: patient notification feed, read, broadcast, unread_count in /me
+- `specs/007-async-email-notifications/quickstart.md` — CREATED: 8 validation scenarios
+- `.specify/feature.json` — UPDATED: points to `specs/007-async-email-notifications`
+- `backend/.env` — NOT modified (user restored real MongoDB credentials; left as-is)
+
+**Decisions made:**
+- CONFIRMED: BullMQ v5 on existing ioredis (constitution locked stack)
+- CONFIRMED: Handlebars templates on disk, cached in memory, hot-reloadable
+- CONFIRMED: BullMQ repeatable job for appointment reminder scan (hourly, [24h–25h] window)
+- CONFIRMED: Redis INCR/DECR for unread_count cache, 10-min TTL, DB fallback
+- CONFIRMED: email_log.facility_id nullable (system emails have no facility)
+- CONFIRMED: Notification inserts are synchronous within domain service tx (fast DB write)
+- CONFIRMED: Redis unavailability falls back to synchronous nodemailer send (not silent drop)
+- CONFIRMED: Worker co-process with Express app in dev; can split to separate process in prod
+
+**Still pending:**
+- Run `/speckit-tasks` to generate tasks.md for Phase 7
+- Phase 7 implementation (T001+)
+
+---
+
 ## Session: 2026-10-10e — Phase 6 Appointment Booking Implementation (T001–T031)
 
 **What was done:**

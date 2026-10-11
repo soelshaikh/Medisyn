@@ -1,7 +1,7 @@
 import apiClient from "@/lib/apiClient";
 
 export interface AilmentCatalogItem {
-  _id:         string;
+  id:          string;
   name:        string;
   slug:        string;
   description: string;

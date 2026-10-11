@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Mail, Info } from "lucide-react";
@@ -27,7 +27,7 @@ function formatStatus(s: string | null) {
 function TriggerRow({ trigger }: { trigger: EmailTriggerConfig }) {
   const qc = useQueryClient();
   const mut = useMutation({
-    mutationFn: (enabled: boolean) => emailTriggersApi.update(trigger._id, { enabled }),
+    mutationFn: (enabled: boolean) => emailTriggersApi.update(trigger.id, { enabled }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["email-triggers"] }),
   });
 
@@ -63,7 +63,7 @@ function TriggerRow({ trigger }: { trigger: EmailTriggerConfig }) {
           <span className="text-[var(--font-size-xs)] font-mono bg-[var(--color-surface)] border border-[var(--color-border)] rounded px-1.5 py-0.5 text-[var(--color-text-secondary)]">
             {formatStatus(trigger.fromStatus)}
           </span>
-          <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">→</span>
+          <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">â†’</span>
           <span className="text-[var(--font-size-xs)] font-mono bg-[var(--color-primary-light)] border border-[var(--color-primary)]/20 rounded px-1.5 py-0.5 text-[var(--color-primary-dark)]">
             {formatStatus(trigger.toStatus)}
           </span>
@@ -104,7 +104,7 @@ function ModuleSection({ module, triggers }: { module: string; triggers: EmailTr
         </span>
       </div>
       <div className="p-3 space-y-2">
-        {triggers.map((t) => <TriggerRow key={t._id} trigger={t} />)}
+        {triggers.map((t) => <TriggerRow key={t.id} trigger={t} />)}
       </div>
     </div>
   );
@@ -132,11 +132,11 @@ export default function EmailTriggersPage() {
 
       <div className="flex items-start gap-2 px-4 py-3 bg-[var(--color-info-light)] border border-[var(--color-info)]/30 rounded-[var(--radius-md)] text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
         <Info size={14} className="text-[var(--color-info)] mt-0.5 shrink-0" />
-        <span>Toggling a trigger takes effect immediately — no restart required. Changes apply to new transitions only.</span>
+        <span>Toggling a trigger takes effect immediately â€” no restart required. Changes apply to new transitions only.</span>
       </div>
 
       {isLoading && (
-        <div className="text-[var(--font-size-sm)] text-[var(--color-text-muted)] py-8 text-center">Loading…</div>
+        <div className="text-[var(--font-size-sm)] text-[var(--color-text-muted)] py-8 text-center">Loadingâ€¦</div>
       )}
 
       {error && (

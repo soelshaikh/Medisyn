@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,7 +49,7 @@ function fmtDate(s: string) {
 
 const PAGE_LIMIT = 50;
 
-/* Pending filter state — committed only on Apply */
+/* Pending filter state â€” committed only on Apply */
 interface Filters { movementType: string; }
 
 export default function MovementsPage() {
@@ -105,7 +105,7 @@ export default function MovementsPage() {
   }
 
   function handleExport() {
-    /* CSV export — placeholder */
+    /* CSV export â€” placeholder */
     const rows = [
       ["Type", "Batch #", "Qty", "Before", "After", "Order", "Notes", "Date"],
       ...filtered.map((m) => [
@@ -149,20 +149,20 @@ export default function MovementsPage() {
       ),
     },
     {
-      key: "qtyBefore", header: "Before → After", align: "right",
-      render: (m) => <span className="font-mono text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{m.qtyBefore} → {m.qtyAfter}</span>,
+      key: "qtyBefore", header: "Before â†’ After", align: "right",
+      render: (m) => <span className="font-mono text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{m.qtyBefore} â†’ {m.qtyAfter}</span>,
     },
     {
       key: "orderNumber", header: "Order",
       render: (m) => m.orderNumber
         ? <span className="font-mono text-[var(--font-size-xs)] text-[var(--color-primary)]">{m.orderNumber}</span>
-        : <span className="text-[var(--color-text-muted)]">—</span>,
+        : <span className="text-[var(--color-text-muted)]">â€”</span>,
     },
     {
       key: "notes", header: "Notes",
       render: (m) => (
         <span className="text-[var(--color-text-secondary)] truncate max-w-[180px] block" title={m.notes}>
-          {m.notes || <span className="text-[var(--color-text-muted)]">—</span>}
+          {m.notes || <span className="text-[var(--color-text-muted)]">â€”</span>}
         </span>
       ),
     },
@@ -197,7 +197,7 @@ export default function MovementsPage() {
       <DataGrid
         columns={columns}
         data={filtered}
-        keyFn={(m) => m._id}
+        keyFn={(m) => m.id}
         loading={isLoading}
         emptyTitle="No movements found"
         emptyDescription="No inventory movements match the current filters."
@@ -206,7 +206,7 @@ export default function MovementsPage() {
         ] : undefined}
         search={search}
         onSearch={setSearch}
-        searchPlaceholder="Search batch, order, notes…"
+        searchPlaceholder="Search batch, order, notesâ€¦"
         onExport={handleExport}
         onRefresh={() => qc.invalidateQueries({ queryKey: ["inventory-movements"] })}
         sort={sort}
@@ -214,7 +214,7 @@ export default function MovementsPage() {
       />
 
       {totalPages > 1 && (
-        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        <Pagination page={page} totalPages={totalPages} onPage={setPage} />
       )}
     </div>
   );

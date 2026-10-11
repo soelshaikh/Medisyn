@@ -100,7 +100,14 @@ export type ErrorCode =
   // Appointments — bookings
   | 'APPOINTMENT_NOT_FOUND'
   | 'APPOINTMENT_INVALID_STATUS_TRANSITION'
-  | 'APPOINTMENT_DUPLICATE_BOOKING';
+  | 'APPOINTMENT_DUPLICATE_BOOKING'
+  // File storage
+  | 'STORAGE_UNAVAILABLE'
+  | 'STORAGE_ERROR'
+  | 'NO_FILE'
+  | 'FILE_TOO_LARGE'
+  | 'FILE_TYPE_NOT_ALLOWED'
+  | 'FILE_EMPTY';
 
 export class AppError extends Error {
   constructor(

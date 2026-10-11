@@ -1,5 +1,5 @@
 export interface AdminUser {
-  _id:           string;
+  id:            string;
   email:         string;
   fullName:      string;
   phone?:        string;
@@ -11,7 +11,7 @@ export interface AdminUser {
 }
 
 export interface AdminRole {
-  _id:         string;
+  id:          string;
   name:        string;
   slug:        string;
   description: string;
@@ -46,7 +46,7 @@ export interface PartnerUser extends AdminUser {
 }
 
 export interface FAQ {
-  _id:         string;
+  id:          string;
   question:    string;
   answer:      string;
   category:    string;
@@ -56,7 +56,7 @@ export interface FAQ {
 }
 
 export interface AuditLog {
-  _id:        string;
+  id:         string;
   userId:     string | null;
   userEmail:  string;
   action:     string;
@@ -70,10 +70,10 @@ export interface AuditLog {
 export interface DashboardMetrics {
   users:      { total: number; newToday: number };
   approvals:  { pendingClinics: number; pendingPartners: number };
-  orders:     { total: number; today: number; pending: number; byStatus: Array<{ _id: string; count: number }> };
+  orders:     { total: number; today: number; pending: number; byStatus: Array<{ status: string; count: number }> };
   products:   { active: number; lowStock: number };
   revenue:    { totalCents: number; totalCAD: string };
-  charts:     { dailyOrders: Array<{ _id: string; count: number; revenue: number }> };
+  charts:     { dailyOrders: Array<{ date: string; count: number; revenue: number }> };
   healthcare: {
     pendingCompounding: number;
     openAskPharmacist:  number;
@@ -92,7 +92,7 @@ export interface BatchAllocation {
 }
 
 export interface ProductBatch {
-  _id:              string;
+  id:               string;
   productId:        string;
   batchNumber:      string;
   expiryDate:       string;
@@ -111,7 +111,7 @@ export interface ProductBatch {
 }
 
 export interface InventoryMovement {
-  _id:          string;
+  id:           string;
   productId:    string;
   batchId:      string;
   batchNumber:  string;
@@ -127,9 +127,9 @@ export interface InventoryMovement {
 }
 
 export interface AdminOrder {
-  _id:              string;
+  id:               string;
   orderNumber:      string;
-  userId:           { _id: string; email: string; fullName: string; phone?: string } | string | null;
+  userId:           { id: string; email: string; fullName: string; phone?: string } | string | null;
   guestInfo:        { email: string; fullName: string; phone: string } | null;
   items:            Array<{ name: string; sku: string; price: number; quantity: number; lineTotal: number }>;
   batchAllocations: BatchAllocation[];
@@ -147,7 +147,7 @@ export interface AdminOrder {
 }
 
 export interface AdminBrand {
-  _id:         string;
+  id:          string;
   name:        string;
   slug:        string;
   description: string;
@@ -159,14 +159,14 @@ export interface AdminBrand {
 }
 
 export interface AdminProduct {
-  _id:                 string;
+  id:                  string;
   name:                string;
   slug:                string;
   sku:                 string;
   description:         string;
   shortDescription:    string;
-  categoryId:          { _id: string; name: string; slug: string } | string;
-  brandId:             { _id: string; name: string; slug: string } | string | null;
+  categoryId:          { id: string; name: string; slug: string } | string;
+  brandId:             { id: string; name: string; slug: string } | string | null;
   din:                 string;
   upc:                 string;
   images:              Array<{ url: string; alt: string; isPrimary: boolean }>;
@@ -192,7 +192,7 @@ export interface AdminProduct {
 }
 
 export interface AdminCoupon {
-  _id:              string;
+  id:               string;
   code:             string;
   type:             string;
   value:            number;
@@ -214,8 +214,8 @@ export interface StatusEntry {
 }
 
 export interface AdminPrescription {
-  _id:                string;
-  patientId:          string | { _id: string; fullName: string; email: string };
+  id:                 string;
+  patientId:          string | { id: string; fullName: string; email: string };
   prescriptionNumber: string;
   prescriberName:     string;
   prescriberLicense:  string;
@@ -231,8 +231,8 @@ export interface AdminPrescription {
 }
 
 export interface AdminCompoundingRequest {
-  _id:               string;
-  patientId:         string | { _id: string; fullName: string; email: string };
+  id:                string;
+  patientId:         string | { id: string; fullName: string; email: string };
   medicationName:    string;
   strength:          string;
   form:              string;
@@ -249,8 +249,8 @@ export interface AdminCompoundingRequest {
 }
 
 export interface AdminAskPharmacist {
-  _id:           string;
-  patientId:     string | { _id: string; fullName: string; email: string };
+  id:            string;
+  patientId:     string | { id: string; fullName: string; email: string };
   subject:       string;
   question:      string;
   fileUrl:       string;
@@ -262,7 +262,7 @@ export interface AdminAskPharmacist {
 }
 
 export interface VaccineService {
-  _id:             string;
+  id:              string;
   name:            string;
   slug:            string;
   description:     string;
@@ -274,7 +274,7 @@ export interface VaccineService {
 }
 
 export interface AppointmentSlot {
-  _id:              string;
+  id:               string;
   vaccineServiceId: VaccineService | string;
   date:             string;
   startTime:        string;
@@ -287,9 +287,9 @@ export interface AppointmentSlot {
 }
 
 export interface AppointmentBooking {
-  _id:              string;
+  id:               string;
   slotId:           AppointmentSlot | string;
-  patientId:        { _id: string; fullName: string; email: string; phone?: string } | string;
+  patientId:        { id: string; fullName: string; email: string; phone?: string } | string;
   vaccineServiceId: VaccineService | string;
   status:           string;
   statusHistory:    StatusEntry[];
@@ -303,8 +303,8 @@ export interface AppointmentBooking {
 }
 
 export interface AdminAilmentRequest {
-  _id:          string;
-  patientId:    string | { _id: string; fullName: string; email: string; phone?: string };
+  id:           string;
+  patientId:    string | { id: string; fullName: string; email: string; phone?: string };
   ailmentId:    string;
   ailmentName:  string;
   formData:     Record<string, unknown>;
@@ -317,7 +317,7 @@ export interface AdminAilmentRequest {
   createdAt:    string;
 }
 
-export type InvoiceStatus        = "draft" | "finalized" | "cancelled" | "system_cancelled";
+export type InvoiceStatus        = "draft" | "issued" | "finalized" | "void" | "cancelled" | "system_cancelled";
 export type InvoicePaymentStatus = "unpaid" | "partial_paid" | "paid" | "overpaid" | "cancelled" | "system_cancelled";
 export type PaymentMethod        = "cash" | "card" | "e_transfer" | "cheque";
 
@@ -340,7 +340,7 @@ export interface InvoiceTaxLine {
 
 /* Separate collection — returned as lineItems[] in detail view */
 export interface InvoiceLineItem {
-  _id:            string;
+  id:             string;
   invoiceId:      string;
   productId?:     string;
   name:           string;
@@ -356,7 +356,7 @@ export interface InvoiceLineItem {
 }
 
 export interface InvoiceLineItemHistory {
-  _id:        string;
+  id:         string;
   lineItemId: string;
   invoiceId:  string;
   action:     "created" | "updated" | "deleted";
@@ -378,7 +378,7 @@ export interface PaymentStatusHistoryEntry {
 }
 
 export interface PaymentTransaction {
-  _id:               string;
+  id:                string;
   type:              PaymentTransactionType;
   amount:            number;
   currency:          string;
@@ -408,7 +408,7 @@ export interface PaymentTransaction {
 }
 
 export interface PaymentAllocation {
-  _id:           string;
+  id:            string;
   transactionId: string | PaymentTransaction;
   invoiceId:     string;
   amount:        number;
@@ -418,7 +418,7 @@ export interface PaymentAllocation {
 }
 
 export interface AdminInvoice {
-  _id:            string;
+  id:             string;
   invoiceNumber:  string;
   type:           "ecommerce" | "adhoc";
   status:         InvoiceStatus;
@@ -428,6 +428,7 @@ export interface AdminInvoice {
   customerId?:    string;
   customerName:   string;
   customerEmail:  string;
+  customerPhone?: string;
   billingAddress: InvoiceAddress;
   subtotal:       number;
   discountAmount: number;
@@ -443,6 +444,8 @@ export interface AdminInvoice {
   issuedAt?:      string;
   cancelledAt?:   string;
   cancelReason?:  string;
+  voidReason?:    string;
+  voidedAt?:      string;
   createdAt:      string;
   updatedAt:      string;
   /* Populated in detail view */

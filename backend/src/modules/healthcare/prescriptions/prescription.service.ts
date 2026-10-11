@@ -1,6 +1,9 @@
 import { withTenantContext } from '@/lib/tenant-context';
 import { AppError } from '@/lib/errors';
 import { createAuditEntry } from '@/core/audit/audit.service';
+import { createNotification } from '@/notifications/notifications.service';
+import { fileStorage } from '@/lib/file-storage/file-storage.service';
+import { ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, MIME_TO_EXT } from '@/lib/file-storage/file-storage.types';
 import type { AuthContext } from '@/core/auth/middleware/parse-jwt';
 import {
   insertPrescriptionRequest,
@@ -11,6 +14,7 @@ import {
   findPrescriptionDetailForAdmin,
   listPrescriptionsForAdmin,
   updatePrescription,
+  appendPrescriptionFileKey,
 } from './prescription.queries';
 import { validatePrescriptionTransition } from './prescription.types';
 import type {
@@ -238,5 +242,114 @@ export async function updatePrescriptionStatus(
       },
       tx,
     );
+
+    await createNotification(tx, {
+      facilityId,
+      userId: existing.patientId,
+      type: 'prescription_status_changed',
+      title: 'Prescription update',
+      body: `Your prescription status has been updated to: ${input.newStatus}.`,
+      actionUrl: `${process.env.FRONTEND_URL ?? ''}/patient/prescriptions/${id}`,
+    });
+  });
+}
+
+// ── uploadPrescriptionFile ────────────────────────────────────────────────
+
+export async function uploadPrescriptionFile(
+  auth: AuthContext,
+  prescriptionId: string,
+  file: Express.Multer.File,
+): Promise<{ fileKey: string }> {
+  const facilityId = auth.facilityId!;
+
+  return withTenantContext(facilityId, async (tx) => {
+    const record = await findPrescriptionById(prescriptionId, tx);
+    if (!record) {
+      throw new AppError('NOT_FOUND', 'Prescription request not found', 404);
+    }
+
+    if (record.patientId !== auth.userId) {
+      throw new AppError('FORBIDDEN', 'Access denied', 403);
+    }
+
+    const ext = file.originalname.includes('.')
+      ? `.${file.originalname.split('.').pop()!.toLowerCase()}`
+      : '';
+
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype) || !ALLOWED_EXTENSIONS.has(ext)) {
+      throw new AppError('FILE_TYPE_NOT_ALLOWED', 'File type not allowed', 422);
+    }
+
+    if (file.size === 0) {
+      throw new AppError('FILE_EMPTY', 'File is empty', 422);
+    }
+
+    const mappedExt = MIME_TO_EXT[file.mimetype]!;
+    const fileKey = await fileStorage.uploadFile(
+      file.buffer,
+      file.mimetype,
+      `${facilityId}/prescriptions`,
+      mappedExt,
+    );
+
+    await appendPrescriptionFileKey(prescriptionId, fileKey, tx);
+
+    await createAuditEntry(
+      {
+        facilityId,
+        actorId: auth.userId,
+        actorType: 'user',
+        action: 'file.upload',
+        resourceType: 'prescription_request',
+        resourceId: prescriptionId,
+        metadata: { fileKey, mimeType: file.mimetype, sizeBytes: file.size },
+      },
+      tx,
+    );
+
+    return { fileKey };
+  });
+}
+
+// ── getPrescriptionFileUrl ────────────────────────────────────────────────
+
+export async function getPrescriptionFileUrl(
+  auth: AuthContext,
+  prescriptionId: string,
+  fileKey: string,
+): Promise<{ url: string; expiresIn: number }> {
+  const facilityId = auth.facilityId!;
+
+  return withTenantContext(facilityId, async (tx) => {
+    const record = await findPrescriptionById(prescriptionId, tx);
+    if (!record) {
+      throw new AppError('NOT_FOUND', 'Prescription request not found', 404);
+    }
+
+    if (record.patientId !== auth.userId) {
+      throw new AppError('FORBIDDEN', 'Access denied', 403);
+    }
+
+    if (!record.fileKeys.includes(fileKey)) {
+      throw new AppError('FORBIDDEN', 'File not associated with this prescription', 403);
+    }
+
+    const url = await fileStorage.getSignedUrl(fileKey);
+
+    await createAuditEntry(
+      {
+        facilityId,
+        actorId: auth.userId,
+        actorType: 'user',
+        action: 'file.sign_url',
+        resourceType: 'prescription_request',
+        resourceId: prescriptionId,
+        metadata: { fileKey, expirySeconds: fileStorage.signedUrlExpiry },
+      },
+      tx,
+    );
+
+    return { url, expiresIn: fileStorage.signedUrlExpiry };
   });
 }

@@ -348,19 +348,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         value={line.batchId}
                         onFocus={() => setOverrideProductId(line.productId)}
                         onChange={(e) => {
-                          const selected = (availBatches ?? []).find((b) => b._id === e.target.value);
+                          const selected = (availBatches ?? []).find((b) => b.id === e.target.value);
                           if (!selected) return;
                           setOverrideLines((prev) => prev.map((l, i) =>
-                            i === idx ? { ...l, batchId: selected._id, batchNumber: selected.batchNumber, expiryDate: selected.expiryDate } : l,
+                            i === idx ? { ...l, batchId: selected.id, batchNumber: selected.batchNumber, expiryDate: selected.expiryDate } : l,
                           ));
                         }}
                         className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-2 text-[var(--font-size-sm)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       >
                         <option value={line.batchId}>{line.batchNumber} (current)</option>
                         {activeBatches
-                          .filter((b) => b._id !== line.batchId)
+                          .filter((b) => b.id !== line.batchId)
                           .map((b) => (
-                            <option key={b._id} value={b._id}>
+                            <option key={b.id} value={b.id}>
                               {b.batchNumber} — exp {new Date(b.expiryDate).toLocaleDateString("en-CA")} — {b.currentQty} units
                             </option>
                           ))}

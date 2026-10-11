@@ -80,7 +80,7 @@ function MovementsDrawer({ productId, batchId, batchNumber }: { productId: strin
       ) : (
         <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
           {(data?.data as InventoryMovement[]).map((m) => (
-            <div key={m._id} className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2">
+            <div key={m.id} className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2">
               <span className={`min-w-[80px] text-[var(--font-size-xs)] font-semibold ${movementTypeColor[m.movementType] ?? ""}`}>
                 {movementTypeLabel[m.movementType] ?? m.movementType}
               </span>
@@ -209,7 +209,7 @@ export function InventoryCard({ productId, productName, inventory }: Props) {
   });
 
   const editBatchMut = useMutation({
-    mutationFn: () => inventoryApi.updateBatch(productId, editBatch!._id, {
+    mutationFn: () => inventoryApi.updateBatch(productId, editBatch!.id, {
       batchNumber:      editBatchNum.trim() || undefined,
       expiryDate:       editExpiry ? new Date(editExpiry).toISOString() : undefined,
       manufacturedDate: editMfgDate ? new Date(editMfgDate).toISOString() : null,
@@ -329,17 +329,17 @@ export function InventoryCard({ productId, productName, inventory }: Props) {
             ) : (
               <div className="space-y-1.5">
                 {batches.map((b) => {
-                  const isExpanded = expandedBatch === b._id;
+                  const isExpanded = expandedBatch === b.id;
                   const statusCls  = batchStatusColor(b, alertDays);
                   const statusLbl  = batchStatusLabel(b, alertDays);
                   const nearExpiry = b.status === "active" && daysUntil(b.expiryDate) <= alertDays && daysUntil(b.expiryDate) > 0;
 
                   return (
-                    <div key={b._id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] overflow-hidden">
+                    <div key={b.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] overflow-hidden">
                       {/* Batch row */}
                       <div className="flex items-center gap-2 px-3 py-2 bg-white">
                         <button
-                          onClick={() => setExpandedBatch(isExpanded ? null : b._id)}
+                          onClick={() => setExpandedBatch(isExpanded ? null : b.id)}
                           className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
                         >
                           {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -380,7 +380,7 @@ export function InventoryCard({ productId, productName, inventory }: Props) {
                             <Tooltip content="Adjust stock" side="top">
                               <button
                                 type="button"
-                                onClick={() => { setAdjustBatchId(b._id); setBatchDelta(""); setBatchReason(""); }}
+                                onClick={() => { setAdjustBatchId(b.id); setBatchDelta(""); setBatchReason(""); }}
                                 className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-primary)] transition-colors"
                               >
                                 <SlidersHorizontal size={12} />
@@ -389,7 +389,7 @@ export function InventoryCard({ productId, productName, inventory }: Props) {
                             <Tooltip content="Recall batch" side="top">
                               <button
                                 type="button"
-                                onClick={() => { setRecallBatchId(b._id); setRecallReason(""); }}
+                                onClick={() => { setRecallBatchId(b.id); setRecallReason(""); }}
                                 className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-error-light)] hover:text-[var(--color-error)] transition-colors"
                               >
                                 <Ban size={12} />
@@ -402,7 +402,7 @@ export function InventoryCard({ productId, productName, inventory }: Props) {
                       {/* Expanded: movement history */}
                       {isExpanded && (
                         <div className="border-t border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3">
-                          <MovementsDrawer productId={productId} batchId={b._id} batchNumber={b.batchNumber} />
+                          <MovementsDrawer productId={productId} batchId={b.id} batchNumber={b.batchNumber} />
                         </div>
                       )}
                     </div>

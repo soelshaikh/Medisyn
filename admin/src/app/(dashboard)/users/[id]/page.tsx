@@ -45,8 +45,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   if (isLoading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>;
   if (!user) return <p className="text-[var(--color-text-muted)]">User not found.</p>;
 
-  const userRoleIds = (user.roles as Array<{ _id: string } | string>).map((r) =>
-    typeof r === "string" ? r : r._id
+  const userRoleIds = (user.roles as Array<{ id: string } | string>).map((r) =>
+    typeof r === "string" ? r : r.id
   );
 
   return (
@@ -93,8 +93,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           <p className="text-[var(--font-size-sm)] text-[var(--color-text-muted)]">No admin roles assigned.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {(user.roles as Array<{ _id: string; name: string } | string>).map((r) => (
-              <span key={typeof r === "string" ? r : r._id}
+            {(user.roles as Array<{ id: string; name: string } | string>).map((r) => (
+              <span key={typeof r === "string" ? r : r.id}
                 className="px-3 py-1 bg-[var(--color-primary-light)] text-[var(--color-primary)] rounded-[var(--radius-full)] text-[var(--font-size-xs)] font-medium">
                 {typeof r === "string" ? r : r.name}
               </span>
@@ -136,14 +136,14 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         <div className="space-y-4">
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {(roles ?? []).map((role) => (
-              <label key={role._id} className="flex items-center gap-3 cursor-pointer">
+              <label key={role.id} className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={selectedRoles.includes(role._id)}
+                  checked={selectedRoles.includes(role.id)}
                   onChange={(e) => setSelectedRoles(
                     e.target.checked
-                      ? [...selectedRoles, role._id]
-                      : selectedRoles.filter((r) => r !== role._id)
+                      ? [...selectedRoles, role.id]
+                      : selectedRoles.filter((r) => r !== role.id)
                   )}
                   className="rounded"
                 />

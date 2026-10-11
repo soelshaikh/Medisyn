@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { authMiddleware } from './auth.middleware';
 import { authService } from './auth.service';
+import { getUnreadCount } from '@/notifications/notifications.service';
 import {
   RegisterBodySchema,
   LoginBodySchema,
@@ -37,6 +38,52 @@ function zodError(err: ZodError): AppError {
   return new AppError('VALIDATION_ERROR', message, 422);
 }
 
+// ── GET /me ────────────────────────────────────────────────────────────────
+authRouter.get(
+  '/me',
+  ...authMiddleware,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const auth = req.auth!;
+    try {
+      const user = await authService.getMe(auth.userId, auth.facilityId);
+      const unreadCount = auth.facilityId
+        ? await getUnreadCount(auth.userId, auth.facilityId).catch(() => 0)
+        : 0;
+      return res.json({ data: { ...user, unreadCount } });
+    } catch (err) {
+      return next(err);
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /auth/register:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Register a new user account
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [firstName, lastName, email, password, facilitySlug]
+ *             properties:
+ *               firstName: { type: string }
+ *               lastName: { type: string }
+ *               email: { type: string, format: email }
+ *               password: { type: string, minLength: 8 }
+ *               facilitySlug: { type: string }
+ *     responses:
+ *       201:
+ *         description: Registration successful
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
 // ── POST /register ─────────────────────────────────────────────────────────
 authRouter.post('/register', async (req: Request, res: Response, next: NextFunction) => {
   const parsed = RegisterBodySchema.safeParse(req.body);
@@ -59,6 +106,55 @@ authRouter.post('/register', async (req: Request, res: Response, next: NextFunct
   }
 });
 
+/**
+ * @openapi
+ * /auth/login:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Login with email and password
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, facilitySlug]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               password: { type: string }
+ *               facilitySlug: { type: string }
+ *     responses:
+ *       200:
+ *         description: Login successful — returns JWT access token + user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accessToken: { type: string }
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id: { type: string, format: uuid }
+ *                         email: { type: string }
+ *                         firstName: { type: string }
+ *                         lastName: { type: string }
+ *                         role: { type: string }
+ *                         facilityId: { type: string, format: uuid }
+ *       401:
+ *         description: Invalid credentials or account inactive
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
 // ── POST /login ────────────────────────────────────────────────────────────
 authRouter.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   const parsed = LoginBodySchema.safeParse(req.body);
@@ -114,6 +210,23 @@ authRouter.post('/super-admin/login', async (req: Request, res: Response, next: 
   }
 });
 
+/**
+ * @openapi
+ * /auth/logout:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Logout current session
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
 // ── POST /logout ───────────────────────────────────────────────────────────
 authRouter.post(
   '/logout',
@@ -155,6 +268,31 @@ authRouter.post(
   },
 );
 
+/**
+ * @openapi
+ * /auth/forgot-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Request a password reset link
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, facilitySlug]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               facilitySlug: { type: string }
+ *     responses:
+ *       200:
+ *         description: Reset link sent (always 200 — email existence not disclosed)
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
 // ── POST /forgot-password ──────────────────────────────────────────────────
 authRouter.post('/forgot-password', async (req: Request, res: Response, next: NextFunction) => {
   const parsed = ForgotPasswordBodySchema.safeParse(req.body);
@@ -174,6 +312,36 @@ authRouter.post('/forgot-password', async (req: Request, res: Response, next: Ne
   }
 });
 
+/**
+ * @openapi
+ * /auth/reset-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Reset password using a reset token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, password]
+ *             properties:
+ *               token: { type: string }
+ *               password: { type: string, minLength: 8 }
+ *     responses:
+ *       200:
+ *         description: Password updated
+ *       400:
+ *         description: Invalid or expired token
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
 // ── POST /reset-password ───────────────────────────────────────────────────
 authRouter.post('/reset-password', async (req: Request, res: Response, next: NextFunction) => {
   const parsed = ResetPasswordBodySchema.safeParse(req.body);

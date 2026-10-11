@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -47,7 +47,7 @@ export default function AskPharmacistPage() {
       render: (a) => (
         a.respondedAt
           ? <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{fmtDateTime(a.respondedAt)}</span>
-          : <span className="text-[var(--color-text-muted)]">—</span>
+          : <span className="text-[var(--color-text-muted)]">â€”</span>
       ),
     },
     {
@@ -61,7 +61,7 @@ export default function AskPharmacistPage() {
     {
       key: "actions", header: "Actions", width: "80px",
       render: (a) => (
-        <Link href={`/ask-pharmacist/${a._id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
+        <Link href={`/ask-pharmacist/${a.id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
           <Eye size={13} /> {a.status === "open" ? "Respond" : "View"}
         </Link>
       ),
@@ -82,7 +82,7 @@ export default function AskPharmacistPage() {
           <>
             <div className="w-56">
               <Input
-                placeholder="Search subject…"
+                placeholder="Search subjectâ€¦"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 leftIcon={<Search size={14} />}
@@ -101,7 +101,7 @@ export default function AskPharmacistPage() {
           </>
         }
       />
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(a) => a._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(a) => a.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );

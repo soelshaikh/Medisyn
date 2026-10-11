@@ -14,6 +14,47 @@ function zodError(err: ZodError): AppError {
   return new AppError('VALIDATION_ERROR', msg, 422);
 }
 
+/**
+ * @openapi
+ * /checkout/preview:
+ *   post:
+ *     tags: [Commerce]
+ *     summary: Preview order totals and get a preview token
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [shippingAddress, shippingMethodId]
+ *             properties:
+ *               shippingMethodId: { type: string, format: uuid }
+ *               shippingAddress:
+ *                 type: object
+ *                 required: [street, city, province, postalCode, country]
+ *                 properties:
+ *                   street: { type: string }
+ *                   unit: { type: string }
+ *                   city: { type: string }
+ *                   province: { type: string }
+ *                   postalCode: { type: string }
+ *                   country: { type: string, enum: [CA] }
+ *     responses:
+ *       200:
+ *         description: Checkout preview with totals and signed preview token
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       422:
+ *         description: Cart empty or stock insufficient
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
 // ── POST /checkout/preview ────────────────────────────────────────────────
 checkoutRouter.post(
   '/checkout/preview',
@@ -37,6 +78,60 @@ checkoutRouter.post(
   },
 );
 
+/**
+ * @openapi
+ * /checkout/place:
+ *   post:
+ *     tags: [Commerce]
+ *     summary: Place an order using a preview token
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [previewToken, shippingAddress, shippingMethodId]
+ *             properties:
+ *               previewToken: { type: string }
+ *               shippingMethodId: { type: string, format: uuid }
+ *               notes: { type: string, maxLength: 1000 }
+ *               shippingAddress:
+ *                 type: object
+ *                 required: [street, city, province, postalCode, country]
+ *                 properties:
+ *                   street: { type: string }
+ *                   city: { type: string }
+ *                   province: { type: string }
+ *                   postalCode: { type: string }
+ *                   country: { type: string, enum: [CA] }
+ *     responses:
+ *       201:
+ *         description: Order placed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orderId: { type: string, format: uuid }
+ *                     orderNumber: { type: string }
+ *                     status: { type: string, enum: [pending] }
+ *                     total: { type: string }
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       422:
+ *         description: Preview token invalid/expired or validation error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
 // ── POST /checkout/place ──────────────────────────────────────────────────
 checkoutRouter.post(
   '/checkout/place',

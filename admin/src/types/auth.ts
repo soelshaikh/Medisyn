@@ -1,30 +1,48 @@
+/* Backend API contract types for the admin auth endpoints */
+
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  fullName: string;
-  phone?: string;
+/* POST /api/v1/auth/super-admin/login */
+export interface SuperAdminLoginResponse {
+  data: {
+    accessToken: string;
+    user: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+    };
+  };
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  expiresIn: number;
+/* GET /api/v1/auth/me */
+export interface MeResponse {
+  data: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    emailVerified: boolean;
+    role: string | null;
+    facilityId: string | null;
+    unreadCount: number;
+  };
 }
 
-export interface User {
-  id: string;
-  email: string;
-  fullName: string;
-  phone?: string;
-  role: "patient" | "clinic" | "pharmacy_partner";
-  roles: string[];
-  permissions: string[];
-  status: "pending_verification" | "active" | "suspended" | "deactivated";
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
+/* POST /api/v1/auth/refresh */
+export interface RefreshResponse {
+  data: {
+    accessToken: string;
+  };
+}
+
+/* Standard error envelope */
+export interface ApiErrorResponse {
+  error: {
+    code: string;
+    message: string;
+  };
 }

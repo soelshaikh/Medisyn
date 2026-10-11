@@ -1,10 +1,12 @@
 import Redis from 'ioredis';
 
-// ── Redis client ──────────────────────────────────────────────────────────
-// Used exclusively as a performance cache + fast-path revocation flags.
+const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
+
+// ── Redis client (cache) ──────────────────────────────────────────────────
+// Used for performance cache + fast-path revocation flags.
 // PostgreSQL is the source of truth — every Redis read has a DB fallback.
 
-export const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+export const redis = new Redis(REDIS_URL, {
   maxRetriesPerRequest: 1,
   enableReadyCheck: false,
   lazyConnect: true,
@@ -14,6 +16,21 @@ export const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379'
 redis.on('error', (err) => {
   // Log but do not crash — Redis is a cache; DB fallback handles unavailability.
   console.error('[Redis] Connection error:', err.message);
+});
+
+// ── Redis client (BullMQ) ─────────────────────────────────────────────────
+// BullMQ requires maxRetriesPerRequest: null for its blocking commands.
+// Must be a separate connection from the cache client.
+
+export const bullmqRedis = new Redis(REDIS_URL, {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+  lazyConnect: true,
+  connectTimeout: 5000,
+});
+
+bullmqRedis.on('error', (err) => {
+  console.error('[BullMQ Redis] Connection error:', err.message);
 });
 
 // ── RedisUnavailableError ─────────────────────────────────────────────────

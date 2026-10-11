@@ -2,6 +2,7 @@ import { withTenantContext } from '@/lib/tenant-context';
 import { AppError } from '@/lib/errors';
 import { calculateTax, sumTaxLines } from '@/lib/tax-rates';
 import { createAuditEntry } from '@/core/audit/audit.service';
+import { createNotification } from '@/notifications/notifications.service';
 import {
   lockInventoryRecord,
   updateInventoryQuantity,
@@ -411,6 +412,15 @@ export async function advanceOrderStatus(
       { facilityId, actorId: auth.userId, actorType: 'user', action: 'order.status_changed', resourceType: 'order', resourceId: orderId, metadata: { from: order.status, to: newStatus } },
       tx,
     );
+
+    await createNotification(tx, {
+      facilityId,
+      userId: order.patientId,
+      type: 'order_status_changed',
+      title: 'Order update',
+      body: `Your order status has been updated to: ${newStatus}.`,
+      actionUrl: `${process.env.FRONTEND_URL ?? ''}/patient/orders/${orderId}`,
+    });
   });
 }
 

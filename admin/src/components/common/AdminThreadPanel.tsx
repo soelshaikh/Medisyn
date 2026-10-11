@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -13,7 +13,7 @@ import {
 import { threadsApi, type ThreadEntityType, type ThreadChannel, type ThreadMessage } from "@/api/threads.api";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
+/* â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function isSameDay(a: string, b: string) {
   return new Date(a).toDateString() === new Date(b).toDateString();
@@ -46,7 +46,7 @@ function fmtFullDateTime(iso: string) {
   });
 }
 
-/* ── Tab config ──────────────────────────────────────────────────────────── */
+/* â”€â”€ Tab config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 interface TabConfig {
   channel:    ThreadChannel;
@@ -67,7 +67,7 @@ function getTabConfig(entityType: ThreadEntityType): TabConfig[] {
   ];
 }
 
-/* ── Message bubble ──────────────────────────────────────────────────────── */
+/* â”€â”€ Message bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 interface BubbleProps {
   msg:           ThreadMessage;
@@ -145,7 +145,7 @@ function MessageBubble({ msg, isInternal, isUnread, currentUserId, onReply, onEd
                   <button
                     title="Delete message"
                     disabled={isDeleting}
-                    onClick={() => onDelete(msg._id)}
+                    onClick={() => onDelete(msg.id)}
                     className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)] hover:bg-[var(--color-error-light)] transition-colors disabled:opacity-50"
                   >
                     <Trash2 size={12} />
@@ -161,7 +161,7 @@ function MessageBubble({ msg, isInternal, isUnread, currentUserId, onReply, onEd
       {msg.parentMessage && !isDeleted && (
         <div className="mb-2.5 rounded border-l-2 border-[var(--color-primary)] bg-white/60 px-3 py-1.5">
           <p className="text-[10px] font-semibold text-[var(--color-primary)] mb-0.5">
-            ↩ {msg.parentMessage.authorName}
+            â†© {msg.parentMessage.authorName}
           </p>
           <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] line-clamp-2 italic leading-relaxed">
             {msg.parentMessage.bodyPreview}
@@ -183,7 +183,7 @@ function MessageBubble({ msg, isInternal, isUnread, currentUserId, onReply, onEd
   );
 }
 
-/* ── Inline edit form ────────────────────────────────────────────────────── */
+/* â”€â”€ Inline edit form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 interface EditFormProps {
   initialBody: string;
@@ -234,7 +234,7 @@ function InlineEditForm({ initialBody, isInternal, isPending, onSave, onCancel }
   );
 }
 
-/* ── Date divider ────────────────────────────────────────────────────────── */
+/* â”€â”€ Date divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function DateDivider({ label }: { label: string }) {
   return (
@@ -248,7 +248,7 @@ function DateDivider({ label }: { label: string }) {
   );
 }
 
-/* ── Props ───────────────────────────────────────────────────────────────── */
+/* â”€â”€ Props â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export interface AdminThreadPanelProps {
   entityType:   ThreadEntityType;
@@ -256,7 +256,7 @@ export interface AdminThreadPanelProps {
   defaultOpen?: boolean;
 }
 
-/* ── Main panel ──────────────────────────────────────────────────────────── */
+/* â”€â”€ Main panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: AdminThreadPanelProps) {
   const { user }  = useAdminAuthStore();
@@ -284,7 +284,7 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
   /* A message is unread if it came from a patient and this admin hasn't read it */
   const isUnreadMsg = useCallback((msg: ThreadMessage): boolean => {
     if (msg.authorRole !== "patient" || !!msg.deletedAt) return false;
-    if (localReadIds.has(msg._id)) return false;
+    if (localReadIds.has(msg.id)) return false;
     return !msg.readBy.some((r) => r.userId === (user?.id ?? ""));
   }, [localReadIds, user?.id]);
 
@@ -296,11 +296,11 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
     const userId = user.id;
     const unread = messages.filter((m) => {
       if (m.authorRole !== "patient" || !!m.deletedAt) return false;
-      if (localReadIds.has(m._id)) return false;
+      if (localReadIds.has(m.id)) return false;
       return !m.readBy.some((r) => r.userId === userId);
     });
     if (!unread.length) return;
-    const ids = unread.map((m) => m._id);
+    const ids = unread.map((m) => m.id);
     setLocalReadIds((prev) => {
       const next = new Set(prev);
       ids.forEach((id) => next.add(id));
@@ -333,7 +333,7 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
     const trimmed = body.trim();
     if (!trimmed || postMut.isPending) return;
     postMut.mutate(
-      { body: trimmed, parentMessageId: replyingTo?._id ?? undefined },
+      { body: trimmed, parentMessageId: replyingTo?.id ?? undefined },
       { onSuccess: () => { setBody(""); setReplyingTo(null); } },
     );
   }
@@ -369,7 +369,7 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
   const headerSummary = count === 0
     ? "No messages"
     : `${count} ${count === 1 ? "message" : "messages"}`
-    + (unreadCount > 0 ? ` · ${unreadCount} unread` : "");
+    + (unreadCount > 0 ? ` Â· ${unreadCount} unread` : "");
 
   const sendLabel = activeTab.isInternal
     ? "Add Note"
@@ -377,11 +377,11 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
     ? "Send Message"
     : "Send to Patient";
 
-  /* ── Render ── */
+  /* â”€â”€ Render â”€â”€ */
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white shadow-[var(--shadow-sm)] overflow-hidden">
 
-      {/* ── Collapsed header ── */}
+      {/* â”€â”€ Collapsed header â”€â”€ */}
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
@@ -408,7 +408,7 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
 
       {isOpen && (
         <>
-          {/* ── Tabs ── */}
+          {/* â”€â”€ Tabs â”€â”€ */}
           <div className="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
             {tabs.map((tab, i) => (
               <button
@@ -438,17 +438,17 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
             ))}
           </div>
 
-          {/* ── Internal notes warning banner ── */}
+          {/* â”€â”€ Internal notes warning banner â”€â”€ */}
           {activeTab.isInternal && (
             <div className="flex items-center gap-2 px-5 py-2 bg-amber-50 border-b border-amber-200">
               <Lock size={11} className="text-amber-600 shrink-0" />
               <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">
-                Staff only — never visible to patient
+                Staff only â€” never visible to patient
               </p>
             </div>
           )}
 
-          {/* ── Message list ── */}
+          {/* â”€â”€ Message list â”€â”€ */}
           <div className="px-5 py-4 max-h-[440px] overflow-y-auto flex flex-col gap-2.5">
             {isLoading ? (
               <div className="flex justify-center py-10">
@@ -479,10 +479,10 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
 
                 {messages.map((msg, idx) => {
                   const showDate = idx === 0 || !isSameDay(messages[idx - 1].createdAt, msg.createdAt);
-                  const isEditing = editingId === msg._id;
+                  const isEditing = editingId === msg.id;
 
                   return (
-                    <div key={msg._id}>
+                    <div key={msg.id}>
                       {showDate && <DateDivider label={fmtDateDivider(msg.createdAt)} />}
 
                       {isEditing ? (
@@ -490,7 +490,7 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
                           initialBody={msg.body}
                           isInternal={activeTab.isInternal}
                           isPending={editMut.isPending}
-                          onSave={(newBody) => handleEditSave(msg._id, newBody)}
+                          onSave={(newBody) => handleEditSave(msg.id, newBody)}
                           onCancel={() => setEditingId(null)}
                         />
                       ) : (
@@ -500,9 +500,9 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
                           isUnread={isUnreadMsg(msg)}
                           currentUserId={user?.id ?? ""}
                           onReply={setReplyingTo}
-                          onEdit={(m) => setEditingId(m._id)}
+                          onEdit={(m) => setEditingId(m.id)}
                           onDelete={handleDelete}
-                          isDeleting={deletingId === msg._id}
+                          isDeleting={deletingId === msg.id}
                         />
                       )}
                     </div>
@@ -514,7 +514,7 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
             )}
           </div>
 
-          {/* ── Compose area ── */}
+          {/* â”€â”€ Compose area â”€â”€ */}
           <div className="border-t border-[var(--color-border)] px-5 py-4 space-y-3 bg-[var(--color-surface)]">
 
             {/* Reply-to banner */}
@@ -526,7 +526,7 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
                     Replying to {replyingTo.authorName}
                   </p>
                   <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)] truncate italic mt-0.5">
-                    {replyingTo.body.length > 100 ? replyingTo.body.slice(0, 100) + "…" : replyingTo.body}
+                    {replyingTo.body.length > 100 ? replyingTo.body.slice(0, 100) + "â€¦" : replyingTo.body}
                   </p>
                 </div>
                 <button
@@ -547,10 +547,10 @@ export function AdminThreadPanel({ entityType, entityId, defaultOpen = false }: 
               onKeyDown={handleKeyDown}
               placeholder={
                 activeTab.isInternal
-                  ? "Add an internal staff note… (Ctrl+Enter to send)"
+                  ? "Add an internal staff noteâ€¦ (Ctrl+Enter to send)"
                   : activeTab.channel === "direct"
-                  ? "Message the patient directly… (Ctrl+Enter to send)"
-                  : "Write a message to the patient… (Ctrl+Enter to send)"
+                  ? "Message the patient directlyâ€¦ (Ctrl+Enter to send)"
+                  : "Write a message to the patientâ€¦ (Ctrl+Enter to send)"
               }
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-[var(--font-size-sm)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-shadow"
             />

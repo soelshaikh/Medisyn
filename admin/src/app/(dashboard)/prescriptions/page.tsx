@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -47,7 +47,7 @@ export default function PrescriptionsPage() {
     {
       key: "dosage", header: "Dosage",
       render: (r) => (
-        <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{r.dosage || "—"}</span>
+        <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{r.dosage || "â€”"}</span>
       ),
     },
     {
@@ -71,7 +71,7 @@ export default function PrescriptionsPage() {
     {
       key: "actions", header: "Actions", width: "60px",
       render: (r) => (
-        <Link href={`/prescriptions/${r._id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
+        <Link href={`/prescriptions/${r.id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
           <Eye size={13} /> View
         </Link>
       ),
@@ -92,7 +92,7 @@ export default function PrescriptionsPage() {
           <>
             <div className="w-56">
               <Input
-                placeholder="Search medication or Rx #…"
+                placeholder="Search medication or Rx #â€¦"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 leftIcon={<Search size={14} />}
@@ -111,7 +111,7 @@ export default function PrescriptionsPage() {
           </>
         }
       />
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(r) => r._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(r) => r.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );

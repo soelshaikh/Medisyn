@@ -1,142 +1,151 @@
 import apiClient from "@/lib/apiClient";
-import type { AdminProduct, ListResponse } from "@/types/admin";
+import type { AdminProduct } from "@/types/admin";
 
-const BASE = "/products";
+const PRODUCTS_BASE = "/catalogue/products";
+const CATEGORIES_BASE = "/catalogue/categories";
+const COUPONS_BASE = "/catalogue/coupons";
+const INVENTORY_BASE = "/catalogue/inventory";
 
 export const productsApi = {
   list: (params?: Record<string, unknown>) =>
-    apiClient.get<{ success: boolean; data: AdminProduct[]; meta: { page: number; limit: number; total: number; totalPages: number } }>(
-      `${BASE}/admin/all`, { params }
-    ).then((r) => ({ products: r.data.data, total: r.data.meta.total, page: r.data.meta.page, limit: r.data.meta.limit })),
+    apiClient
+      .get<{ data: AdminProduct[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(
+        PRODUCTS_BASE,
+        { params },
+      )
+      .then((r) => ({ products: r.data.data, total: r.data.pagination.total, page: r.data.pagination.page, limit: r.data.pagination.limit })),
 
   getById: (id: string) =>
-    apiClient.get<{ data: AdminProduct }>(`${BASE}/admin/${id}`).then((r) => r.data.data),
+    apiClient.get<{ data: AdminProduct }>(`${PRODUCTS_BASE}/${id}`).then((r) => r.data.data),
 
   create: (data: Record<string, unknown>) =>
-    apiClient.post<{ data: AdminProduct }>(BASE, data).then((r) => r.data.data),
+    apiClient.post<{ data: AdminProduct }>(PRODUCTS_BASE, data).then((r) => r.data.data),
 
   update: (id: string, data: Record<string, unknown>) =>
-    apiClient.patch<{ data: AdminProduct }>(`${BASE}/${id}`, data).then((r) => r.data.data),
+    apiClient.patch<{ data: AdminProduct }>(`${PRODUCTS_BASE}/${id}`, data).then((r) => r.data.data),
 
   archive: (id: string) =>
-    apiClient.delete(`${BASE}/${id}`).then((r) => r.data),
+    apiClient.delete(`${PRODUCTS_BASE}/${id}`).then((r) => r.data),
 
   uploadImage: (id: string, file: File, alt?: string, isPrimary?: boolean) => {
     const fd = new FormData();
     fd.append("image", file);
     if (alt)       fd.append("alt", alt);
     if (isPrimary) fd.append("isPrimary", "true");
-    return apiClient.post<{ data: AdminProduct }>(`${BASE}/${id}/images`, fd, {
+    return apiClient.post<{ data: AdminProduct }>(`${PRODUCTS_BASE}/${id}/images`, fd, {
       headers: { "Content-Type": "multipart/form-data" },
     }).then((r) => r.data.data);
   },
 
   setPrimaryImage: (id: string, url: string) =>
-    apiClient.patch<{ data: AdminProduct }>(`${BASE}/${id}/images/primary`, { url })
+    apiClient.patch<{ data: AdminProduct }>(`${PRODUCTS_BASE}/${id}/images/primary`, { url })
       .then((r) => r.data.data),
 
   reorderImages: (id: string, urls: string[]) =>
-    apiClient.patch<{ data: AdminProduct }>(`${BASE}/${id}/images/reorder`, { urls })
+    apiClient.patch<{ data: AdminProduct }>(`${PRODUCTS_BASE}/${id}/images/reorder`, { urls })
       .then((r) => r.data.data),
 
   removeImage: (id: string, url: string) =>
-    apiClient.delete<{ data: AdminProduct }>(`${BASE}/${id}/images`, { data: { url } })
+    apiClient.delete<{ data: AdminProduct }>(`${PRODUCTS_BASE}/${id}/images`, { data: { url } })
       .then((r) => r.data.data),
-};
-
-export const brandsApi = {
-  list: () =>
-    apiClient.get<{ data: Array<{ _id: string; name: string; slug: string; isActive: boolean }> }>("/brands/admin/all")
-      .then((r) => r.data.data),
-
-  getById: (id: string) =>
-    apiClient.get<{ data: import("@/types/admin").AdminBrand }>(`/brands/admin/${id}`)
-      .then((r) => r.data.data),
-
-  create: (data: { name: string; description?: string; logoUrl?: string; website?: string }) =>
-    apiClient.post<{ data: import("@/types/admin").AdminBrand }>("/brands", data).then((r) => r.data.data),
-
-  update: (id: string, data: Record<string, unknown>) =>
-    apiClient.patch<{ data: import("@/types/admin").AdminBrand }>(`/brands/${id}`, data).then((r) => r.data.data),
-
-  delete: (id: string) =>
-    apiClient.delete(`/brands/${id}`).then((r) => r.data),
 };
 
 export const categoriesApi = {
   list: () =>
-    apiClient.get<{ data: Array<{ _id: string; name: string; slug: string }> }>("/categories")
+    apiClient.get<{ data: Array<{ id: string; name: string; slug: string }> }>(CATEGORIES_BASE)
       .then((r) => r.data.data),
 
   listAdmin: () =>
-    apiClient.get<{ data: Array<{ _id: string; name: string; slug: string; isActive: boolean }> }>("/categories/admin/all")
+    apiClient.get<{ data: Array<{ id: string; name: string; slug: string; isActive: boolean }> }>(CATEGORIES_BASE)
       .then((r) => r.data.data),
 
   create: (data: { name: string; description?: string; parentId?: string }) =>
-    apiClient.post("/categories", data).then((r) => r.data),
+    apiClient.post(CATEGORIES_BASE, data).then((r) => r.data),
 
   update: (id: string, data: Record<string, unknown>) =>
-    apiClient.patch(`/categories/${id}`, data).then((r) => r.data),
+    apiClient.patch(`${CATEGORIES_BASE}/${id}`, data).then((r) => r.data),
 
   delete: (id: string) =>
-    apiClient.delete(`/categories/${id}`).then((r) => r.data),
+    apiClient.delete(`${CATEGORIES_BASE}/${id}`).then((r) => r.data),
 };
 
 export const inventoryApi = {
   list: (params?: Record<string, unknown>) =>
-    apiClient.get("/admin/inventory", { params }).then((r) => r.data.data),
+    apiClient.get(INVENTORY_BASE, { params }).then((r) => r.data.data),
 
   lowStock: () =>
-    apiClient.get("/admin/inventory/low-stock").then((r) => r.data.data),
+    apiClient.get(`${INVENTORY_BASE}/low-stock`).then((r) => r.data.data),
 
   nearExpiry: (days?: number) =>
-    apiClient.get("/admin/inventory/near-expiry", { params: days ? { days } : {} }).then((r) => r.data.data),
+    apiClient.get(`${INVENTORY_BASE}/near-expiry`, { params: days ? { days } : {} }).then((r) => r.data.data),
 
   allMovements: (params?: Record<string, unknown>) =>
-    apiClient.get("/admin/inventory/movements", { params }).then((r) => r.data.data),
+    apiClient.get(`${INVENTORY_BASE}/movements`, { params }).then((r) => r.data.data),
 
   get: (productId: string) =>
-    apiClient.get(`/admin/inventory/${productId}`).then((r) => r.data.data),
+    apiClient.get(`${INVENTORY_BASE}/${productId}`).then((r) => r.data.data),
 
   update: (productId: string, data: Record<string, unknown>) =>
-    apiClient.patch(`/admin/inventory/${productId}`, data).then((r) => r.data),
+    apiClient.patch(`${INVENTORY_BASE}/${productId}`, data).then((r) => r.data),
 
   adjust: (productId: string, delta: number) =>
-    apiClient.post(`/admin/inventory/${productId}/adjust`, { delta }).then((r) => r.data),
+    apiClient.post(`${INVENTORY_BASE}/${productId}/adjust`, { delta }).then((r) => r.data),
 
   /* Batch endpoints */
   listBatches: (productId: string) =>
-    apiClient.get(`/admin/inventory/${productId}/batches`).then((r) => r.data.data),
+    apiClient.get(`${INVENTORY_BASE}/${productId}/batches`).then((r) => r.data.data),
 
   addBatch: (productId: string, data: Record<string, unknown>) =>
-    apiClient.post(`/admin/inventory/${productId}/batches`, data).then((r) => r.data.data),
+    apiClient.post(`${INVENTORY_BASE}/${productId}/batches`, data).then((r) => r.data.data),
 
   updateBatch: (productId: string, batchId: string, data: Record<string, unknown>) =>
-    apiClient.patch(`/admin/inventory/${productId}/batches/${batchId}`, data).then((r) => r.data.data),
+    apiClient.patch(`${INVENTORY_BASE}/${productId}/batches/${batchId}`, data).then((r) => r.data.data),
 
   recallBatch: (productId: string, batchId: string, reason: string) =>
-    apiClient.post(`/admin/inventory/${productId}/batches/${batchId}/recall`, { reason }).then((r) => r.data.data),
+    apiClient.post(`${INVENTORY_BASE}/${productId}/batches/${batchId}/recall`, { reason }).then((r) => r.data.data),
 
   adjustBatch: (productId: string, batchId: string, delta: number, reason: string) =>
-    apiClient.post(`/admin/inventory/${productId}/batches/${batchId}/adjust`, { delta, reason }).then((r) => r.data.data),
+    apiClient.post(`${INVENTORY_BASE}/${productId}/batches/${batchId}/adjust`, { delta, reason }).then((r) => r.data.data),
 
   batchMovements: (productId: string, batchId: string, params?: Record<string, unknown>) =>
-    apiClient.get(`/admin/inventory/${productId}/batches/${batchId}/movements`, { params }).then((r) => r.data.data),
+    apiClient.get(`${INVENTORY_BASE}/${productId}/batches/${batchId}/movements`, { params }).then((r) => r.data.data),
 
   productMovements: (productId: string, params?: Record<string, unknown>) =>
-    apiClient.get(`/admin/inventory/${productId}/movements`, { params }).then((r) => r.data.data),
+    apiClient.get(`${INVENTORY_BASE}/${productId}/movements`, { params }).then((r) => r.data.data),
+};
+
+// brands has no backend route yet — calls will 404 until backend brands router is added
+const BRANDS_BASE = "/catalogue/brands";
+
+export const brandsApi = {
+  list: () =>
+    apiClient.get<{ data: Array<{ id: string; name: string; slug: string; isActive: boolean }> }>(BRANDS_BASE)
+      .then((r) => r.data.data),
+
+  getById: (id: string) =>
+    apiClient.get<{ data: import("@/types/admin").AdminBrand }>(`${BRANDS_BASE}/${id}`)
+      .then((r) => r.data.data),
+
+  create: (data: { name: string; description?: string; logoUrl?: string; website?: string }) =>
+    apiClient.post<{ data: import("@/types/admin").AdminBrand }>(BRANDS_BASE, data).then((r) => r.data.data),
+
+  update: (id: string, data: Record<string, unknown>) =>
+    apiClient.patch<{ data: import("@/types/admin").AdminBrand }>(`${BRANDS_BASE}/${id}`, data).then((r) => r.data.data),
+
+  delete: (id: string) =>
+    apiClient.delete(`${BRANDS_BASE}/${id}`).then((r) => r.data),
 };
 
 export const couponsApi = {
   list: (params?: Record<string, unknown>) =>
-    apiClient.get("/coupons", { params }).then((r) => r.data.data as unknown[]),
+    apiClient.get(COUPONS_BASE, { params }).then((r) => r.data.data as unknown[]),
 
   create: (data: Record<string, unknown>) =>
-    apiClient.post("/coupons", data).then((r) => r.data),
+    apiClient.post(COUPONS_BASE, data).then((r) => r.data),
 
   update: (id: string, data: Record<string, unknown>) =>
-    apiClient.patch(`/coupons/${id}`, data).then((r) => r.data),
+    apiClient.patch(`${COUPONS_BASE}/${id}`, data).then((r) => r.data),
 
   delete: (id: string) =>
-    apiClient.delete(`/coupons/${id}`).then((r) => r.data),
+    apiClient.delete(`${COUPONS_BASE}/${id}`).then((r) => r.data),
 };

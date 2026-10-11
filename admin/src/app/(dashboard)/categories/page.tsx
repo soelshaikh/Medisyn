@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,7 +10,7 @@ import { Modal } from "@/components/ui/Modal";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Pencil, Trash2, Plus } from "lucide-react";
 
-interface AdminCategory { _id: string; name: string; slug: string; isActive: boolean; }
+interface AdminCategory { id: string; name: string; slug: string; isActive: boolean; }
 interface CategoryForm  { name: string; description: string; }
 const BLANK: CategoryForm = { name: "", description: "" };
 
@@ -31,7 +31,7 @@ export default function CategoriesPage() {
   const save = useMutation({
     mutationFn: () =>
       editing
-        ? categoriesApi.update(editing._id, form as unknown as Record<string, unknown>)
+        ? categoriesApi.update(editing.id, form as unknown as Record<string, unknown>)
         : categoriesApi.create({ name: form.name.trim(), description: form.description.trim() || undefined }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["categories-admin"] });
@@ -100,7 +100,7 @@ export default function CategoriesPage() {
         columns={cols}
         data={categories ?? []}
         loading={isLoading}
-        keyFn={(c) => c._id}
+        keyFn={(c) => c.id}
         emptyTitle="No categories yet"
         emptyDescription="Add your first category to organise products."
       />
@@ -118,7 +118,7 @@ export default function CategoriesPage() {
             <label className="block text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)] mb-1.5">Description</label>
             <textarea
               rows={2}
-              placeholder="Optional description…"
+              placeholder="Optional descriptionâ€¦"
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-2 text-[var(--font-size-sm)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
@@ -144,7 +144,7 @@ export default function CategoriesPage() {
           </p>
           <div className="flex gap-3 justify-end">
             <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="danger" loading={del.isPending} onClick={() => deleteTarget && del.mutate(deleteTarget._id)}>Delete</Button>
+            <Button variant="danger" loading={del.isPending} onClick={() => deleteTarget && del.mutate(deleteTarget.id)}>Delete</Button>
           </div>
         </div>
       </Modal>

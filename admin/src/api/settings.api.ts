@@ -8,14 +8,14 @@ export interface WorkingHours {
 }
 
 export interface Holiday {
-  _id:      string;
+  id:       string;
   date:     string; // "YYYY-MM-DD"
   name:     string;
   isClosed: boolean;
 }
 
 export interface PharmacySettings {
-  _id:           string;
+  id:            string;
   pharmacyName:  string;
   phone:         string;
   email:         string;

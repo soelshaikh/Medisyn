@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,7 @@ const STATUS_OPTIONS: { value: InterestStatus; label: string }[] = [
 ];
 
 function fmt(dateStr: string) {
-  if (!dateStr) return "—";
+  if (!dateStr) return "â€”";
   return new Date(dateStr).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -116,7 +116,7 @@ export default function AppointmentInterestPage() {
     <div className="space-y-4">
       <PageHeader
         title="Appointment Interest Requests"
-        description={`${total} request${total !== 1 ? "s" : ""}${newCount > 0 ? ` · ${newCount} new` : ""}`}
+        description={`${total} request${total !== 1 ? "s" : ""}${newCount > 0 ? ` Â· ${newCount} new` : ""}`}
         onRefresh={() => qc.invalidateQueries({ queryKey: ["appointment-interest"] })}
         refreshing={isFetching}
         actions={
@@ -137,7 +137,7 @@ export default function AppointmentInterestPage() {
         columns={columns}
         data={rows}
         loading={isLoading}
-        keyFn={(r) => r._id}
+        keyFn={(r) => r.id}
         emptyTitle="No interest requests yet"
         emptyDescription="When patients submit a request due to no available slots, they will appear here."
       />
@@ -225,7 +225,7 @@ export default function AppointmentInterestPage() {
                   value={adminNote}
                   onChange={(e) => setAdminNote(e.target.value)}
                   rows={3}
-                  placeholder="Reason for status change…"
+                  placeholder="Reason for status changeâ€¦"
                   className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] resize-none"
                 />
               </div>
@@ -235,7 +235,7 @@ export default function AppointmentInterestPage() {
               <Button variant="ghost" onClick={() => setDetail(null)}>Cancel</Button>
               <Button
                 loading={statusMut.isPending}
-                onClick={() => statusMut.mutate({ id: detail._id, status: newStatus, note: adminNote })}
+                onClick={() => statusMut.mutate({ id: detail.id, status: newStatus, note: adminNote })}
               >
                 Save
               </Button>

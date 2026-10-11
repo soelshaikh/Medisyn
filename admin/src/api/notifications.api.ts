@@ -1,7 +1,7 @@
 import apiClient from "@/lib/apiClient";
 
 export interface AdminNotification {
-  _id:       string;
+  id:        string;
   type:      string;
   title:     string;
   message:   string;
@@ -11,16 +11,24 @@ export interface AdminNotification {
   createdAt: string;
 }
 
+export interface NotificationsListResult {
+  data:        AdminNotification[];
+  total:       number;
+  unreadCount: number;
+}
+
 export const notificationsApi = {
   list: (page = 1, limit = 20) =>
     apiClient
-      .get<{ data: { data: AdminNotification[]; total: number } }>("/notifications", { params: { page, limit } })
-      .then((r) => r.data.data),
-
-  unreadCount: () =>
-    apiClient
-      .get<{ data: { count: number } }>("/notifications/unread-count")
-      .then((r) => r.data.data.count),
+      .get<{ success: true; data: { items: AdminNotification[]; unreadCount: number; pagination: { page: number; limit: number; total: number; totalPages: number } } }>(
+        "/notifications",
+        { params: { page, limit } },
+      )
+      .then((r): NotificationsListResult => ({
+        data:        r.data.data.items,
+        total:       r.data.data.pagination.total,
+        unreadCount: r.data.data.unreadCount,
+      })),
 
   markRead: (id: string) =>
     apiClient.patch(`/notifications/${id}/read`).then((r) => r.data),

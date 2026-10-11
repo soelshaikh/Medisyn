@@ -1,0 +1,12 @@
+{{> header frontendUrl=frontendUrl}}
+<h1>Your pharmacist has replied</h1>
+<p>Hi {{firstName}}, a pharmacist has responded to your question.</p>
+<div style="background:#F7F9FB;border-left:3px solid #1677A8;padding:14px 16px;border-radius:4px;margin:0 0 20px;">
+  <p style="font-size:13px;color:#718096;margin:0 0 6px;">Your question:</p>
+  <p style="font-size:14px;color:#1A202C;margin:0;">{{questionSummary}}</p>
+</div>
+<p>Log in to view the full reply from your pharmacist:</p>
+<p>
+  <a href="{{replyUrl}}" class="btn">View reply</a>
+</p>
+{{> footer currentYear=currentYear}}

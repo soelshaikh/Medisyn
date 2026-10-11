@@ -1,7 +1,7 @@
 import apiClient from "@/lib/apiClient";
 
 export interface PharmacistTopic {
-  _id:       string;
+  id:        string;
   name:      string;
   slug:      string;
   isActive:  boolean;

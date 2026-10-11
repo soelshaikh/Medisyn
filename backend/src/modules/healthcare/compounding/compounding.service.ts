@@ -1,6 +1,8 @@
 import { withTenantContext } from '@/lib/tenant-context';
 import { AppError } from '@/lib/errors';
 import { createAuditEntry } from '@/core/audit/audit.service';
+import { fileStorage } from '@/lib/file-storage/file-storage.service';
+import { ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, MIME_TO_EXT } from '@/lib/file-storage/file-storage.types';
 import type { AuthContext } from '@/core/auth/middleware/parse-jwt';
 import {
   insertCompoundingRequest,
@@ -12,6 +14,7 @@ import {
   findCompoundingDetailForAdmin,
   listCompoundingForAdmin,
   updateCompoundingStatus,
+  appendCompoundingFileKey,
 } from './compounding.queries';
 import { validateCompoundingTransition } from './compounding.types';
 import type {
@@ -323,5 +326,105 @@ export async function adminUpdateCompoundingStatus(
       },
       tx,
     );
+  });
+}
+
+// ── uploadCompoundingFile ─────────────────────────────────────────────────
+
+export async function uploadCompoundingFile(
+  auth: AuthContext,
+  compoundingId: string,
+  file: Express.Multer.File,
+): Promise<{ fileKey: string }> {
+  const facilityId = auth.facilityId!;
+
+  return withTenantContext(facilityId, async (tx) => {
+    const record = await findCompoundingById(compoundingId, tx);
+    if (!record) {
+      throw new AppError('NOT_FOUND', 'Compounding request not found', 404);
+    }
+
+    if (record.patientId !== auth.userId) {
+      throw new AppError('FORBIDDEN', 'Access denied', 403);
+    }
+
+    const ext = file.originalname.includes('.')
+      ? `.${file.originalname.split('.').pop()!.toLowerCase()}`
+      : '';
+
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype) || !ALLOWED_EXTENSIONS.has(ext)) {
+      throw new AppError('FILE_TYPE_NOT_ALLOWED', 'File type not allowed', 422);
+    }
+
+    if (file.size === 0) {
+      throw new AppError('FILE_EMPTY', 'File is empty', 422);
+    }
+
+    const mappedExt = MIME_TO_EXT[file.mimetype]!;
+    const fileKey = await fileStorage.uploadFile(
+      file.buffer,
+      file.mimetype,
+      `${facilityId}/compounding`,
+      mappedExt,
+    );
+
+    await appendCompoundingFileKey(compoundingId, fileKey, tx);
+
+    await createAuditEntry(
+      {
+        facilityId,
+        actorId: auth.userId,
+        actorType: 'user',
+        action: 'file.upload',
+        resourceType: 'compounding_request',
+        resourceId: compoundingId,
+        metadata: { fileKey, mimeType: file.mimetype, sizeBytes: file.size },
+      },
+      tx,
+    );
+
+    return { fileKey };
+  });
+}
+
+// ── getCompoundingFileUrl ─────────────────────────────────────────────────
+
+export async function getCompoundingFileUrl(
+  auth: AuthContext,
+  compoundingId: string,
+  fileKey: string,
+): Promise<{ url: string; expiresIn: number }> {
+  const facilityId = auth.facilityId!;
+
+  return withTenantContext(facilityId, async (tx) => {
+    const record = await findCompoundingById(compoundingId, tx);
+    if (!record) {
+      throw new AppError('NOT_FOUND', 'Compounding request not found', 404);
+    }
+
+    if (record.patientId !== auth.userId) {
+      throw new AppError('FORBIDDEN', 'Access denied', 403);
+    }
+
+    if (!record.fileKeys.includes(fileKey)) {
+      throw new AppError('FORBIDDEN', 'File not associated with this compounding request', 403);
+    }
+
+    const url = await fileStorage.getSignedUrl(fileKey);
+
+    await createAuditEntry(
+      {
+        facilityId,
+        actorId: auth.userId,
+        actorType: 'user',
+        action: 'file.sign_url',
+        resourceType: 'compounding_request',
+        resourceId: compoundingId,
+        metadata: { fileKey, expirySeconds: fileStorage.signedUrlExpiry },
+      },
+      tx,
+    );
+
+    return { url, expiresIn: fileStorage.signedUrlExpiry };
   });
 }

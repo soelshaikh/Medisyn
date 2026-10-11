@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -71,26 +71,26 @@ export default function AuditLogPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Audit Log" description="All admin and system actions — auto-refreshes every 30s" />
+      <PageHeader title="Audit Log" description="All admin and system actions â€” auto-refreshes every 30s" />
 
       <div className="flex flex-wrap gap-3">
         <div className="w-64">
           <Input
-            placeholder="Search actor or action…"
+            placeholder="Search actor or actionâ€¦"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             leftIcon={<Search size={14} />}
           />
         </div>
         <Input
-          placeholder="Filter by resource…"
+          placeholder="Filter by resourceâ€¦"
           value={resource}
           onChange={(e) => { setResource(e.target.value); setPage(1); }}
           className="w-44"
         />
       </div>
 
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(a) => a._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(a) => a.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );

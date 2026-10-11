@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +44,7 @@ export default function PartnersPage() {
       key: "contact", header: "Contact",
       render: (p) => (
         <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
-          {p.profile?.contactName ?? "—"}
+          {p.profile?.contactName ?? "â€”"}
         </span>
       ),
     },
@@ -52,7 +52,7 @@ export default function PartnersPage() {
       key: "license", header: "License #",
       render: (p) => (
         <span className="text-[var(--font-size-sm)] font-mono text-[var(--color-text-secondary)]">
-          {p.profile?.licenseNumber ?? "—"}
+          {p.profile?.licenseNumber ?? "â€”"}
         </span>
       ),
     },
@@ -71,7 +71,7 @@ export default function PartnersPage() {
     {
       key: "actions", header: "Actions", width: "60px",
       render: (p) => (
-        <Link href={`/partners/${p._id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
+        <Link href={`/partners/${p.id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
           <Eye size={13} /> Review
         </Link>
       ),
@@ -92,7 +92,7 @@ export default function PartnersPage() {
           <>
             <div className="w-56">
               <Input
-                placeholder="Search name or email…"
+                placeholder="Search name or emailâ€¦"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 leftIcon={<Search size={14} />}
@@ -111,7 +111,7 @@ export default function PartnersPage() {
           </>
         }
       />
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(p) => p._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(p) => p.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );

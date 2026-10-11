@@ -1,6 +1,7 @@
 import { withTenantContext } from '@/lib/tenant-context';
 import { AppError } from '@/lib/errors';
 import { createAuditEntry } from '@/core/audit/audit.service';
+import { createNotification } from '@/notifications/notifications.service';
 import type { AuthContext } from '@/core/auth/middleware/parse-jwt';
 import {
   insertConversation,
@@ -232,6 +233,15 @@ export async function addStaffMessage(
     if (status === 'open') {
       await updateConversationStatus(id, 'in_progress', tx);
     }
+
+    await createNotification(tx, {
+      facilityId,
+      userId: conv.patientId,
+      type: 'ask_pharmacist_replied',
+      title: 'Your pharmacist has replied',
+      body: 'A pharmacist has responded to your question.',
+      actionUrl: `${process.env.FRONTEND_URL ?? ''}/patient/ask-a-pharmacist/${id}`,
+    });
 
     return msg;
   });

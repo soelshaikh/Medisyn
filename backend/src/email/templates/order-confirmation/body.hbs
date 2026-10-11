@@ -1,0 +1,22 @@
+{{> header frontendUrl=frontendUrl}}
+<h1>Order confirmed</h1>
+<p>Hi {{firstName}}, thank you for your order! Here is a summary:</p>
+<table style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+  <tr style="background:#F7F9FB;">
+    <th style="text-align:left;padding:8px 10px;font-size:13px;color:#718096;border-bottom:1px solid #E2E8F0;">Order #</th>
+    <td style="padding:8px 10px;font-size:14px;">{{orderNumber}}</td>
+  </tr>
+  <tr>
+    <th style="text-align:left;padding:8px 10px;font-size:13px;color:#718096;border-bottom:1px solid #E2E8F0;">Total</th>
+    <td style="padding:8px 10px;font-size:14px;">{{orderTotal}}</td>
+  </tr>
+  <tr style="background:#F7F9FB;">
+    <th style="text-align:left;padding:8px 10px;font-size:13px;color:#718096;">Status</th>
+    <td style="padding:8px 10px;font-size:14px;">{{orderStatus}}</td>
+  </tr>
+</table>
+<p>
+  <a href="{{orderUrl}}" class="btn">View order details</a>
+</p>
+<p class="small">If you have any questions, contact us at <a href="mailto:support@medisyn.ca">support@medisyn.ca</a>.</p>
+{{> footer currentYear=currentYear}}

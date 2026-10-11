@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,8 +25,8 @@ const BLANK = {
 };
 
 const CAPACITY_OPTIONS = [
-  { value: "strict", label: "Strict", description: "Hard cap — blocks new bookings when full" },
-  { value: "open",   label: "Open",   description: "Soft cap — allows over-requests" },
+  { value: "strict", label: "Strict", description: "Hard cap â€” blocks new bookings when full" },
+  { value: "open",   label: "Open",   description: "Soft cap â€” allows over-requests" },
 ];
 
 export default function SlotsPage() {
@@ -56,7 +56,7 @@ export default function SlotsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-slots"] }); setCreateOpen(false); setForm({ ...BLANK }); },
   });
 
-  const serviceOptions = (services ?? []).map((s) => ({ value: s._id, label: s.name }));
+  const serviceOptions = (services ?? []).map((s) => ({ value: s.id, label: s.name }));
   const filterOptions  = [{ value: "", label: "All vaccines" }, ...serviceOptions];
 
   const columns: Column<AppointmentSlot>[] = [
@@ -64,7 +64,7 @@ export default function SlotsPage() {
       key: "vaccine", header: "Vaccine",
       render: (s) => (
         <span className="font-semibold text-[var(--color-text-primary)]">
-          {typeof s.vaccineServiceId === "object" ? s.vaccineServiceId.name : "—"}
+          {typeof s.vaccineServiceId === "object" ? s.vaccineServiceId.name : "â€”"}
         </span>
       ),
     },
@@ -75,7 +75,7 @@ export default function SlotsPage() {
           <p className="font-medium text-[var(--color-text-primary)]">
             {fmtDate(s.date)}
           </p>
-          <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{fmt12h(s.startTime)} – {fmt12h(s.endTime)}</p>
+          <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{fmt12h(s.startTime)} â€“ {fmt12h(s.endTime)}</p>
         </div>
       ),
     },
@@ -115,7 +115,7 @@ export default function SlotsPage() {
     {
       key: "actions", header: "Actions", width: "70px",
       render: (s) => (
-        <Link href={`/appointments/slots/${s._id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
+        <Link href={`/appointments/slots/${s.id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
           <Eye size={13} /> Manage
         </Link>
       ),
@@ -148,7 +148,7 @@ export default function SlotsPage() {
         />
       </div>
 
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(s) => s._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(s) => s.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
 
       {/* Create modal */}
@@ -158,8 +158,8 @@ export default function SlotsPage() {
             label="Vaccine Service"
             value={form.vaccineServiceId}
             onChange={(v) => setForm((f) => ({ ...f, vaccineServiceId: v }))}
-            options={[{ value: "", label: "Select a vaccine…", disabled: true }, ...(services ?? []).filter((s) => s.status === "active").map((s) => ({ value: s._id, label: s.name }))]}
-            placeholder="Select a vaccine…"
+            options={[{ value: "", label: "Select a vaccineâ€¦", disabled: true }, ...(services ?? []).filter((s) => s.status === "active").map((s) => ({ value: s.id, label: s.name }))]}
+            placeholder="Select a vaccineâ€¦"
           />
 
           <DatePicker

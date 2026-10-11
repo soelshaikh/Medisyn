@@ -11,7 +11,7 @@ interface UserListResponse {
 }
 
 export interface UserSearchResult {
-  _id:      string;
+  id:       string;
   uhid:     string | null;
   fullName: string;
   email:    string;
@@ -26,12 +26,12 @@ export const usersApi = {
 
   list: (params?: Record<string, unknown>) =>
     apiClient
-      .get<{ data: AdminUser[]; meta: { page: number; limit: number; total: number; totalPages: number } }>(BASE, { params })
+      .get<{ data: AdminUser[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(BASE, { params })
       .then((r): UserListResponse => ({
         data:  r.data.data,
-        total: r.data.meta.total,
-        page:  r.data.meta.page,
-        limit: r.data.meta.limit,
+        total: r.data.pagination.total,
+        page:  r.data.pagination.page,
+        limit: r.data.pagination.limit,
       })),
 
   getById: (id: string) =>

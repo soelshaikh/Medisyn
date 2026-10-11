@@ -188,8 +188,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     setPriceStr(fmtCAD(product.price));
     setCompareStr(product.compareAtPrice ? fmtCAD(product.compareAtPrice) : "");
     setStatus(product.status);
-    setCategoryId(typeof product.categoryId === "object" ? product.categoryId._id : (product.categoryId ?? ""));
-    setBrandId(product.brandId && typeof product.brandId === "object" ? product.brandId._id : (product.brandId ?? ""));
+    setCategoryId(typeof product.categoryId === "object" ? product.categoryId.id : (product.categoryId ?? ""));
+    setBrandId(product.brandId && typeof product.brandId === "object" ? product.brandId.id : (product.brandId ?? ""));
     setDin(product.din ?? "");
     setUpc(product.upc ?? "");
     setRequiresRx(product.requiresPrescription);
@@ -561,7 +561,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 onChange={(v) => setCategoryId(v === "_none" ? "" : v)}
                 options={[
                   { value: "_none", label: "No category" },
-                  ...(categories ?? []).map((c) => ({ value: c._id, label: c.name })),
+                  ...(categories ?? []).map((c) => ({ value: c.id, label: c.name })),
                 ]}
               />
               <Select
@@ -570,7 +570,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 onChange={(v) => setBrandId(v === "_none" ? "" : v)}
                 options={[
                   { value: "_none", label: "No brand" },
-                  ...(brands ?? []).filter((b) => b.isActive).map((b) => ({ value: b._id, label: b.name })),
+                  ...(brands ?? []).filter((b) => b.isActive).map((b) => ({ value: b.id, label: b.name })),
                 ]}
               />
               <label className="flex cursor-pointer items-center gap-2.5">
@@ -653,7 +653,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
           <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 space-y-1.5">
             {([
-              ["ID",      product._id.slice(-8)],
+              ["ID",      product.id.slice(-8)],
               ["Slug",    `/${product.slug}`],
               ["Created", fmtDateTime(product.createdAt)],
               ["Updated", fmtDateTime(product.updatedAt)],

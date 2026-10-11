@@ -309,6 +309,22 @@ export async function findPrescriptionDetailForAdmin(
   return detail;
 }
 
+// ── appendPrescriptionFileKey ─────────────────────────────────────────────
+
+export async function appendPrescriptionFileKey(
+  id: string,
+  fileKey: string,
+  tx: TenantTransaction,
+): Promise<void> {
+  await tx
+    .update(prescriptionRequests)
+    .set({
+      fileKeys: sql`array_append(${prescriptionRequests.fileKeys}, ${fileKey})`,
+      updatedAt: new Date(),
+    })
+    .where(eq(prescriptionRequests.id, id));
+}
+
 // ── updatePrescription ────────────────────────────────────────────────────
 
 export async function updatePrescription(

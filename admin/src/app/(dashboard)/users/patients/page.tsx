@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -48,7 +48,7 @@ export default function PatientsPage() {
       key: "uhid", header: "UHID", width: "130px",
       render: (u) => (
         <span className="font-mono text-[var(--font-size-xs)] text-[var(--color-text-muted)]">
-          {(u as AdminUser & { uhid?: string }).uhid ?? "—"}
+          {(u as AdminUser & { uhid?: string }).uhid ?? "â€”"}
         </span>
       ),
     },
@@ -66,7 +66,7 @@ export default function PatientsPage() {
       key: "actions", header: "Actions", width: "80px",
       render: (u) => (
         <Link
-          href={`/users/${u._id}`}
+          href={`/users/${u.id}`}
           className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit"
         >
           <Eye size={13} /> View
@@ -89,7 +89,7 @@ export default function PatientsPage() {
           <>
             <div className="w-56">
               <Input
-                placeholder="Search name or email…"
+                placeholder="Search name or emailâ€¦"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 leftIcon={<Search size={14} />}
@@ -111,7 +111,7 @@ export default function PatientsPage() {
           </>
         }
       />
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(u) => u._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(u) => u.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );

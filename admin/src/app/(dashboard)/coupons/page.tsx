@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -57,7 +57,7 @@ export default function CouponsPage() {
       if (form.minOrderAmount) payload.minOrderAmount = Math.round(parseFloat(form.minOrderAmount) * 100);
       if (form.usageLimit)     payload.usageLimit     = parseInt(form.usageLimit, 10);
       if (form.expiresAt)      payload.expiresAt      = new Date(form.expiresAt).toISOString();
-      return editing ? couponsApi.update(editing._id, payload) : couponsApi.create(payload);
+      return editing ? couponsApi.update(editing.id, payload) : couponsApi.create(payload);
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin-coupons"] });
@@ -163,7 +163,7 @@ export default function CouponsPage() {
         columns={cols}
         data={list}
         loading={isLoading}
-        keyFn={(c) => c._id}
+        keyFn={(c) => c.id}
         emptyTitle="No coupons yet"
         emptyDescription="Create a coupon code to offer discounts to customers."
       />
@@ -259,7 +259,7 @@ export default function CouponsPage() {
           </p>
           <div className="flex gap-3 justify-end">
             <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="danger" loading={del.isPending} onClick={() => deleteTarget && del.mutate(deleteTarget._id)}>Delete</Button>
+            <Button variant="danger" loading={del.isPending} onClick={() => deleteTarget && del.mutate(deleteTarget.id)}>Delete</Button>
           </div>
         </div>
       </Modal>

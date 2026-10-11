@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +18,7 @@ const STATUSES = ["submitted", "reviewing", "responded", "closed"];
 
 function patientName(r: AdminAilmentRequest) {
   if (typeof r.patientId === "object" && r.patientId !== null) return r.patientId.fullName;
-  return "—";
+  return "â€”";
 }
 function patientEmail(r: AdminAilmentRequest) {
   if (typeof r.patientId === "object" && r.patientId !== null) return r.patientId.email;
@@ -67,7 +67,7 @@ export default function AilmentRequestsPage() {
       key: "actions", header: "", width: "80px",
       render: (r) => (
         <Link
-          href={`/minor-ailments/requests/${r._id}`}
+          href={`/minor-ailments/requests/${r.id}`}
           className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit"
         >
           <Eye size={13} /> {r.status === "submitted" || r.status === "reviewing" ? "Review" : "View"}
@@ -90,7 +90,7 @@ export default function AilmentRequestsPage() {
           <>
             <div className="w-56">
               <Input
-                placeholder="Search ailment…"
+                placeholder="Search ailmentâ€¦"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 leftIcon={<Search size={14} />}
@@ -109,7 +109,7 @@ export default function AilmentRequestsPage() {
           </>
         }
       />
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(r) => r._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(r) => r.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );

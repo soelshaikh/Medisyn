@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +23,7 @@ import type { FAQ } from "@/types/admin";
 
 const BLANK_FAQ = { question: "", answer: "", category: "", sortOrder: 0, isPublished: true };
 
-/* ── Sortable table row ── */
+/* â”€â”€ Sortable table row â”€â”€ */
 
 interface SortableRowProps {
   faq:      FAQ;
@@ -36,7 +36,7 @@ function SortableRow({ faq, onEdit, onDelete, onToggle }: SortableRowProps) {
   const {
     attributes, listeners, setNodeRef,
     transform, transition, isDragging,
-  } = useSortable({ id: faq._id });
+  } = useSortable({ id: faq.id });
 
   const style: React.CSSProperties = {
     transform:  CSS.Transform.toString(transform),
@@ -115,7 +115,7 @@ function SortableRow({ faq, onEdit, onDelete, onToggle }: SortableRowProps) {
   );
 }
 
-/* ── Page ── */
+/* â”€â”€ Page â”€â”€ */
 
 export default function FAQsPage() {
   const qc = useQueryClient();
@@ -146,7 +146,7 @@ export default function FAQsPage() {
   const faqSave = useMutation({
     mutationFn: () =>
       editingFaq
-        ? faqsApi.update(editingFaq._id, faqForm)
+        ? faqsApi.update(editingFaq.id, faqForm)
         : faqsApi.create(faqForm),
     onSuccess: () => {
       toast.success(editingFaq ? "FAQ updated" : "FAQ created");
@@ -177,7 +177,7 @@ export default function FAQsPage() {
 
   function togglePublish(faq: FAQ) {
     faqsApi
-      .update(faq._id, { isPublished: !faq.isPublished })
+      .update(faq.id, { isPublished: !faq.isPublished })
       .then(() => {
         toast.success(faq.isPublished ? "FAQ moved to draft" : "FAQ published");
         qc.invalidateQueries({ queryKey: ["admin-faqs"] });
@@ -201,11 +201,11 @@ export default function FAQsPage() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setItems((prev) => {
-      const oldIdx = prev.findIndex((f) => f._id === String(active.id));
-      const newIdx = prev.findIndex((f) => f._id === String(over.id));
+      const oldIdx = prev.findIndex((f) => f.id === String(active.id));
+      const newIdx = prev.findIndex((f) => f.id === String(over.id));
       if (oldIdx === -1 || newIdx === -1) return prev;
       const next = arrayMove(prev, oldIdx, newIdx).map((f, i) => ({ ...f, sortOrder: i }));
-      sortMut.mutate(next.map((f) => ({ id: f._id, sortOrder: f.sortOrder })));
+      sortMut.mutate(next.map((f) => ({ id: f.id, sortOrder: f.sortOrder })));
       return next;
     });
   }
@@ -216,7 +216,7 @@ export default function FAQsPage() {
     <div className="space-y-4">
       <PageHeader
         title="FAQs"
-        description={`${total} question${total !== 1 ? "s" : ""}${total > 1 ? " · drag rows to reorder" : ""}`}
+        description={`${total} question${total !== 1 ? "s" : ""}${total > 1 ? " Â· drag rows to reorder" : ""}`}
         onRefresh={() => qc.invalidateQueries({ queryKey: ["admin-faqs"] })}
         refreshing={isFetching}
         actions={
@@ -261,11 +261,11 @@ export default function FAQsPage() {
                   <th className="w-20" />
                 </tr>
               </thead>
-              <SortableContext items={items.map((f) => f._id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={items.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <tbody>
                   {items.map((f) => (
                     <SortableRow
-                      key={f._id}
+                      key={f.id}
                       faq={f}
                       onEdit={openEdit}
                       onDelete={setDeleteTarget}
@@ -301,7 +301,7 @@ export default function FAQsPage() {
               value={faqForm.answer}
               onChange={(e) => setFaqForm((f) => ({ ...f, answer: e.target.value }))}
               rows={5}
-              placeholder="Write the full answer here…"
+              placeholder="Write the full answer hereâ€¦"
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             />
           </div>
@@ -367,7 +367,7 @@ export default function FAQsPage() {
             <Button
               variant="danger"
               loading={faqDelete.isPending}
-              onClick={() => deleteTarget && faqDelete.mutate(deleteTarget._id)}
+              onClick={() => deleteTarget && faqDelete.mutate(deleteTarget.id)}
             >
               Delete
             </Button>

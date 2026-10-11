@@ -17,6 +17,7 @@ import {
   findAdminAppointmentDetail,
 } from './appointment.queries';
 import { validateAppointmentTransition } from './appointment.types';
+import { createNotification } from '@/notifications/notifications.service';
 import type {
   AppointmentStatus,
   PatientAppointmentDetail,
@@ -118,6 +119,15 @@ export async function bookAppointment(
       },
       tx,
     );
+
+    await createNotification(tx, {
+      facilityId,
+      userId: auth.userId,
+      type: 'appointment_booked',
+      title: 'Appointment confirmed',
+      body: 'Your appointment has been booked. Check your appointments for details.',
+      actionUrl: `${process.env.FRONTEND_URL ?? ''}/patient/appointments/${appointment.id}`,
+    });
 
     const detail = await findPatientAppointmentDetail(facilityId, appointment.id, auth.userId, tx);
     return detail!;

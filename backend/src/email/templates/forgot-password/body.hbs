@@ -1,0 +1,9 @@
+{{> header frontendUrl=frontendUrl}}
+<h1>Reset your password</h1>
+<p>Hi {{firstName}}, we received a request to reset your MediSyn password. Click the button below — this link expires in 1 hour.</p>
+<p>
+  <a href="{{resetUrl}}" class="btn">Reset password</a>
+</p>
+<p class="small">Or paste this link in your browser:<br /><a href="{{resetUrl}}">{{resetUrl}}</a></p>
+<p class="small">If you did not request a password reset, please ignore this email. Your password has not been changed.</p>
+{{> footer currentYear=currentYear}}

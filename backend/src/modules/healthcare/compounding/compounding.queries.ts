@@ -309,6 +309,22 @@ export async function findCompoundingDetailForAdmin(
   return detail;
 }
 
+// ── appendCompoundingFileKey ──────────────────────────────────────────────
+
+export async function appendCompoundingFileKey(
+  id: string,
+  fileKey: string,
+  tx: TenantTransaction,
+): Promise<void> {
+  await tx
+    .update(compoundingRequests)
+    .set({
+      fileKeys: sql`array_append(${compoundingRequests.fileKeys}, ${fileKey})`,
+      updatedAt: new Date(),
+    })
+    .where(eq(compoundingRequests.id, id));
+}
+
 // ── updateCompoundingStatus ───────────────────────────────────────────────
 
 export async function updateCompoundingStatus(

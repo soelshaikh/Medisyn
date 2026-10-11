@@ -1,0 +1,1 @@
+Your MediSyn order #{{orderNumber}} is confirmed

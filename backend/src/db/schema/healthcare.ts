@@ -34,6 +34,7 @@ export const prescriptionRequests = pgTable(
     prescriberName: text('prescriber_name'),
     prescriberFax: text('prescriber_fax'),
     fileReference: text('file_reference'),
+    fileKeys: text('file_keys').array().notNull().default([]),
     // enum: submitted | under_review | approved | declined
     status: text('status').notNull().default('submitted'),
     dispenseNotes: text('dispense_notes'),
@@ -98,6 +99,7 @@ export const compoundingRequests = pgTable(
     specialInstructions: text('special_instructions'),
     prescriberName: text('prescriber_name'),
     fileReference: text('file_reference'),
+    fileKeys: text('file_keys').array().notNull().default([]),
     quotedPrice: numeric('quoted_price', { precision: 10, scale: 2 }),
     quotedTurnaroundDays: integer('quoted_turnaround_days'),
     // enum: submitted | under_review | quoted | accepted | patient_declined | ready | completed | declined

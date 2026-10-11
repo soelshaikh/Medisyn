@@ -1,0 +1,23 @@
+{{> header frontendUrl=frontendUrl}}
+<h1>Prescription update</h1>
+<p>Hi {{firstName}}, the status of your prescription request has been updated.</p>
+<table style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+  <tr style="background:#F7F9FB;">
+    <th style="text-align:left;padding:8px 10px;font-size:13px;color:#718096;border-bottom:1px solid #E2E8F0;">Reference</th>
+    <td style="padding:8px 10px;font-size:14px;">{{prescriptionRef}}</td>
+  </tr>
+  <tr>
+    <th style="text-align:left;padding:8px 10px;font-size:13px;color:#718096;">New Status</th>
+    <td style="padding:8px 10px;font-size:14px;font-weight:600;">{{newStatus}}</td>
+  </tr>
+  {{#if note}}
+  <tr style="background:#F7F9FB;">
+    <th style="text-align:left;padding:8px 10px;font-size:13px;color:#718096;">Note</th>
+    <td style="padding:8px 10px;font-size:14px;">{{note}}</td>
+  </tr>
+  {{/if}}
+</table>
+<p>
+  <a href="{{prescriptionUrl}}" class="btn">View prescription</a>
+</p>
+{{> footer currentYear=currentYear}}

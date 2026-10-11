@@ -4,50 +4,73 @@ import type { VaccineService, AppointmentSlot, AppointmentBooking, ListResponse 
 /* ── Vaccine Services ── */
 export const vaccineServicesApi = {
   listAdmin: () =>
-    apiClient.get<{ data: VaccineService[] }>("/vaccine-services/admin/all").then((r) => r.data.data),
+    apiClient.get<{ data: VaccineService[] }>("/admin/vaccine-services").then((r) => r.data.data),
 
   create: (data: Record<string, unknown>) =>
-    apiClient.post<{ data: VaccineService }>("/vaccine-services", data).then((r) => r.data.data),
+    apiClient.post<{ data: VaccineService }>("/admin/vaccine-services", data).then((r) => r.data.data),
 
   update: (id: string, data: Record<string, unknown>) =>
-    apiClient.patch<{ data: VaccineService }>(`/vaccine-services/${id}`, data).then((r) => r.data.data),
+    apiClient.patch<{ data: VaccineService }>(`/admin/vaccine-services/${id}`, data).then((r) => r.data.data),
 
+  // no backend route for sort-order or delete yet — will 404 at runtime
   batchSortOrder: (items: { id: string; sortOrder: number }[]) =>
-    apiClient.patch("/vaccine-services/admin/sort-order", { items }).then((r) => r.data),
+    apiClient.patch("/admin/vaccine-services/sort-order", { items }).then((r) => r.data),
 
   delete: (id: string) =>
-    apiClient.delete(`/vaccine-services/${id}`).then((r) => r.data),
+    apiClient.delete(`/admin/vaccine-services/${id}`).then((r) => r.data),
 };
 
 /* ── Appointment Slots ── */
 export const appointmentSlotsApi = {
   list: (params?: Record<string, unknown>) =>
-    apiClient.get<{ data: ListResponse<AppointmentSlot> }>("/appointment-slots", { params }).then((r) => r.data.data),
+    apiClient
+      .get<{ data: AppointmentSlot[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(
+        "/admin/availability-slots",
+        { params },
+      )
+      .then((r): ListResponse<AppointmentSlot> => ({
+        data:  r.data.data,
+        total: r.data.pagination.total,
+        page:  r.data.pagination.page,
+        limit: r.data.pagination.limit,
+      })),
 
+  // no GET /admin/availability-slots/:id on backend — pages should use list then filter
   getById: (id: string) =>
-    apiClient.get<{ data: AppointmentSlot }>(`/appointment-slots/${id}`).then((r) => r.data.data),
+    apiClient.get<{ data: AppointmentSlot }>(`/admin/availability-slots/${id}`).then((r) => r.data.data),
 
   create: (data: Record<string, unknown>) =>
-    apiClient.post<{ data: AppointmentSlot }>("/appointment-slots", data).then((r) => r.data.data),
+    apiClient.post<{ data: AppointmentSlot }>("/admin/availability-slots", data).then((r) => r.data.data),
 
   update: (id: string, data: Record<string, unknown>) =>
-    apiClient.patch<{ data: AppointmentSlot }>(`/appointment-slots/${id}`, data).then((r) => r.data.data),
+    apiClient.patch<{ data: AppointmentSlot }>(`/admin/availability-slots/${id}`, data).then((r) => r.data.data),
 };
 
 /* ── Bookings ── */
 export const appointmentsApi = {
   list: (params?: Record<string, unknown>) =>
-    apiClient.get<{ data: ListResponse<AppointmentBooking> }>("/appointments/admin", { params }).then((r) => r.data.data),
+    apiClient
+      .get<{ data: AppointmentBooking[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(
+        "/admin/appointments",
+        { params },
+      )
+      .then((r): ListResponse<AppointmentBooking> => ({
+        data:  r.data.data,
+        total: r.data.pagination.total,
+        page:  r.data.pagination.page,
+        limit: r.data.pagination.limit,
+      })),
 
   getById: (id: string) =>
-    apiClient.get<{ data: AppointmentBooking }>(`/appointments/admin/${id}`).then((r) => r.data.data),
+    apiClient.get<{ data: AppointmentBooking }>(`/admin/appointments/${id}`).then((r) => r.data.data),
 
   updateStatus: (id: string, status: string, note?: string) =>
-    apiClient.patch(`/appointments/admin/${id}/status`, { status, note }).then((r) => r.data),
+    apiClient.patch(`/admin/appointments/${id}/status`, { status, note }).then((r) => r.data),
 
+  // no /reply route on backend — use addNote
   setReply: (id: string, reply: string) =>
-    apiClient.patch(`/appointments/admin/${id}/reply`, { reply }).then((r) => r.data),
+    apiClient.patch(`/admin/appointments/${id}/notes`, { note: reply }).then((r) => r.data),
 
   addNote: (id: string, note: string) =>
-    apiClient.post(`/appointments/admin/${id}/notes`, { note }).then((r) => r.data),
+    apiClient.patch(`/admin/appointments/${id}/notes`, { note }).then((r) => r.data),
 };

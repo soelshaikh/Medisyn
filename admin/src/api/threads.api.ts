@@ -12,7 +12,7 @@ export type ThreadEntityType =
 export type ThreadChannel = "patient" | "internal" | "direct";
 
 export interface ThreadMessage {
-  _id:             string;
+  id:              string;
   parentMessageId: string | null;
   parentMessage:   { authorName: string; bodyPreview: string } | null;
   authorId:        string;
@@ -34,7 +34,7 @@ export interface ThreadResult {
 }
 
 export interface ThreadSummary {
-  _id:                string;
+  id:                 string;
   entityType:         ThreadEntityType;
   entityId:           string;
   channel:            ThreadChannel;

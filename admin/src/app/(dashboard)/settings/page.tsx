@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,7 @@ const PROVINCE_OPTIONS = ["AB","BC","MB","NB","NL","NS","NT","NU","ON","PE","QC"
 const TAB_LABELS = ["Pharmacy Info", "Working Hours", "Holidays", "Policies"] as const;
 type Tab = (typeof TAB_LABELS)[number];
 
-/* ── Small section card ── */
+/* â”€â”€ Small section card â”€â”€ */
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white shadow-[var(--shadow-sm)]">
@@ -35,13 +35,13 @@ export default function SettingsPage() {
   const qc  = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>("Pharmacy Info");
 
-  /* ── Fetch settings ── */
+  /* â”€â”€ Fetch settings â”€â”€ */
   const { data: settings, isLoading, isFetching } = useQuery({
     queryKey: ["admin-settings"],
     queryFn:  settingsApi.get,
   });
 
-  /* ────────────────────────────────── PHARMACY INFO ── */
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ PHARMACY INFO â”€â”€ */
   const [info, setInfo] = useState({
     pharmacyName:  "",
     phone:         "",
@@ -80,10 +80,10 @@ export default function SettingsPage() {
       setInfoSaved(true);
       setTimeout(() => setInfoSaved(false), 3000);
     },
-    onError: () => setInfoError("Failed to save — please try again."),
+    onError: () => setInfoError("Failed to save â€” please try again."),
   });
 
-  /* ────────────────────────────────── WORKING HOURS ── */
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ WORKING HOURS â”€â”€ */
   const [hours, setHours] = useState<WorkingHours[]>([]);
   const [hoursInit, setHoursInit] = useState(false);
   const [hoursSaved,  setHoursSaved]  = useState(false);
@@ -113,10 +113,10 @@ export default function SettingsPage() {
       setHoursSaved(true);
       setTimeout(() => setHoursSaved(false), 3000);
     },
-    onError: () => setHoursError("Failed to save working hours — please try again."),
+    onError: () => setHoursError("Failed to save working hours â€” please try again."),
   });
 
-  /* ────────────────────────────────── HOLIDAYS ── */
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ HOLIDAYS â”€â”€ */
   const [holidayModal,    setHolidayModal]    = useState(false);
   const [editingHoliday,  setEditingHoliday]  = useState<Holiday | null>(null);
   const [deleteHoliday,   setDeleteHoliday]   = useState<Holiday | null>(null);
@@ -136,7 +136,7 @@ export default function SettingsPage() {
   const holidaySave = useMutation({
     mutationFn: () =>
       editingHoliday
-        ? settingsApi.updateHoliday(editingHoliday._id, hForm)
+        ? settingsApi.updateHoliday(editingHoliday.id, hForm)
         : settingsApi.addHoliday(hForm),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-settings"] });
@@ -145,21 +145,21 @@ export default function SettingsPage() {
   });
 
   const holidayDelete = useMutation({
-    mutationFn: () => settingsApi.deleteHoliday(deleteHoliday!._id),
+    mutationFn: () => settingsApi.deleteHoliday(deleteHoliday!.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-settings"] });
       setDeleteHoliday(null);
     },
   });
 
-  /* ────────────────────────────────── POLICIES ── */
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ POLICIES â”€â”€ */
   const policiesMut = useMutation({
     mutationFn: (data: { emailVerificationRequired?: boolean }) =>
       settingsApi.updatePolicies(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-settings"] }),
   });
 
-  /* ────────────────────────────────── RENDER ── */
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ RENDER â”€â”€ */
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -181,7 +181,7 @@ export default function SettingsPage() {
         refreshing={isFetching}
       />
 
-      {/* ── Tab bar ── */}
+      {/* â”€â”€ Tab bar â”€â”€ */}
       <div
         className="flex gap-1 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1"
         style={{ width: "fit-content" }}
@@ -202,7 +202,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {/* ──────────────── PHARMACY INFO TAB ── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ PHARMACY INFO TAB â”€â”€ */}
       {activeTab === "Pharmacy Info" && (
         <Card title="Pharmacy Details">
           <div className="space-y-4">
@@ -282,7 +282,7 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* ──────────────── WORKING HOURS TAB ── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ WORKING HOURS TAB â”€â”€ */}
       {activeTab === "Working Hours" && (
         <Card title="Weekly Hours">
           <div className="space-y-3">
@@ -352,7 +352,7 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* ──────────────── HOLIDAYS TAB ── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ HOLIDAYS TAB â”€â”€ */}
       {activeTab === "Holidays" && (
         <Card title="Holidays & Closures">
           <div className="space-y-4">
@@ -375,7 +375,7 @@ export default function SettingsPage() {
                   .slice()
                   .sort((a, b) => a.date.localeCompare(b.date))
                   .map((h) => (
-                    <div key={h._id} className="flex items-center gap-4 px-4 py-3 bg-white">
+                    <div key={h.id} className="flex items-center gap-4 px-4 py-3 bg-white">
                       <span className="font-mono text-[var(--font-size-sm)] text-[var(--color-text-secondary)] w-28 shrink-0">{h.date}</span>
                       <span className="flex-1 text-[var(--font-size-sm)] font-medium text-[var(--color-text-primary)]">{h.name}</span>
                       <span className={[
@@ -406,7 +406,7 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* ──────────────── POLICIES TAB ── */}
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ POLICIES TAB â”€â”€ */}
       {activeTab === "Policies" && (
         <Card title="Platform Policies">
           <div className="space-y-1">
@@ -456,7 +456,7 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* ── Add / Edit holiday modal ── */}
+      {/* â”€â”€ Add / Edit holiday modal â”€â”€ */}
       <Modal
         open={holidayModal}
         onClose={() => setHolidayModal(false)}
@@ -500,7 +500,7 @@ export default function SettingsPage() {
         </div>
       </Modal>
 
-      {/* ── Delete holiday confirm ── */}
+      {/* â”€â”€ Delete holiday confirm â”€â”€ */}
       <Modal open={!!deleteHoliday} onClose={() => setDeleteHoliday(null)} title="Delete Holiday">
         <div className="space-y-4">
           <p className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">

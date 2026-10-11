@@ -1,0 +1,9 @@
+{{> header frontendUrl=frontendUrl}}
+<h1>Verify your email address</h1>
+<p>Hi {{firstName}}, please verify your email address to activate your MediSyn account. This link expires in 24 hours.</p>
+<p>
+  <a href="{{verifyUrl}}" class="btn">Verify email address</a>
+</p>
+<p class="small">Or paste this link in your browser:<br /><a href="{{verifyUrl}}">{{verifyUrl}}</a></p>
+<p class="small">If you did not create a MediSyn account, you can safely ignore this email.</p>
+{{> footer currentYear=currentYear}}

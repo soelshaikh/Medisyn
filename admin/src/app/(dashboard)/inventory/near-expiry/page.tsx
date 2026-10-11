@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +18,7 @@ const WINDOW_OPTIONS = [
 ];
 
 interface NearExpiryBatch {
-  _id:             string;
+  id:              string;
   productId:       string;
   batchNumber:     string;
   expiryDate:      string;
@@ -26,7 +26,7 @@ interface NearExpiryBatch {
   status:          string;
   supplier:        string | null;
   daysUntilExpiry: number;
-  product:         { _id: string; name: string; sku: string };
+  product:         { id: string; name: string; sku: string };
 }
 
 function daysUntil(dateStr: string) {
@@ -95,14 +95,14 @@ export default function NearExpiryPage() {
           <div className="flex items-center gap-2">
             {days_ <= 30 && <AlertTriangle size={13} className="shrink-0 text-[var(--color-error)]" />}
             {days_ > 30 && days_ <= 90 && <AlertTriangle size={13} className="shrink-0 text-[var(--color-warning)]" />}
-            <span className="font-medium text-[var(--color-text-primary)]">{b.product?.name ?? "—"}</span>
+            <span className="font-medium text-[var(--color-text-primary)]">{b.product?.name ?? "â€”"}</span>
           </div>
         );
       },
     },
     {
       key: "sku", header: "SKU",
-      render: (b) => <span className="font-mono text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{b.product?.sku ?? "—"}</span>,
+      render: (b) => <span className="font-mono text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{b.product?.sku ?? "â€”"}</span>,
     },
     {
       key: "batchNumber", header: "Batch #", sortable: true,
@@ -130,7 +130,7 @@ export default function NearExpiryPage() {
     },
     {
       key: "supplier", header: "Supplier",
-      render: (b) => <span className="text-[var(--color-text-secondary)]">{b.supplier ?? <span className="text-[var(--color-text-muted)]">—</span>}</span>,
+      render: (b) => <span className="text-[var(--color-text-secondary)]">{b.supplier ?? <span className="text-[var(--color-text-muted)]">â€”</span>}</span>,
     },
   ];
 
@@ -138,7 +138,7 @@ export default function NearExpiryPage() {
     <div className="space-y-5">
       <PageHeader
         title="Near-Expiry Batches"
-        description="Batches expiring within the selected window — prioritise these for fulfillment (FEFO)"
+        description="Batches expiring within the selected window â€” prioritise these for fulfillment (FEFO)"
       />
 
       <FilterPanel onApply={applyFilters} onReset={resetFilters} columns={3}>
@@ -147,7 +147,7 @@ export default function NearExpiryPage() {
             value={pending.window}
             onChange={(v) => setPending((p) => ({ ...p, window: v }))}
             options={WINDOW_OPTIONS}
-            placeholder="Select window…"
+            placeholder="Select windowâ€¦"
           />
         </FilterField>
       </FilterPanel>
@@ -155,7 +155,7 @@ export default function NearExpiryPage() {
       <DataGrid
         columns={columns}
         data={filtered}
-        keyFn={(b) => b._id}
+        keyFn={(b) => b.id}
         loading={isLoading}
         emptyTitle="No near-expiry batches"
         emptyDescription={`No active batches expiring within ${applied.window} days.`}
@@ -164,7 +164,7 @@ export default function NearExpiryPage() {
         ] : undefined}
         search={search}
         onSearch={setSearch}
-        searchPlaceholder="Search batch or product…"
+        searchPlaceholder="Search batch or productâ€¦"
         onExport={handleExport}
         onRefresh={() => qc.invalidateQueries({ queryKey: ["near-expiry"] })}
       />

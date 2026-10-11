@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,7 +41,7 @@ export default function OrdersPage() {
             {o.orderNumber}
           </p>
           <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">
-            {o.guestInfo?.email ?? (typeof o.userId === "object" && o.userId ? o.userId.email : "—")}
+            {o.guestInfo?.email ?? (typeof o.userId === "object" && o.userId ? o.userId.email : "â€”")}
           </p>
         </div>
       ),
@@ -49,7 +49,7 @@ export default function OrdersPage() {
     {
       key: "customer", header: "Customer",
       render: (o) => {
-        const name  = o.guestInfo?.fullName ?? (typeof o.userId === "object" && o.userId ? o.userId.fullName : null) ?? "—";
+        const name  = o.guestInfo?.fullName ?? (typeof o.userId === "object" && o.userId ? o.userId.fullName : null) ?? "â€”";
         const email = o.guestInfo?.email    ?? (typeof o.userId === "object" && o.userId ? o.userId.email    : null);
         return (
           <div>
@@ -80,7 +80,7 @@ export default function OrdersPage() {
     {
       key: "actions", header: "Actions", width: "80px",
       render: (o) => (
-        <Link href={`/orders/${o._id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
+        <Link href={`/orders/${o.id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
           <Eye size={13} /> View
         </Link>
       ),
@@ -101,7 +101,7 @@ export default function OrdersPage() {
           <>
             <div className="w-56">
               <Input
-                placeholder="Search order # or email…"
+                placeholder="Search order # or emailâ€¦"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 leftIcon={<Search size={14} />}
@@ -120,7 +120,7 @@ export default function OrdersPage() {
           </>
         }
       />
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(o) => o._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(o) => o.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );

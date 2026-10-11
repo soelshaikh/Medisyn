@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -105,7 +105,7 @@ export default function PermissionsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search permissions…"
+              placeholder="Search permissionsâ€¦"
               className="w-full pl-9 pr-4 py-2 text-[var(--font-size-sm)] border border-[var(--color-border)]
                          rounded-[var(--radius-md)] bg-[var(--color-white)] text-[var(--color-text-primary)]
                          placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)]
@@ -168,7 +168,7 @@ export default function PermissionsPage() {
                           ) : (
                             assignedRoles.map((r) => (
                               <span
-                                key={r._id}
+                                key={r.id}
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-full)]
                                            bg-[var(--color-primary-light)] text-[var(--color-primary)]
                                            text-[var(--font-size-xs)] font-[var(--font-weight-medium)]"

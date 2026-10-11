@@ -3,6 +3,7 @@ dotenv.config();
 
 import http from 'http';
 import { createApp } from './app';
+import { startWorkers } from './workers';
 
 const PORT = process.env.PORT ?? 3001;
 const app = createApp();
@@ -11,6 +12,7 @@ const server = http.createServer(app);
 server.listen(PORT, () => {
   console.log(`Vtech-Med API running on http://localhost:${PORT}`);
   console.log(`Health: http://localhost:${PORT}/health`);
+  startWorkers().catch((err) => console.error('[workers] startup error:', err));
 });
 
 async function shutdown(signal: string) {

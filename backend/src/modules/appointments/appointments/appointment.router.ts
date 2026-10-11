@@ -29,6 +29,80 @@ function zodError(err: ZodError): AppError {
   return new AppError('VALIDATION_ERROR', msg, 422);
 }
 
+/**
+ * @openapi
+ * /appointments:
+ *   post:
+ *     tags: [Appointments]
+ *     summary: Book an appointment
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [slotId]
+ *             properties:
+ *               slotId: { type: string, format: uuid }
+ *               reason: { type: string, maxLength: 500 }
+ *     responses:
+ *       201:
+ *         description: Appointment booked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string, format: uuid }
+ *                     status: { type: string, enum: [scheduled] }
+ *                     slotId: { type: string, format: uuid }
+ *                     patientId: { type: string, format: uuid }
+ *       400:
+ *         description: No capacity available on the requested slot
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       404:
+ *         description: Slot not found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *   get:
+ *     tags: [Appointments]
+ *     summary: List patient's own appointments
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [scheduled, completed, cancelled, no_show] }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *     responses:
+ *       200:
+ *         description: Paginated list of appointments
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
 // POST /appointments — book an appointment
 appointmentRouter.post(
   '/appointments',

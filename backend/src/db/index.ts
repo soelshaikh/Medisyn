@@ -10,6 +10,7 @@ import * as catalogueSchema from './schema/catalogue';
 import * as commerceSchema from './schema/commerce';
 import * as healthcareSchema from './schema/healthcare';
 import * as appointmentsSchema from './schema/appointments';
+import * as asyncInfraSchema from './schema/async-infra';
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ const schema = {
   ...commerceSchema,
   ...healthcareSchema,
   ...appointmentsSchema,
+  ...asyncInfraSchema,
 };
 
 // ── Regular pool — app_user role, RLS enforced ────────────────────────────
@@ -47,6 +49,19 @@ const superAdminClient = postgres(process.env.DATABASE_SUPER_ADMIN_URL!, {
 });
 
 export const superAdminDb = drizzle(superAdminClient, { schema });
+
+// ── Worker pool — app_super_admin role, BYPASSRLS ─────────────────────────
+// Used exclusively by BullMQ workers (email, notification, cron jobs).
+// Workers are trusted background processes — they need BYPASSRLS to update
+// email_log rows (which may have facility_id = NULL for system emails).
+
+const workerClient = postgres(process.env.DATABASE_SUPER_ADMIN_URL!, {
+  max: Number(process.env.DB_WORKER_POOL_MAX ?? 3),
+  idle_timeout: 20,
+  connect_timeout: 10,
+});
+
+export const workerDb = drizzle(workerClient, { schema });
 
 // ── Type exports ──────────────────────────────────────────────────────────
 

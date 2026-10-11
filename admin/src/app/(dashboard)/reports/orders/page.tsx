@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -24,8 +24,8 @@ export default function OrdersReportPage() {
     queryFn:  () => reportsApi.orders({ preset: applied }),
   });
 
-  const guestCount = data?.guestVsUser.find((g) => g._id === "guest")?.count ?? 0;
-  const regCount   = data?.guestVsUser.find((g) => g._id === "registered")?.count ?? 0;
+  const guestCount = data?.guestVsUser.find((g) => g.type === "guest")?.count ?? 0;
+  const regCount   = data?.guestVsUser.find((g) => g.type === "registered")?.count ?? 0;
   const total      = guestCount + regCount || 1;
   const maxStatus  = Math.max(...(data?.byStatus.map((s) => s.count) ?? [0]), 1);
 
@@ -72,7 +72,7 @@ export default function OrdersReportPage() {
               {data.byStatus.length === 0 ? <ReportEmpty /> : (
                 <div className="space-y-2.5">
                   {data.byStatus.map((s) => (
-                    <ReportHorizBar key={s._id} label={s._id.replace(/_/g, " ")} count={s.count} max={maxStatus} />
+                    <ReportHorizBar key={s.status} label={s.status.replace(/_/g, " ")} count={s.count} max={maxStatus} />
                   ))}
                 </div>
               )}

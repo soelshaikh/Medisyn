@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,13 +23,13 @@ import { Plus, Edit2, Trash2, GripVertical } from "lucide-react";
 
 const BLANK = { name: "", isActive: true, sortOrder: 0 };
 
-/* ── Sortable row ── */
+/* â”€â”€ Sortable row â”€â”€ */
 
 function SortableRow({
   item, onEdit, onDelete,
 }: { item: PharmacistTopic; onEdit: (t: PharmacistTopic) => void; onDelete: (t: PharmacistTopic) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: item._id });
+    useSortable({ id: item.id });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -94,7 +94,7 @@ function SortableRow({
   );
 }
 
-/* ── Page ── */
+/* â”€â”€ Page â”€â”€ */
 
 export default function PharmacistTopicsPage() {
   const qc = useQueryClient();
@@ -123,7 +123,7 @@ export default function PharmacistTopicsPage() {
   const saveMut = useMutation({
     mutationFn: () =>
       editing
-        ? pharmacistTopicsApi.update(editing._id, form)
+        ? pharmacistTopicsApi.update(editing.id, form)
         : pharmacistTopicsApi.create(form),
     onSuccess: () => {
       toast.success(editing ? "Topic updated" : "Topic created");
@@ -134,7 +134,7 @@ export default function PharmacistTopicsPage() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: () => pharmacistTopicsApi.delete(deleteTarget!._id),
+    mutationFn: () => pharmacistTopicsApi.delete(deleteTarget!.id),
     onSuccess:  () => {
       toast.success("Topic deleted");
       qc.invalidateQueries({ queryKey: ["pharmacist-topics"] });
@@ -166,11 +166,11 @@ export default function PharmacistTopicsPage() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setItems((prev) => {
-      const oldIdx = prev.findIndex((t) => t._id === String(active.id));
-      const newIdx = prev.findIndex((t) => t._id === String(over.id));
+      const oldIdx = prev.findIndex((t) => t.id === String(active.id));
+      const newIdx = prev.findIndex((t) => t.id === String(over.id));
       if (oldIdx === -1 || newIdx === -1) return prev;
       const next = arrayMove(prev, oldIdx, newIdx).map((t, i) => ({ ...t, sortOrder: i }));
-      sortMut.mutate(next.map((t) => ({ id: t._id, sortOrder: t.sortOrder })));
+      sortMut.mutate(next.map((t) => ({ id: t.id, sortOrder: t.sortOrder })));
       return next;
     });
   }
@@ -180,8 +180,8 @@ export default function PharmacistTopicsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Ask Pharmacist — Topics"
-        description={`${total} topic${total !== 1 ? "s" : ""}${total > 1 ? " · drag rows to reorder" : ""}`}
+        title="Ask Pharmacist â€” Topics"
+        description={`${total} topic${total !== 1 ? "s" : ""}${total > 1 ? " Â· drag rows to reorder" : ""}`}
         onRefresh={() => qc.invalidateQueries({ queryKey: ["pharmacist-topics"] })}
         refreshing={isFetching}
         actions={
@@ -222,10 +222,10 @@ export default function PharmacistTopicsPage() {
                   <th className="w-28" />
                 </tr>
               </thead>
-              <SortableContext items={items.map((t) => t._id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={items.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 <tbody>
                   {items.map((t) => (
-                    <SortableRow key={t._id} item={t} onEdit={openEdit} onDelete={setDeleteTarget} />
+                    <SortableRow key={t.id} item={t} onEdit={openEdit} onDelete={setDeleteTarget} />
                   ))}
                 </tbody>
               </SortableContext>

@@ -25,6 +25,7 @@ export interface LineItemInput {
 export interface AdhocInvoicePayload {
   customerName:   string;
   customerEmail:  string;
+  customerPhone?: string;
   customerId?:    string;
   billingAddress: InvoiceAddress;
   items?: LineItemInput[];
@@ -85,6 +86,12 @@ export const invoicesApi = {
   cancel: (id: string, reason: string) =>
     apiClient
       .patch<{ data: AdminInvoice }>(`${BASE}/admin/${id}/cancel`, { reason })
+      .then((r) => r.data.data),
+
+  /* Void */
+  void: (id: string, reason: string) =>
+    apiClient
+      .patch<{ data: AdminInvoice }>(`${BASE}/admin/${id}/void`, { reason })
       .then((r) => r.data.data),
 
   /* Update draft header (discount, tax, notes) */

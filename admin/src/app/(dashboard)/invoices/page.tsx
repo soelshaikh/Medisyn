@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -63,8 +63,8 @@ export default function InvoicesPage() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   async function handleDownload(inv: AdminInvoice) {
-    setDownloadingId(inv._id);
-    try { await invoicesApi.downloadPdf(inv._id, `${inv.invoiceNumber}.pdf`); }
+    setDownloadingId(inv.id);
+    try { await invoicesApi.downloadPdf(inv.id, `${inv.invoiceNumber}.pdf`); }
     finally { setDownloadingId(null); }
   }
 
@@ -113,7 +113,7 @@ export default function InvoicesPage() {
       key: "invoiceNumber", header: "Invoice #", sortable: true,
       render: (inv) => (
         <Link
-          href={`/invoices/${inv._id}`}
+          href={`/invoices/${inv.id}`}
           className="font-mono font-semibold text-[var(--color-primary)] hover:underline"
         >
           {inv.invoiceNumber}
@@ -146,7 +146,7 @@ export default function InvoicesPage() {
       key: "orderNumber", header: "Order",
       render: (inv) => inv.orderNumber
         ? <span className="font-mono text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{inv.orderNumber}</span>
-        : <span className="text-[var(--color-text-muted)]">—</span>,
+        : <span className="text-[var(--color-text-muted)]">â€”</span>,
     },
     {
       key: "total", header: "Total", sortable: true, align: "right",
@@ -192,7 +192,7 @@ export default function InvoicesPage() {
       key: "issuedAt", header: "Issued", sortable: true,
       render: (inv) => (
         <span className="whitespace-nowrap text-[var(--font-size-xs)] text-[var(--color-text-muted)]">
-          {inv.issuedAt ? fmtDate(inv.issuedAt) : "—"}
+          {inv.issuedAt ? fmtDate(inv.issuedAt) : "â€”"}
         </span>
       ),
     },
@@ -201,12 +201,12 @@ export default function InvoicesPage() {
       render: (inv) => (
         <button
           type="button"
-          disabled={downloadingId === inv._id}
+          disabled={downloadingId === inv.id}
           onClick={() => handleDownload(inv)}
           className="inline-flex items-center gap-1 text-[var(--color-primary)] hover:underline text-[var(--font-size-xs)] disabled:opacity-50 disabled:cursor-wait"
           title="Download PDF"
         >
-          {downloadingId === inv._id
+          {downloadingId === inv.id
             ? <Loader2 size={13} className="animate-spin" />
             : <Download size={13} />}
           PDF
@@ -272,7 +272,7 @@ export default function InvoicesPage() {
       <DataGrid
         columns={columns}
         data={invoices}
-        keyFn={(inv) => inv._id}
+        keyFn={(inv) => inv.id}
         loading={isLoading}
         emptyTitle="No invoices found"
         emptyDescription="No invoices match the current filters."
@@ -280,7 +280,7 @@ export default function InvoicesPage() {
         summary={total > 0 ? [{ label: "Total Invoices", value: String(total) }] : undefined}
         search={search}
         onSearch={(q) => { setSearch(q); setPage(1); }}
-        searchPlaceholder="Invoice #, email, order #…"
+        searchPlaceholder="Invoice #, email, order #â€¦"
         onExport={handleExport}
         onRefresh={() => qc.invalidateQueries({ queryKey: ["invoices-admin"] })}
         sort={sort}
@@ -288,7 +288,7 @@ export default function InvoicesPage() {
       />
 
       {totalPages > 1 && (
-        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        <Pagination page={page} totalPages={totalPages} onPage={setPage} />
       )}
     </div>
   );

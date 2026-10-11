@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import multer from 'multer';
 import { ZodError } from 'zod';
 import { authMiddleware } from '@/core/auth/auth.middleware';
 import { requirePermission } from '@/core/auth/middleware/require-permission';
@@ -12,7 +13,14 @@ import {
   listAdminCompounding,
   getAdminCompoundingDetail,
   adminUpdateCompoundingStatus,
+  uploadCompoundingFile,
+  getCompoundingFileUrl,
 } from './compounding.service';
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: Number(process.env.FILE_MAX_SIZE_BYTES ?? 10_485_760) },
+});
 import {
   CreateCompoundingBodySchema,
   ListCompoundingQuerySchema,
@@ -148,6 +156,42 @@ compoundingRouter.patch(
       res.json({ data: { success: true } });
     } catch (err) {
       if (err instanceof ZodError) return next(zodError(err));
+      next(err);
+    }
+  },
+);
+
+// POST /compounding/:id/files — upload a file to a compounding request
+compoundingRouter.post(
+  '/compounding/:id/files',
+  ...authMiddleware,
+  upload.single('file'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) {
+        return next(new AppError('NO_FILE', 'No file uploaded', 400));
+      }
+      const result = await uploadCompoundingFile(req.auth!, req.params.id as string, req.file);
+      res.status(201).json({ data: result });
+    } catch (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return next(new AppError('FILE_TOO_LARGE', 'File exceeds the maximum allowed size', 422));
+      }
+      next(err);
+    }
+  },
+);
+
+// GET /compounding/:id/files/:fileKey/url — generate a signed URL for a compounding file
+compoundingRouter.get(
+  '/compounding/:id/files/:fileKey/url',
+  ...authMiddleware,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const fileKey = decodeURIComponent(req.params.fileKey as string);
+      const result = await getCompoundingFileUrl(req.auth!, req.params.id as string, fileKey);
+      res.json({ data: result });
+    } catch (err) {
       next(err);
     }
   },

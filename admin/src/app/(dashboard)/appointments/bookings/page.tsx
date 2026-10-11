@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,8 +17,8 @@ import { fmtDate } from "@/lib/format";
 const STATUSES = ["", "pending", "confirmed", "cancelled", "completed", "no_show"];
 
 function slotLabel(slot: AppointmentSlot | string | undefined) {
-  if (!slot || typeof slot === "string") return "—";
-  return `${fmtDate(slot.date)} · ${slot.startTime}–${slot.endTime}`;
+  if (!slot || typeof slot === "string") return "â€”";
+  return `${fmtDate(slot.date)} Â· ${slot.startTime}â€“${slot.endTime}`;
 }
 
 export default function BookingsPage() {
@@ -40,8 +40,8 @@ export default function BookingsPage() {
         const p = typeof b.patientId === "object" ? b.patientId : null;
         return (
           <div>
-            <p className="font-semibold text-[var(--color-text-primary)]">{p?.fullName ?? "—"}</p>
-            <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{p?.email ?? "—"}</p>
+            <p className="font-semibold text-[var(--color-text-primary)]">{p?.fullName ?? "â€”"}</p>
+            <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{p?.email ?? "â€”"}</p>
           </div>
         );
       },
@@ -50,7 +50,7 @@ export default function BookingsPage() {
       key: "vaccine", header: "Vaccine",
       render: (b) => (
         <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
-          {typeof b.vaccineServiceId === "object" ? b.vaccineServiceId.name : "—"}
+          {typeof b.vaccineServiceId === "object" ? b.vaccineServiceId.name : "â€”"}
         </span>
       ),
     },
@@ -78,7 +78,7 @@ export default function BookingsPage() {
       key: "actions", header: "Actions", width: "70px",
       render: (b) => (
         <Link
-          href={`/appointments/bookings/${b._id}`}
+          href={`/appointments/bookings/${b.id}`}
           className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit"
         >
           <Eye size={13} /> {b.status === "pending" ? "Review" : "View"}
@@ -98,7 +98,7 @@ export default function BookingsPage() {
         title="Appointment Bookings"
         description={
           pendingCount > 0
-            ? `${total.toLocaleString()} total · ${pendingCount} pending review`
+            ? `${total.toLocaleString()} total Â· ${pendingCount} pending review`
             : `${total.toLocaleString()} total bookings`
         }
         onRefresh={() => qc.invalidateQueries({ queryKey: ["admin-appointments"] })}
@@ -107,7 +107,7 @@ export default function BookingsPage() {
           <>
             <div className="w-64">
               <Input
-                placeholder="Search patient name…"
+                placeholder="Search patient nameâ€¦"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 leftIcon={<Search size={14} />}
@@ -127,7 +127,7 @@ export default function BookingsPage() {
         }
       />
 
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(b) => b._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(b) => b.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );

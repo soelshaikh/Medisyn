@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -29,7 +29,7 @@ const BLANK = {
   durationMinutes: "30", sortOrder: "0",
 };
 
-/* ── Sortable card ── */
+/* â”€â”€ Sortable card â”€â”€ */
 
 interface SortableCardProps {
   svc:      VaccineService;
@@ -41,7 +41,7 @@ function SortableCard({ svc, onEdit, onToggle }: SortableCardProps) {
   const {
     attributes, listeners, setNodeRef,
     transform, transition, isDragging,
-  } = useSortable({ id: svc._id });
+  } = useSortable({ id: svc.id });
 
   const style: React.CSSProperties = {
     transform:  CSS.Transform.toString(transform),
@@ -130,7 +130,7 @@ function SortableCard({ svc, onEdit, onToggle }: SortableCardProps) {
   );
 }
 
-/* ── Page ── */
+/* â”€â”€ Page â”€â”€ */
 
 export default function VaccineServicesPage() {
   const qc = useQueryClient();
@@ -174,7 +174,7 @@ export default function VaccineServicesPage() {
 
   const updateMut = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
-      vaccineServicesApi.update(editTarget!._id, payload),
+      vaccineServicesApi.update(editTarget!.id, payload),
     onSuccess: () => {
       toast.success("Vaccine service updated");
       qc.invalidateQueries({ queryKey: ["vaccine-services-admin"] });
@@ -185,7 +185,7 @@ export default function VaccineServicesPage() {
 
   const toggleMut = useMutation({
     mutationFn: (svc: VaccineService) =>
-      vaccineServicesApi.update(svc._id, { status: svc.status === "active" ? "inactive" : "active" }),
+      vaccineServicesApi.update(svc.id, { status: svc.status === "active" ? "inactive" : "active" }),
     onSuccess: (_, svc) => {
       toast.success(`${svc.name} ${svc.status === "active" ? "deactivated" : "activated"}`);
       qc.invalidateQueries({ queryKey: ["vaccine-services-admin"] });
@@ -219,11 +219,11 @@ export default function VaccineServicesPage() {
     if (!over || active.id === over.id) return;
 
     setItems((prev) => {
-      const oldIdx = prev.findIndex((s) => s._id === String(active.id));
-      const newIdx = prev.findIndex((s) => s._id === String(over.id));
+      const oldIdx = prev.findIndex((s) => s.id === String(active.id));
+      const newIdx = prev.findIndex((s) => s.id === String(over.id));
       if (oldIdx === -1 || newIdx === -1) return prev;
       const next = arrayMove(prev, oldIdx, newIdx);
-      sortMut.mutate(next.map((s, i) => ({ id: s._id, sortOrder: i })));
+      sortMut.mutate(next.map((s, i) => ({ id: s.id, sortOrder: i })));
       return next;
     });
   }
@@ -235,7 +235,7 @@ export default function VaccineServicesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Vaccine Services"
-        description={`${activeCount} active · ${inactiveCount} inactive${items.length > 1 ? " · drag cards to reorder" : ""}`}
+        description={`${activeCount} active Â· ${inactiveCount} inactive${items.length > 1 ? " Â· drag cards to reorder" : ""}`}
         onRefresh={() => qc.invalidateQueries({ queryKey: ["vaccine-services-admin"] })}
         actions={
           <Button onClick={() => { setForm({ ...BLANK }); setCreateModal(true); }}>
@@ -267,11 +267,11 @@ export default function VaccineServicesPage() {
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext items={items.map((s) => s._id)} strategy={rectSortingStrategy}>
+          <SortableContext items={items.map((s) => s.id)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {items.map((svc) => (
                 <SortableCard
-                  key={svc._id}
+                  key={svc.id}
                   svc={svc}
                   onEdit={openEdit}
                   onToggle={setConfirmToggle}
@@ -335,7 +335,7 @@ export default function VaccineServicesPage() {
   );
 }
 
-/* ── Vaccine service form (shared create / edit) ── */
+/* â”€â”€ Vaccine service form (shared create / edit) â”€â”€ */
 
 interface FormState {
   name: string; slug: string; description: string;
@@ -371,7 +371,7 @@ function VaccineServiceForm({ form, setForm, onSubmit, onCancel, loading, submit
           value={form.description}
           onChange={str("description")}
           rows={3}
-          placeholder="Patient-facing description…"
+          placeholder="Patient-facing descriptionâ€¦"
           className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)] resize-none hover:border-[var(--color-primary)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)] outline-none transition-colors"
         />
       </div>
@@ -384,7 +384,7 @@ function VaccineServiceForm({ form, setForm, onSubmit, onCancel, loading, submit
           value={form.eligibilityNotes}
           onChange={str("eligibilityNotes")}
           rows={2}
-          placeholder="Who is eligible, age groups, contraindications…"
+          placeholder="Who is eligible, age groups, contraindicationsâ€¦"
           className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--font-size-sm)] resize-none hover:border-[var(--color-primary)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)] outline-none transition-colors"
         />
       </div>

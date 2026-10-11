@@ -123,7 +123,7 @@ export default function AdminLoginPage() {
         {
           id:          data.user.id,
           email:       data.user.email,
-          fullName:    data.user.fullName,
+          fullName:    `${data.user.firstName ?? ''} ${data.user.lastName ?? ''}`.trim(),
           roles:       data.user.roles ?? [],
           permissions: data.user.permissions ?? [],
         },

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -37,7 +37,7 @@ export function AdminTopbar() {
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["notifications-unread"],
-    queryFn:  notificationsApi.unreadCount,
+    queryFn:  () => notificationsApi.list(1, 1).then((r) => r.unreadCount),
     enabled:  !!user,
     refetchInterval: !!user ? 30_000 : false,
     staleTime: 20_000,
@@ -140,8 +140,8 @@ export function AdminTopbar() {
                 ) : (
                   notifications.map((n: AdminNotification) => (
                     <button
-                      key={n._id}
-                      onClick={() => !n.read && markReadMut.mutate(n._id)}
+                      key={n.id}
+                      onClick={() => !n.read && markReadMut.mutate(n.id)}
                       className={[
                         "w-full text-left px-4 py-3 hover:bg-[var(--color-surface)] transition-colors",
                         !n.read ? "bg-[var(--color-primary-light)]" : "",

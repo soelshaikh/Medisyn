@@ -1,7 +1,7 @@
 import apiClient from "@/lib/apiClient";
 
 export interface EmailTriggerConfig {
-  _id:            string;
+  id:             string;
   module:         string;
   fromStatus:     string | null;
   toStatus:       string;

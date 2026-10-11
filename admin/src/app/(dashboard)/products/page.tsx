@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -89,7 +89,7 @@ export default function ProductsPage() {
       void qc.invalidateQueries({ queryKey: ["admin-products"] });
       setCreateOpen(false);
       setForm(EMPTY_FORM);
-      router.push(`/products/${created._id}`);
+      router.push(`/products/${created.id}`);
     },
     onError: (e: Error) => setFormError(e.message ?? "Failed to create product."),
   });
@@ -140,7 +140,7 @@ export default function ProductsPage() {
       render: (p) => (
         <div>
           <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
-            {typeof p.categoryId === "object" ? p.categoryId?.name : "—"}
+            {typeof p.categoryId === "object" ? p.categoryId?.name : "â€”"}
           </span>
           {p.tags?.length > 0 && (
             <div className="flex items-center gap-1 mt-0.5">
@@ -166,7 +166,7 @@ export default function ProductsPage() {
       key: "stock", header: "Stock", width: "80px",
       render: (p) => {
         const qty = p.inventory?.quantity ?? null;
-        if (qty === null) return <span className="text-[var(--color-text-muted)]">—</span>;
+        if (qty === null) return <span className="text-[var(--color-text-muted)]">â€”</span>;
         const low = p.inventory?.trackInventory && qty <= (p.inventory.lowStockThreshold ?? 5);
         return (
           <span className={low ? "text-[var(--color-error)] font-semibold" : "text-[var(--color-text-primary)]"}>
@@ -180,7 +180,7 @@ export default function ProductsPage() {
       render: (p) => (
         p.requiresPrescription
           ? <span className="text-[var(--font-size-xs)] px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--color-warning-light)] text-[var(--color-warning)] font-semibold">Rx</span>
-          : <span className="text-[var(--color-text-muted)]">—</span>
+          : <span className="text-[var(--color-text-muted)]">â€”</span>
       ),
     },
     { key: "status", header: "Status", width: "100px", render: (p) => <StatusBadge status={p.status} /> },
@@ -188,7 +188,7 @@ export default function ProductsPage() {
       key: "actions", header: "Actions", width: "80px",
       render: (p) => (
         <Link
-          href={`/products/${p._id}`}
+          href={`/products/${p.id}`}
           className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit"
         >
           <Eye size={13} /> Edit
@@ -212,7 +212,7 @@ export default function ProductsPage() {
           <>
             <div className="w-56">
               <Input
-                placeholder="Search name or SKU…"
+                placeholder="Search name or SKUâ€¦"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 leftIcon={<Search size={14} />}
@@ -245,13 +245,13 @@ export default function ProductsPage() {
         columns={columns}
         data={products}
         loading={isLoading}
-        keyFn={(p) => p._id}
+        keyFn={(p) => p.id}
         emptyTitle={search || status ? "No products match your filters" : "No products yet"}
         emptyDescription={search || status ? "Try a different search or clear the filters." : "Add your first product to get started."}
       />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
 
-      {/* ── Add Product modal ── */}
+      {/* â”€â”€ Add Product modal â”€â”€ */}
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Add Product">
         <div className="space-y-4">
           {/* Name + SKU side by side */}
@@ -279,7 +279,7 @@ export default function ProductsPage() {
               placeholder="19.99"
               value={form.priceCAD}
               onChange={(e) => field("priceCAD", e.target.value.replace(/[^0-9.]/g, ""))}
-              hint="Enter in dollars — e.g. 19.99"
+              hint="Enter in dollars â€” e.g. 19.99"
             />
             <Input
               label="Compare-at Price"
@@ -288,7 +288,7 @@ export default function ProductsPage() {
               placeholder="24.99"
               value={form.compareAtPriceCAD}
               onChange={(e) => field("compareAtPriceCAD", e.target.value.replace(/[^0-9.]/g, ""))}
-              hint="Optional — shown as crossed-out"
+              hint="Optional â€” shown as crossed-out"
             />
           </div>
 
@@ -310,7 +310,7 @@ export default function ProductsPage() {
               onChange={(v) => field("categoryId", v === "_none" ? "" : v)}
               options={[
                 { value: "_none", label: "No category" },
-                ...(categories ?? []).map((c) => ({ value: c._id, label: c.name })),
+                ...(categories ?? []).map((c) => ({ value: c.id, label: c.name })),
               ]}
             />
           </div>
@@ -322,7 +322,7 @@ export default function ProductsPage() {
             </label>
             <textarea
               rows={2}
-              placeholder="Brief product description…"
+              placeholder="Brief product descriptionâ€¦"
               value={form.shortDescription}
               onChange={(e) => field("shortDescription", e.target.value)}
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-2 text-[var(--font-size-sm)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -64,7 +64,7 @@ export default function StaffMembersPage() {
         <div className="flex flex-wrap gap-1.5">
           {(u.roles ?? []).map((r, idx) => (
             <span
-              key={r._id}
+              key={r.id}
               className={`rounded-full px-2.5 py-0.5 text-[var(--font-size-xs)] font-semibold capitalize ${roleBadgeClass(idx)}`}
             >
               {r.name}
@@ -87,7 +87,7 @@ export default function StaffMembersPage() {
       key: "actions", header: "Actions", width: "80px",
       render: (u) => (
         <Link
-          href={`/users/${u._id}`}
+          href={`/users/${u.id}`}
           className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit"
         >
           <Eye size={13} /> View
@@ -110,7 +110,7 @@ export default function StaffMembersPage() {
           <>
             <div className="w-56">
               <Input
-                placeholder="Search name or email…"
+                placeholder="Search name or emailâ€¦"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 leftIcon={<Search size={14} />}
@@ -132,7 +132,7 @@ export default function StaffMembersPage() {
           </>
         }
       />
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(u) => u._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(u) => u.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );

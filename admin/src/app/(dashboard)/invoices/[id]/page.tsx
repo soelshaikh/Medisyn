@@ -53,7 +53,7 @@ export default function InvoiceDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={inv.invoiceNumber}
-        description={`${inv.type === "ecommerce" ? "Ecommerce" : "Adhoc"} invoice · ${fmtDate(inv.issuedAt)}`}
+        description={`${inv.type === "ecommerce" ? "Ecommerce" : "Adhoc"} invoice · ${inv.issuedAt ? fmtDate(inv.issuedAt) : '—'}`}
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -97,7 +97,7 @@ export default function InvoiceDetailPage() {
             <Row label="Number"  value={inv.invoiceNumber} mono />
             <Row label="Type"    value={inv.type === "ecommerce" ? "Ecommerce" : "Adhoc"} />
             <Row label="Status"  value={inv.status === "issued" ? "Issued" : "VOID"} />
-            <Row label="Issued"  value={fmtDate(inv.issuedAt)} />
+            <Row label="Issued"  value={inv.issuedAt ? fmtDate(inv.issuedAt) : '—'} />
             {inv.orderNumber && (
               <div className="flex justify-between">
                 <dt className="text-[var(--color-text-muted)]">Order</dt>

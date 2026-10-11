@@ -3,8 +3,8 @@ import apiClient from "@/lib/apiClient";
 export type InterestStatus = "new" | "contacted" | "resolved";
 
 export interface AppointmentInterest {
-  _id:                string;
-  patientId?:         { _id: string; fullName: string; email: string } | null;
+  id:                 string;
+  patientId?:         { id: string; fullName: string; email: string } | null;
   firstName:          string;
   lastName:           string;
   email:              string;

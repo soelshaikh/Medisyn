@@ -24,6 +24,7 @@ import {
   getFacilityUserByUserAndFacility,
   getFacilityRoleName,
   writeAuthAuditEntry,
+  getUserById,
 } from '@/core/super-admin/auth-queries.service';
 import {
   createFacilityPatientRole,
@@ -539,6 +540,38 @@ export const authService = {
         firstName: user.firstName,
         lastName: user.lastName,
       },
+    };
+  },
+
+  // ── Get Me ────────────────────────────────────────────────────────────
+  async getMe(userId: string, facilityId: string | null): Promise<{
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    emailVerified: boolean;
+    role: string | null;
+    facilityId: string | null;
+  }> {
+    const user = await getUserById(userId);
+    if (!user) throw new AppError('NOT_FOUND', 'User not found', 404);
+
+    let role: string | null = null;
+    if (facilityId) {
+      const facilityUser = await getFacilityUserByUserAndFacility(userId, facilityId);
+      if (facilityUser) {
+        role = await getFacilityRoleName(facilityUser.roleId);
+      }
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      emailVerified: user.emailVerified,
+      role,
+      facilityId,
     };
   },
 

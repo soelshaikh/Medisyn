@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +35,7 @@ export default function CompoundingPage() {
         <div>
           <p className="font-semibold text-[var(--color-text-primary)]">{c.medicationName}</p>
           <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">
-            {c.form} · {c.strength || "—"} · qty {c.quantity}
+            {c.form} Â· {c.strength || "â€”"} Â· qty {c.quantity}
           </p>
         </div>
       ),
@@ -51,7 +51,7 @@ export default function CompoundingPage() {
       render: (c) => (
         c.quoteAmount !== null
           ? <span className="font-semibold text-[var(--color-text-primary)]">${(c.quoteAmount / 100).toFixed(2)}</span>
-          : <span className="text-[var(--color-text-muted)]">—</span>
+          : <span className="text-[var(--color-text-muted)]">â€”</span>
       ),
     },
     {
@@ -69,7 +69,7 @@ export default function CompoundingPage() {
     {
       key: "actions", header: "Actions", width: "60px",
       render: (c) => (
-        <Link href={`/compounding/${c._id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
+        <Link href={`/compounding/${c.id}`} className="flex items-center gap-1.5 text-[var(--font-size-xs)] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-2 py-1.5 rounded-[var(--radius-md)] transition-colors w-fit">
           <Eye size={13} /> Review
         </Link>
       ),
@@ -90,7 +90,7 @@ export default function CompoundingPage() {
           <>
             <div className="w-56">
               <Input
-                placeholder="Search medication…"
+                placeholder="Search medicationâ€¦"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 leftIcon={<Search size={14} />}
@@ -109,7 +109,7 @@ export default function CompoundingPage() {
           </>
         }
       />
-      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(c) => c._id} />
+      <DataTable columns={columns} data={data?.data ?? []} loading={isLoading} keyFn={(c) => c.id} />
       <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );

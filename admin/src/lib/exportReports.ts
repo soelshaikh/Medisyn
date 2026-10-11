@@ -4,9 +4,6 @@ import autoTable from "jspdf-autotable";
 import type {
   SalesReport,
   OrdersReport,
-  ProductsReport,
-  CustomersReport,
-  CouponsReport,
   ReportPreset,
 } from "@/api/reports.api";
 
@@ -117,7 +114,7 @@ export function exportSalesExcel(data: SalesReport, preset: ReportPreset) {
     {
       name: "Daily",
       rows: data.chart.map((r) => ({
-        Date:            r._id,
+        Date:            r.date,
         "Revenue (CAD)": (r.revenue / 100).toFixed(2),
         Orders:          r.count,
       })),
@@ -144,7 +141,7 @@ export function exportSalesPdf(data: SalesReport, preset: ReportPreset) {
         title: "Daily Breakdown",
         head:  [["Date", "Revenue (CAD)", "Orders"]],
         body:  data.chart.map((r) => [
-          r._id,
+          r.date,
           `$${(r.revenue / 100).toFixed(2)}`,
           r.count,
         ]),
@@ -161,17 +158,17 @@ export function exportOrdersExcel(data: OrdersReport, preset: ReportPreset) {
     {
       name: "By Status",
       rows: data.byStatus.map((s) => ({
-        Status: s._id.replace(/_/g, " "),
+        Status: s.status.replace(/_/g, " "),
         Orders: s.count,
       })),
     },
     {
       name: "Daily",
-      rows: data.dailyChart.map((r) => ({ Date: r._id, Orders: r.count })),
+      rows: data.dailyChart.map((r) => ({ Date: r.date, Orders: r.count })),
     },
     {
       name: "Guest vs Registered",
-      rows: data.guestVsUser.map((g) => ({ Type: g._id, Orders: g.count })),
+      rows: data.guestVsUser.map((g) => ({ Type: g.type, Orders: g.count })),
     },
   ]);
 }
@@ -184,188 +181,17 @@ export function exportOrdersPdf(data: OrdersReport, preset: ReportPreset) {
       {
         title: "Orders by Status",
         head:  [["Status", "Count"]],
-        body:  data.byStatus.map((s) => [s._id.replace(/_/g, " "), s.count]),
+        body:  data.byStatus.map((s) => [s.status.replace(/_/g, " "), s.count]),
       },
       {
         title: "Guest vs Registered",
         head:  [["Type", "Count"]],
-        body:  data.guestVsUser.map((g) => [g._id, g.count]),
+        body:  data.guestVsUser.map((g) => [g.type, g.count]),
       },
       {
         title: "Daily Orders",
         head:  [["Date", "Orders"]],
-        body:  data.dailyChart.map((r) => [r._id, r.count]),
-      },
-    ],
-    data.period,
-  );
-}
-
-/* ── Products ── */
-
-export function exportProductsExcel(data: ProductsReport, preset: ReportPreset) {
-  buildXlsx("products", preset, [
-    {
-      name: "Top by Units",
-      rows: data.topByQty.map((p) => ({
-        Product:         p.name,
-        "Units Sold":    p.qtySold,
-        "Revenue (CAD)": (p.revenue / 100).toFixed(2),
-      })),
-    },
-    {
-      name: "Top by Revenue",
-      rows: data.topByRevenue.map((p) => ({
-        Product:         p.name,
-        "Revenue (CAD)": (p.revenue / 100).toFixed(2),
-        "Units Sold":    p.qtySold,
-      })),
-    },
-  ]);
-}
-
-export function exportProductsPdf(data: ProductsReport, preset: ReportPreset) {
-  buildPdf(
-    "products",
-    preset,
-    [
-      {
-        title: "Top 10 by Units Sold",
-        head:  [["Product", "Units Sold", "Revenue (CAD)"]],
-        body:  data.topByQty.map((p) => [
-          p.name,
-          p.qtySold,
-          `$${(p.revenue / 100).toFixed(2)}`,
-        ]),
-      },
-      {
-        title: "Top 10 by Revenue",
-        head:  [["Product", "Revenue (CAD)", "Units Sold"]],
-        body:  data.topByRevenue.map((p) => [
-          p.name,
-          `$${(p.revenue / 100).toFixed(2)}`,
-          p.qtySold,
-        ]),
-      },
-    ],
-    data.period,
-  );
-}
-
-/* ── Customers ── */
-
-export function exportCustomersExcel(data: CustomersReport, preset: ReportPreset) {
-  buildXlsx("customers", preset, [
-    {
-      name: "Summary",
-      rows: [
-        {
-          "All-Time Patients": data.allTimeTotal,
-          "New This Period":   data.periodNewCount,
-          "Active Buyers":     data.activeCount,
-        },
-      ],
-    },
-    {
-      name: "Daily Registrations",
-      rows: data.dailyChart.map((r) => ({
-        Date:           r._id,
-        "New Patients": r.count,
-      })),
-    },
-  ]);
-}
-
-export function exportCustomersPdf(data: CustomersReport, preset: ReportPreset) {
-  buildPdf(
-    "customers",
-    preset,
-    [
-      {
-        title: "Summary",
-        head:  [["Metric", "Value"]],
-        body:  [
-          ["All-Time Patients", data.allTimeTotal],
-          ["New This Period",   data.periodNewCount],
-          ["Active Buyers",     data.activeCount],
-        ],
-      },
-      {
-        title: "Daily New Registrations",
-        head:  [["Date", "New Patients"]],
-        body:  data.dailyChart.map((r) => [r._id, r.count]),
-      },
-    ],
-    data.period,
-  );
-}
-
-/* ── Coupons ── */
-
-export function exportCouponsExcel(data: CouponsReport, preset: ReportPreset) {
-  buildXlsx("coupons", preset, [
-    {
-      name: "Usage Split",
-      rows: data.withCoupon.map((c) => ({
-        Type:   c._id.replace(/_/g, " "),
-        Orders: c.count,
-      })),
-    },
-    {
-      name: "Top Coupons",
-      rows: data.topCoupons.map((c) => ({
-        Code:                 c._id,
-        "Usage Count":        c.usageCount,
-        "Total Savings (CAD)": (c.totalSavings / 100).toFixed(2),
-      })),
-    },
-    {
-      name: "All Coupons",
-      rows: data.allCoupons.map((c) => ({
-        Code:          c.code,
-        Type:          c.discountType.replace(/_/g, " "),
-        Value:
-          c.discountType === "percentage"
-            ? `${c.discountValue}%`
-            : `$${(c.discountValue / 100).toFixed(2)}`,
-        "Usage Count": c.usageCount,
-        "Usage Limit": c.usageLimit ?? "unlimited",
-      })),
-    },
-  ]);
-}
-
-export function exportCouponsPdf(data: CouponsReport, preset: ReportPreset) {
-  buildPdf(
-    "coupons",
-    preset,
-    [
-      {
-        title: "Orders With / Without Coupon",
-        head:  [["Type", "Orders"]],
-        body:  data.withCoupon.map((c) => [c._id.replace(/_/g, " "), c.count]),
-      },
-      {
-        title: "Top Coupons This Period",
-        head:  [["Code", "Uses", "Savings (CAD)"]],
-        body:  data.topCoupons.map((c) => [
-          c._id,
-          c.usageCount,
-          `$${(c.totalSavings / 100).toFixed(2)}`,
-        ]),
-      },
-      {
-        title: "All Coupons",
-        head:  [["Code", "Type", "Value", "Used", "Limit"]],
-        body:  data.allCoupons.map((c) => [
-          c.code,
-          c.discountType.replace(/_/g, " "),
-          c.discountType === "percentage"
-            ? `${c.discountValue}%`
-            : `$${(c.discountValue / 100).toFixed(2)}`,
-          c.usageCount,
-          c.usageLimit ?? "∞",
-        ]),
+        body:  data.dailyChart.map((r) => [r.date, r.count]),
       },
     ],
     data.period,
