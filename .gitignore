@@ -6,9 +6,9 @@ node_modules/
 dist/
 
 # Environment files (NEVER commit)
-.env
-.env.local
-.env.production
+# .env
+# .env.local
+# .env.production
 
 # Logs
 *.log
