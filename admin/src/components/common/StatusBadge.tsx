@@ -42,9 +42,9 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status, size = "sm" }: StatusBadgeProps) {
   const mapped = statusMap[status.toLowerCase()] ?? {
-    label: status,
+    label: status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
     variant: "default" as BadgeVariant,
   };
 
-  return <Badge variant={mapped.variant} size={size}>{mapped.label}</Badge>;
+  return <Badge variant={mapped.variant} size={size} dot>{mapped.label}</Badge>;
 }

@@ -35,8 +35,9 @@ export const ResendVerificationBodySchema = z.object({
 });
 
 export const SuperAdminLoginBodySchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1).max(128),
+  email:        z.string().email(),
+  password:     z.string().min(1).max(128),
+  facilitySlug: z.string().regex(/^[a-z0-9-]+$/).max(100).optional(),
 });
 
 export type RegisterBody = z.infer<typeof RegisterBodySchema>;

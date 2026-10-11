@@ -7,6 +7,8 @@ export interface AdminUser {
   fullName: string;
   roles: string[];
   permissions: string[];
+  isSuperAdmin?: boolean;
+  facilityName?: string;
 }
 
 interface AdminAuthState {
@@ -47,6 +49,8 @@ export const useAdminAuthStore = create<AdminAuthState>()(
       hasPermission: (permission) => {
         const { user } = get();
         if (!user) return false;
+        // '*' wildcard = super admin, all permissions granted
+        if (user.isSuperAdmin || user.permissions.includes('*')) return true;
         return user.permissions.includes(permission);
       },
     }),

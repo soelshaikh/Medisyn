@@ -19,6 +19,7 @@ import { adminUsersRouter } from './core/super-admin/admin-users.router';
 import { adminRolesRouter } from './core/super-admin/admin-roles.router';
 import { adminPermissionsRouter } from './core/super-admin/admin-permissions.router';
 import { adminAuditRouter } from './core/super-admin/admin-audit.router';
+import { adminFacilitiesRouter } from './core/super-admin/admin-facilities.router';
 
 export { authMiddleware, requireModule, requirePermission };
 
@@ -52,7 +53,7 @@ export function createApp() {
     },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Facility-ID'],
     optionsSuccessStatus: 204,
   };
 
@@ -135,6 +136,7 @@ export function createApp() {
   app.use('/api/v1', adminRolesRouter);
   app.use('/api/v1', adminPermissionsRouter);
   app.use('/api/v1', adminAuditRouter);
+  app.use('/api/v1', adminFacilitiesRouter);
 
   // ── Health (no auth) ─────────────────────────────────────────────────
   app.get('/health', (_req: Request, res: Response) => {

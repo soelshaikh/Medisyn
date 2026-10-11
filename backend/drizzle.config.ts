@@ -8,6 +8,7 @@ export default {
   out: './src/db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    // Super admin role bypasses RLS — required for Drizzle Studio and migrations
+    url: process.env.DATABASE_SUPER_ADMIN_URL ?? process.env.DATABASE_URL!,
   },
 } satisfies Config;

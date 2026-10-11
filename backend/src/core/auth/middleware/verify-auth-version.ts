@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { getCurrentAuthVersion, cacheAuthVersion } from '@/core/super-admin/auth-queries.service';
+import { getIdentityAuthVersion, cacheIdentityAuthVersion } from '../identity-queries.service';
 import { redisGet, isRedisUnavailableError } from '@/lib/redis';
 import { AuthError, ServiceUnavailableError } from '@/lib/errors';
 
 // Step 3: Auth-version staleness check.
 // Fallback chain (fail-closed):
 //   1. Check Redis auth_version:{userId} (60s TTL)
-//   2. Cache miss or Redis unavailable → query users.auth_version via service
+//   2. Cache miss or Redis unavailable → query identityUsers.auth_version
 //   3. Both unavailable → 503
 
 export async function verifyAuthVersion(req: Request, _res: Response, next: NextFunction): Promise<void> {
@@ -34,14 +34,14 @@ export async function verifyAuthVersion(req: Request, _res: Response, next: Next
   // Step 2: DB fallback
   if (currentAuthVersion === null) {
     try {
-      const version = await getCurrentAuthVersion(userId);
+      const version = await getIdentityAuthVersion(userId);
       if (version === null) {
         return next(new AuthError('AUTH_INVALID_TOKEN', 'User not found'));
       }
       currentAuthVersion = version;
 
       if (redisAvailable) {
-        await cacheAuthVersion(userId, currentAuthVersion);
+        await cacheIdentityAuthVersion(userId, currentAuthVersion);
       }
     } catch {
       return next(new ServiceUnavailableError('SERVICE_UNAVAILABLE', 'Unable to verify authorization. Please try again shortly.'));

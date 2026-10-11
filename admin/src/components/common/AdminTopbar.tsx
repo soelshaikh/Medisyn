@@ -77,10 +77,20 @@ export function AdminTopbar() {
 
   return (
     <header
-      className="h-[var(--header-height)] bg-[var(--color-white)] border-b border-[var(--color-border)]
+      className="relative h-[var(--header-height)] bg-[var(--color-white)] border-b border-[var(--color-border)]
                  flex items-center justify-between px-[var(--space-6)] shrink-0"
     >
-      <div />
+      <div className="flex-1" />
+
+      {/* Centered facility name */}
+      <div className="absolute left-1/2 -translate-x-1/2">
+        {user?.facilityName && (
+          <span className="text-[var(--font-size-sm)] font-semibold text-[var(--color-text-primary)] tracking-wide">
+            {user.facilityName}
+          </span>
+        )}
+      </div>
+
       <div className="flex items-center gap-[var(--space-3)]">
         {user && (
           <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">

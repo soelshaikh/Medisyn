@@ -69,3 +69,7 @@ export type TenantTransaction = Parameters<Parameters<typeof db.transaction>[0]>
 export type SuperAdminTransaction = Parameters<
   Parameters<typeof superAdminDb.transaction>[0]
 >[0];
+
+// ── Identity DB — re-exported for convenience ─────────────────────────────
+export { identityDb } from './identity';
+export type { IdentityTransaction } from './identity';

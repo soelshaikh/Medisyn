@@ -2,7 +2,7 @@ import axios from "axios";
 import type { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

@@ -45,7 +45,7 @@ authRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     const auth = req.auth!;
     try {
-      const user = await authService.getMe(auth.userId, auth.facilityId);
+      const user = await authService.getMe(auth.userId, auth.facilityId, auth.accountType);
       const unreadCount = auth.facilityId
         ? await getUnreadCount(auth.userId, auth.facilityId).catch(() => 0)
         : 0;

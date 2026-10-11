@@ -23,9 +23,9 @@ export async function withTenantContext<T>(
 ): Promise<T> {
   if (!facilityId || typeof facilityId !== 'string') {
     throw new AppError(
-      'INTERNAL_ERROR',
-      'withTenantContext: facilityId must be a non-empty string',
-      500,
+      'FORBIDDEN',
+      'No facility context — log in with a facility slug (e.g. ?facility=your-slug)',
+      403,
     );
   }
 

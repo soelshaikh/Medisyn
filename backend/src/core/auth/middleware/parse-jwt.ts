@@ -2,16 +2,31 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthError } from '@/lib/errors';
 
+// ── AuthContext ────────────────────────────────────────────────────────────
+// Attached to req.auth on every authenticated request.
+// userId             → vtech-identity.users.id
+// healthProfessionalId → vtech-core.health_professionals.id (null for super_admin + patient)
+// facilityId         → vtech-core.facilities.id (null for super_admin)
+// facilityPrefix     → short prefix of the facility (null for super_admin)
+// accountType        → 'super_admin' | 'facility_user' | 'patient'
+// roles              → facility_role enum values (empty for super_admin)
+// permissions        → resolved permission_key enum values ('*' for super_admin)
+
 export interface AuthContext {
   userId: string;
   sessionId: string;
+  accountType: 'super_admin' | 'facility_user' | 'patient';
+  healthProfessionalId: string | null;
   facilityId: string | null;
+  facilityPrefix: string | null;
   authVersion: number;
-  role: string;
+  roles: string[];
+  permissions: string[];
+  // Convenience shorthands kept for backward compat with existing middleware
   isSuperAdmin: boolean;
+  role: string;
 }
 
-// Augment Express Request with auth context and request ID
 declare module 'express-serve-static-core' {
   interface Request {
     auth?: AuthContext;
@@ -20,25 +35,25 @@ declare module 'express-serve-static-core' {
 }
 
 interface JwtPayload {
-  sub: string;
+  sub: string;                           // userId from vtech-identity
   sessionId: string;
+  accountType: 'super_admin' | 'facility_user' | 'patient';
+  healthProfessionalId?: string | null;
   facilityId?: string | null;
+  facilityPrefix?: string | null;
   authVersion: number;
-  role: string;
-  isSuperAdmin?: boolean;
+  roles: string[];
+  permissions: string[];
   iat: number;
   exp: number;
 }
 
-// Step 1: Parse and verify JWT signature + expiry.
-// Attaches req.auth on success.
 export function parseJWT(req: Request, _res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
 
   if (!header) {
     return next(new AuthError('AUTH_MISSING', 'Authorization header is required'));
   }
-
   if (!header.startsWith('Bearer ')) {
     return next(new AuthError('AUTH_MALFORMED', 'Authorization header must use Bearer scheme'));
   }
@@ -60,13 +75,21 @@ export function parseJWT(req: Request, _res: Response, next: NextFunction): void
       return next(new AuthError('AUTH_INVALID_TOKEN', 'Token is missing required claims'));
     }
 
+    const isSuperAdmin = payload.accountType === 'super_admin';
+
     req.auth = {
-      userId: payload.sub,
-      sessionId: payload.sessionId,
-      facilityId: payload.facilityId ?? null,
-      authVersion: payload.authVersion,
-      role: payload.role ?? 'staff',
-      isSuperAdmin: payload.isSuperAdmin ?? false,
+      userId:               payload.sub,
+      sessionId:            payload.sessionId,
+      accountType:          payload.accountType ?? 'facility_user',
+      healthProfessionalId: payload.healthProfessionalId ?? null,
+      facilityId:           payload.facilityId ?? null,
+      facilityPrefix:       payload.facilityPrefix ?? null,
+      authVersion:          payload.authVersion,
+      roles:                payload.roles ?? [],
+      permissions:          payload.permissions ?? [],
+      // Backward-compat shorthands
+      isSuperAdmin,
+      role: payload.roles?.[0] ?? (isSuperAdmin ? 'super_admin' : 'staff'),
     };
 
     next();

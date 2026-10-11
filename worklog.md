@@ -4,6 +4,170 @@ This file is the cumulative project history. Each session is also recorded in `w
 
 ---
 
+## Session: 2026-10-11n — Admin Facilities: Prefix + identityDb Staff Creation
+
+**What was done:**
+- `backend/src/core/super-admin/admin-facilities.service.ts` — `adminCreateFacilityStaff` rewritten to create identity user in identityDb + HP+role in vtech-core; `adminListFacilityStaff` rewritten as two-phase cross-DB query; `adminListSuperAdmins`/`adminCreateSuperAdmin` moved to identityDb; `SEAT_ROLE_MAP` updated to enterprise role enum values; `FacilityStaffMember` updated (`healthProfessionalId`, `roles: string[]`); seat config query updated to use `health_professionals` + `user_roles`
+- `backend/src/core/super-admin/admin-facilities.router.ts` — `CreateFacilitySchema` now includes `prefix` field (2–8 lowercase letters)
+- `admin/src/api/platform.api.ts` — `PlatformFacilityDetail` + `FacilityStaffMember` types updated; `createFacility` body includes `prefix`
+- `admin/src/app/(platform)/platform/facilities/[id]/page.tsx` — staff table uses `healthProfessionalId` key; roles rendered as multi-badge list; prefix shown alongside slug
+- `admin/src/app/(platform)/platform/facilities/new/page.tsx` — prefix field added; auto-generated from slug; 2-column grid with slug
+
+**TypeScript: 0 errors in both `backend/` and `admin/`**
+
+**Still pending:**
+- `revokeAllFacilitySessions` still points to vtech-core.sessions — needs identityDb update
+- Drop legacy tables (facility_users, facility_roles, facility_role_permissions) after verification
+
+---
+
+## Session: 2026-10-11m — Auth Service Rewrite (Two-Database Architecture)
+
+**What was done:**
+- `backend/src/core/auth/identity-queries.service.ts` — NEW: all identityDb CRUD (users, sessions, username resolution, auth-version helpers, session revocation state)
+- `backend/src/core/super-admin/auth-queries.service.ts` — added HP/roles/permissions resolver (`resolveHealthProfessionalAuth`), patient helpers (`getPatientFacility`, `createPatientRecord`), `getFacilityByPrefix`
+- `backend/src/core/auth/auth.service.ts` — FULL REWRITE: login/register/refresh/logout/getMe now use identityDb for users+sessions, vtech-core for HP+roles+perms; new JwtPayload with `accountType`, `healthProfessionalId`, `facilityPrefix`, `roles[]`, `permissions[]`
+- `backend/src/core/auth/auth.router.ts` — updated `getMe` call to pass `auth.accountType`
+- `backend/src/core/auth/middleware/check-session.ts` — updated to query identityDb sessions
+- `backend/src/core/auth/middleware/verify-auth-version.ts` — updated to query identityDb auth_version
+
+**TypeScript: 0 errors in `backend/`**
+
+**Still pending:**
+- Task #6: `adminCreateFacilityStaff` needs to create users in identityDb (not vtech-core.users)
+- `revokeAllFacilitySessions` still points to vtech-core.sessions
+- Drop legacy tables after migration
+
+---
+
+## Session: 2026-10-11l — Facility User Management (Staff + Seat Limits)
+
+**What was done:**
+- `backend/src/db/seeds/plans.ts` — added `planEntitlements` seed: 3 seat resources (admin_seats:1, staff_seats:5, pharmacist_seats:5) per plan; idempotent via `onConflictDoUpdate`
+- `backend/src/core/super-admin/admin-facilities.service.ts` — added 4 new functions: `adminGetFacilitySeatConfig`, `adminSetFacilitySeatOverride`, `adminListFacilityStaff`, `adminCreateFacilityStaff`; added `FacilitySeatResource`, `FacilityStaffMember` types
+- `backend/src/core/super-admin/admin-facilities.router.ts` — added 4 new routes: `GET /admin/facilities/:id/seat-config`, `PATCH /admin/facilities/:id/seat-config`, `GET /admin/facilities/:id/staff`, `POST /admin/facilities/:id/staff`
+- `admin/src/api/platform.api.ts` — added `FacilitySeatResource`, `FacilityStaffMember` types; added 4 new API functions: `getFacilitySeatConfig`, `setFacilitySeatOverride`, `listFacilityStaff`, `createFacilityStaff`
+- `admin/src/app/(platform)/platform/facilities/[id]/page.tsx` — full rewrite: added "Seat limits" section (per-role usage bar + plan default display + per-resource override inputs) and "Staff members" section (table of admin/staff/pharmacist users + "Add Staff Member" modal with name/email/password/role form)
+
+**TypeScript: 0 errors in both `admin/` and `backend/`**
+
+**Architecture:**
+- Super admin configures everything from `/platform/facilities/[id]`
+- Seat defaults come from `plan_entitlements` (plan-level), overrides stored in `facility_entitlement_overrides` (per-facility)
+- Staff accounts created directly by super admin: creates `users` row + `facility_users` link with chosen role
+- All 3 staff roles (admin/staff/pharmacist) are system roles already seeded at facility creation time
+
+**Still pending:**
+- Facility creation e2e test against live backend
+- Facility staff can log in using `/auth/login` but the admin panel login page currently routes to `/auth/super-admin/login` — deferred
+
+---
+
+## Session: 2026-10-11k — Subscription Plans Seed, API and Admin UI
+
+**What was done:**
+- `backend/src/db/seeds/plans.ts` — CREATED: standalone plans seed; inserts 7 platform modules + 3 plans (Starter, Growth, Enterprise) with descriptions and module links; idempotent
+- `backend/package.json` — added `"db:seed:plans": "tsx src/db/seeds/plans.ts"` script
+- `backend/src/core/super-admin/admin-facilities.service.ts` — added 5 new functions: `adminGetPlanById`, `adminCreatePlan`, `adminUpdatePlan`, `adminListPlatformModules`, `adminSetPlanModules`; added `AdminPlanDetail`, `AdminPlanModule`, `AdminModule` types
+- `backend/src/core/super-admin/admin-facilities.router.ts` — added 5 new routes: `GET /admin/platform/modules`, `POST /admin/platform/plans`, `GET /admin/platform/plans/:id`, `PATCH /admin/platform/plans/:id`, `PUT /admin/platform/plans/:id/modules`; fixed `req.params.id!` → `(req.params['id'] as string)` cast across all routes (TS2345 with @types/express@5)
+- `admin/src/api/platform.api.ts` — added `PlatformModule`, `PlatformPlanDetail` types; added 5 new API functions: `listModules`, `getPlan`, `createPlan`, `updatePlan`, `setPlanModules`
+- `admin/src/components/common/PlatformSidebar.tsx` — added "Plans" nav item with `LayoutGrid` icon
+- `admin/src/app/(platform)/platform/plans/page.tsx` — CREATED: lists all plans as cards; shows key, name, description, active badge; empty state with seed hint
+- `admin/src/app/(platform)/platform/plans/new/page.tsx` — CREATED: create plan form (name, auto-key, description, module checkboxes)
+- `admin/src/app/(platform)/platform/plans/[id]/page.tsx` — CREATED: edit name/description; module assignment checkboxes; activate/deactivate; facility count display
+
+**TypeScript: 0 errors in both `admin/` and `backend/`**
+
+**To seed the database:**
+```
+cd backend
+npm run db:seed:plans
+```
+
+**Still pending:**
+- Entitlements (staff_seats, api_requests_per_day, etc.) — schema exists, no UI yet
+- Facility creation e2e test against live backend
+
+---
+
+## Session: 2026-10-11j — Platform Super Admin Interface + TypeScript Zero-Error Pass
+
+**What was done:**
+- `admin/src/components/ui/Button.tsx` — added `asChild?: boolean` prop; when true, clones single child element and merges button classes into it (no Radix dependency); used by platform pages that wrap `<Link>` in a styled Button
+- `admin/src/app/(platform)/platform/super-admins/page.tsx` — fixed TS2741: added `open={showModal}` to `<Modal>` (Modal requires `open: boolean`)
+- `admin/` TypeScript: **0 errors** confirmed (`npx tsc --noEmit` exits clean)
+
+**Platform super admin interface (built this session):**
+- `backend/src/core/super-admin/admin-facilities.service.ts` — CREATED: `adminListFacilities`, `adminGetFacilityById`, `adminCreateFacility` (tx: facility + 4 system roles), `adminUpdateFacility`, `adminListPlans`, `adminGetPlatformStats`, `adminListSuperAdmins`, `adminCreateSuperAdmin`
+- `backend/src/core/super-admin/admin-facilities.router.ts` — CREATED: `requireSuperAdmin` middleware; 8 routes under `/api/v1/admin/platform/*` and `/api/v1/admin/facilities/*`
+- `backend/src/app.ts` — mounted `adminFacilitiesRouter`
+- `admin/src/api/platform.api.ts` — CREATED: all platform API functions
+- `admin/src/app/(platform)/layout.tsx` — CREATED: guards non-super-admins; renders `PlatformSidebar` + `AdminTopbar`
+- `admin/src/components/common/PlatformSidebar.tsx` — CREATED: nav to Platform Dashboard, Facilities, Super Admins; collapsed state persisted
+- `admin/src/app/(platform)/platform/dashboard/page.tsx` — CREATED: 5 stat cards, platform-wide stats, quick action links
+- `admin/src/app/(platform)/platform/facilities/page.tsx` — CREATED: paginated facilities table with search + status badges
+- `admin/src/app/(platform)/platform/facilities/new/page.tsx` — CREATED: create facility form (name auto-generates slug, plan dropdown)
+- `admin/src/app/(platform)/platform/facilities/[id]/page.tsx` — CREATED: edit name/plan, status management (activate/suspend/deactivate), "Open" link to enter facility panel
+- `admin/src/app/(platform)/platform/super-admins/page.tsx` — CREATED: super admins list + create modal
+
+**Login flow changes:**
+- `admin/src/app/(auth)/login/page.tsx` — super admin without facility slug → redirect to `/platform/dashboard`; with facility slug → redirect to `/dashboard`
+- `admin/src/stores/adminAuthStore.ts` — `hasPermission()` returns `true` for `isSuperAdmin` or `permissions.includes('*')`
+- `backend/src/core/auth/auth.service.ts` — super admin login now returns `isSuperAdmin: true, roles: ['super_admin'], permissions: ['*']`
+- `backend/src/lib/tenant-context.ts` — missing facilityId throws 403 FORBIDDEN (not 500) with helpful message
+
+**Still pending:**
+- Seed subscription plans table (currently empty — facility creation will fail without plans)
+- Architecture decision: facility staff should use `/auth/login` not `/auth/super-admin/login` — deferred
+- Permission guards on admin action buttons
+
+---
+
+## Session: 2026-10-11i — Fix Sidebar Hidden + API 403 for Super Admin Without Facility
+
+**What was done:**
+- `backend/src/core/auth/auth.service.ts` — added `isSuperAdmin: true`, `roles: ['super_admin']`, `permissions: ['*']` to super admin login response; updated return type to include these fields
+- `admin/src/stores/adminAuthStore.ts` — added `isSuperAdmin?: boolean` to `AdminUser` interface; updated `hasPermission()` to return `true` when `isSuperAdmin` or `permissions` includes `'*'` wildcard
+- `admin/src/app/(auth)/login/page.tsx` — passes `isSuperAdmin: data.user.isSuperAdmin ?? false` to `setAuth()`
+- `admin/src/app/(dashboard)/layout.tsx` — added `NoFacilityBanner` component that shows when super admin has no facilityId in JWT; reads facilityId by decoding JWT from sessionStorage
+- `backend/src/lib/tenant-context.ts` — changed missing-facilityId error from 500 INTERNAL_ERROR → 403 FORBIDDEN with helpful message about facility slug
+
+**Root causes:**
+1. Sidebar hidden: `superAdminLogin` response never included `permissions`/`isSuperAdmin`; frontend set `permissions: []`; `hasPermission()` returned false for all items except Dashboard (permission: null)
+2. API 500 errors: super admin logged in without facilitySlug → `facilityId: null` in JWT → `withTenantContext(null, ...)` threw 500
+
+**Still pending:**
+- Architecture decision: admin panel should use `/auth/login` for facility staff — deferred by user
+- Permission guards on action buttons (requirePermission is still pass-through stub)
+
+---
+
+## Session: 2026-10-11h — Dashboard Crash Fix + getDashboard Rewrite
+
+**What was done:**
+- `admin/src/app/(dashboard)/dashboard/page.tsx:140` — FIXED: expanded `isError || !m` guard to also check `!m.orders || !m.products || !m.revenue || !m.users || !m.approvals || !m.charts`; prevents crash when API returns data in a mismatched shape (shows graceful error UI instead)
+- `admin/src/app/(dashboard)/dashboard/page.tsx:156-157` — FIXED: added `?.` optional chaining on `m.orders?.byStatus` and `m.charts?.dailyOrders`
+- `backend/src/modules/reports/reports.types.ts` — REWROTE `DashboardResult`: replaced the 7-field flat shape (`asOf`, `todayRevenue`, etc.) with the full nested shape matching `DashboardMetrics` (`users`, `approvals`, `orders`, `products`, `revenue`, `charts`, `healthcare`)
+- `backend/src/modules/reports/reports.service.ts` — REWROTE `getDashboard`: 12 parallel SQL queries return all dashboard fields; added `buildDashboardResult` helper (pure data transform, no DB access); both super-admin (BYPASSRLS) and facility-scoped (RLS tenant context) paths use the same `runQueries` function
+
+**Decisions:**
+- CONFIRMED: `approvals.pendingClinics` and `approvals.pendingPartners` return `0` — no pending-approval concept in current `facilities` schema
+- CONFIRMED: `healthcare.pendingAppointments` counts `status = 'scheduled'` (not 'pending'/'confirmed' — appointments use 'scheduled' as the default)
+- CONFIRMED: `revenue.totalCents` = `Math.round(totalCAD * 100)` (integer, derived from numeric DB column)
+- CONFIRMED: 7-day daily orders chart fills missing days with `count: 0, revenue: 0` (no gaps in chart)
+
+**TypeScript status:** 0 errors in both `backend/` and `admin/` after all changes.
+
+**Root cause of crash:** Backend `DashboardResult` type returned `{ asOf, todayRevenue, newPatientsToday, ... }` (flat) while frontend `DashboardMetrics` expected `{ users: {...}, orders: {...}, ... }` (nested). API call returned 200 with mismatched data → `m` was truthy but `m.orders` was undefined → JS crash at `m.orders.byStatus`.
+
+**Still pending:**
+- T019–T025: permission guards on admin action buttons (all currently pass-through stubs)
+- T040–T048: stub remaining placeholder pages (clinics, partners, FAQs, settings/email-triggers)
+- End-to-end runtime validation against live backend
+- Architecture discussion: admin panel should use `/auth/login` for facility staff, not super admin login — deferred by user
+
+---
+
 ## Session: 2026-10-11g — Phase 12 Backend Route Modules: Users, Roles, Permissions, Audit
 
 **What was done:**

@@ -137,7 +137,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (isError || !m) {
+  if (isError || !m || !m.orders || !m.products || !m.revenue || !m.users || !m.approvals || !m.charts) {
     return (
       <div className="space-y-8">
         <PageHeader title="Dashboard" description="Live overview â€” refreshes every 60 seconds" />
@@ -153,8 +153,8 @@ export default function DashboardPage() {
     );
   }
 
-  const maxOrderStatus = Math.max(...(m.orders.byStatus?.map((s) => s.count) ?? [1]));
-  const maxDailyOrders = Math.max(...(m.charts.dailyOrders?.map((d) => d.count) ?? [1]));
+  const maxOrderStatus = Math.max(...(m.orders?.byStatus?.map((s) => s.count) ?? [1]));
+  const maxDailyOrders = Math.max(...(m.charts?.dailyOrders?.map((d) => d.count) ?? [1]));
 
   return (
     <div className="space-y-8">

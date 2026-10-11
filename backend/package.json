@@ -13,10 +13,17 @@
     "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:generate:identity": "drizzle-kit generate --config=drizzle.identity.config.ts",
+    "db:migrate:identity": "drizzle-kit migrate --config=drizzle.identity.config.ts",
+    "db:migrate:to-identity": "tsx src/db/migrations/migrate-to-identity.ts",
     "db:seed": "tsx src/db/seeds/platform-modules.ts",
+    "db:seed:plans": "tsx src/db/seeds/plans.ts",
     "db:seed:facilities": "tsx src/db/seeds/facilities.ts",
     "db:seed:permissions-p7": "tsx src/db/seeds/async-infra-permissions.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:studio:identity": "drizzle-kit studio --config=drizzle.identity.config.ts --port=4984",
+    "create-super-admin": "tsx src/scripts/create-super-admin.ts",
+    "db:reset": "tsx src/scripts/reset-dev-data.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1149.0",

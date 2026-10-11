@@ -71,11 +71,16 @@ export interface PatientReportResult {
 }
 
 export interface DashboardResult {
-  asOf: string;
-  todayRevenue: string;
-  todayOrderCount: number;
-  newPatientsToday: number;
-  openConversations: number;
-  pendingPrescriptions: number;
-  lowStockCount: number;
+  users:      { total: number; newToday: number };
+  approvals:  { pendingClinics: number; pendingPartners: number };
+  orders:     { total: number; today: number; pending: number; byStatus: Array<{ status: string; count: number }> };
+  products:   { active: number; lowStock: number };
+  revenue:    { totalCents: number; totalCAD: string };
+  charts:     { dailyOrders: Array<{ date: string; count: number; revenue: number }> };
+  healthcare: {
+    pendingCompounding:  number;
+    openAskPharmacist:   number;
+    pendingAppointments: number;
+    activePrescriptions: number;
+  };
 }

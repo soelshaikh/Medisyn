@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { getSessionRevocationState } from '@/core/super-admin/auth-queries.service';
+import { getIdentitySessionRevocationState } from '../identity-queries.service';
 import { redisGet, isRedisUnavailableError } from '@/lib/redis';
 import { AuthError, ServiceUnavailableError } from '@/lib/errors';
 
 // Step 2: Session revocation check.
 // Fallback chain (fail-closed):
 //   1. Redis key revoked_session:{sessionId} → 401 if present
-//   2. Redis unavailable → query sessions table via superAdminDb service
+//   2. Redis unavailable → query identitySessions via identity-queries service
 //   3. Both unavailable → 503
 
 export async function checkSession(req: Request, _res: Response, next: NextFunction): Promise<void> {
@@ -29,9 +29,9 @@ export async function checkSession(req: Request, _res: Response, next: NextFunct
     // Redis unavailable — fall through to DB
   }
 
-  // Step 2: DB authoritative check via super-admin service
+  // Step 2: DB authoritative check via identity service
   try {
-    const { exists, revokedAt } = await getSessionRevocationState(sessionId);
+    const { exists, revokedAt } = await getIdentitySessionRevocationState(sessionId);
 
     if (!exists || revokedAt !== null) {
       return next(new AuthError('SESSION_REVOKED', 'This session has been revoked. Please log in again.'));

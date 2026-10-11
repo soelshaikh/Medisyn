@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, cloneElement, isValidElement, Children } from "react";
 import { Spinner } from "./Spinner";
 
 type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger";
@@ -13,6 +13,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
+  asChild?: boolean;
 }
 
 const variantStyles: Record<Variant, string> = {
@@ -41,28 +42,38 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       disabled,
       children,
       className = "",
+      asChild = false,
       ...rest
     },
     ref,
   ) => {
     const isDisabled = disabled || loading;
 
+    const computedClass = [
+      "inline-flex items-center justify-center font-[var(--font-weight-medium)]",
+      "rounded-[var(--radius-md)] transition-all duration-[var(--transition-base)]",
+      "focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] focus-visible:outline-offset-2",
+      "disabled:opacity-50 disabled:cursor-not-allowed",
+      variantStyles[variant],
+      sizeStyles[size],
+      fullWidth ? "w-full" : "",
+      className,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    if (asChild && isValidElement(children)) {
+      const child = Children.only(children) as React.ReactElement<{ className?: string }>;
+      return cloneElement(child, {
+        className: [computedClass, child.props.className].filter(Boolean).join(" "),
+      });
+    }
+
     return (
       <button
         ref={ref}
         disabled={isDisabled}
-        className={[
-          "inline-flex items-center justify-center font-[var(--font-weight-medium)]",
-          "rounded-[var(--radius-md)] transition-all duration-[var(--transition-base)]",
-          "focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] focus-visible:outline-offset-2",
-          "disabled:opacity-50 disabled:cursor-not-allowed",
-          variantStyles[variant],
-          sizeStyles[size],
-          fullWidth ? "w-full" : "",
-          className,
-        ]
-          .filter(Boolean)
-          .join(" ")}
+        className={computedClass}
         {...rest}
       >
         {loading ? (

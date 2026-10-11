@@ -14,7 +14,11 @@ import { subscriptionPlans } from './plans';
 export const facilities = pgTable('facilities', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
+  // URL path identifier: www.vtechmedicine.com/{slug}/login
   slug: text('slug').notNull().unique(),
+  // Short username namespace prefix (e.g. 'med'). Globally unique.
+  // NULL during migration — must be set before facility goes live.
+  prefix: text('prefix').unique(),
   // enum: active | suspended | deactivated
   status: text('status').notNull().default('active'),
   subscriptionPlanId: uuid('subscription_plan_id')

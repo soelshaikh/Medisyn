@@ -169,30 +169,84 @@ export async function getSalesReport(
 
 // ── getDashboard ──────────────────────────────────────────────────────────
 
+function buildDashboardResult(
+  patientTotal: number,
+  patientNewToday: number,
+  orderStatuses: Array<{ status: string; cnt: number }>,
+  orderToday: number,
+  productActive: number,
+  productLowStock: number,
+  revenueTotalCAD: string,
+  dailyOrders: Array<{ date: unknown; cnt: number; revenue: string }>,
+  midnightUtc: Date,
+  pendingCompounding: number,
+  openAskPharmacist: number,
+  pendingAppointments: number,
+  activePrescriptions: number,
+): DashboardResult {
+  const byStatus = orderStatuses.map((r) => ({ status: r.status, count: r.cnt }));
+  const orderTotal = byStatus.reduce((s, r) => s + r.count, 0);
+  const orderPending = byStatus.find((r) => r.status === 'pending')?.count ?? 0;
+
+  const totalCents = Math.round(parseFloat(revenueTotalCAD || '0') * 100);
+
+  // Fill 7-day chart (oldest first, newest = today)
+  const days: string[] = [];
+  for (let i = 6; i >= 0; i--) {
+    days.push(new Date(midnightUtc.getTime() - i * 86_400_000).toISOString().split('T')[0]!);
+  }
+  const dailyMap = new Map(
+    dailyOrders.map((r) => [bucketKey(r.date), { count: r.cnt, revenue: parseFloat(r.revenue || '0') }]),
+  );
+  const dailyChart = days.map((d) => ({
+    date:    d,
+    count:   dailyMap.get(d)?.count   ?? 0,
+    revenue: dailyMap.get(d)?.revenue ?? 0,
+  }));
+
+  return {
+    users:     { total: patientTotal, newToday: patientNewToday },
+    approvals: { pendingClinics: 0, pendingPartners: 0 },
+    orders:    { total: orderTotal, today: orderToday, pending: orderPending, byStatus },
+    products:  { active: productActive, lowStock: productLowStock },
+    revenue:   { totalCents, totalCAD: Number(revenueTotalCAD || 0).toFixed(2) },
+    charts:    { dailyOrders: dailyChart },
+    healthcare: { pendingCompounding, openAskPharmacist, pendingAppointments, activePrescriptions },
+  };
+}
+
 export async function getDashboard(auth: AuthContext): Promise<DashboardResult> {
   const now = new Date();
   const midnightUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  // postgres driver needs a string, not a Date — ISO string works for both pools
-  const midnightIso = midnightUtc.toISOString();
+  const sevenDaysAgo = new Date(midnightUtc.getTime() - 6 * 86_400_000);
+  // postgres-js requires strings for timestamp params, not Date objects
+  const midnightIso   = midnightUtc.toISOString();
+  const sevenDaysIso  = sevenDaysAgo.toISOString();
 
-  // Super admin has no facilityId — query platform-wide via BYPASSRLS pool
-  if (auth.isSuperAdmin || !auth.facilityId) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const runQueries = async (db: any) => {
     const [
-      revenueRows,
       patientRows,
+      patientTodayRows,
+      orderStatusRows,
+      orderTodayRows,
+      productActiveRows,
+      productLowStockRows,
+      revenueRows,
+      dailyOrderRows,
+      compoundingRows,
       convRows,
+      appointmentRows,
       prescRows,
-      stockRows,
     ] = await Promise.all([
-      superAdminDb.execute<{ revenue: string; cnt: number }>(sql`
-        SELECT
-          COALESCE(SUM(total), 0)::text AS revenue,
-          COUNT(*)::int                 AS cnt
-        FROM orders
-        WHERE created_at >= ${midnightIso}
-          AND status IN ('shipped', 'delivered')
+      db.execute(sql`
+        SELECT COUNT(*)::int AS cnt
+        FROM users u
+        JOIN facility_users fu ON fu.user_id = u.id
+        JOIN facility_roles  fr ON fr.id     = fu.role_id
+        WHERE fr.name = 'patient'
       `),
-      superAdminDb.execute<{ cnt: number }>(sql`
+      db.execute(sql`
         SELECT COUNT(*)::int AS cnt
         FROM users u
         JOIN facility_users fu ON fu.user_id = u.id
@@ -200,106 +254,94 @@ export async function getDashboard(auth: AuthContext): Promise<DashboardResult> 
         WHERE fr.name = 'patient'
           AND u.created_at >= ${midnightIso}
       `),
-      superAdminDb.execute<{ cnt: number }>(sql`
-        SELECT COUNT(*)::int AS cnt
-        FROM pharmacist_conversations
-        WHERE status = 'open'
+      db.execute(sql`
+        SELECT status, COUNT(*)::int AS cnt
+        FROM orders
+        GROUP BY status
       `),
-      superAdminDb.execute<{ cnt: number }>(sql`
+      db.execute(sql`
         SELECT COUNT(*)::int AS cnt
-        FROM prescription_requests
-        WHERE status IN ('submitted', 'under_review')
+        FROM orders
+        WHERE created_at >= ${midnightIso}
       `),
-      superAdminDb.execute<{ cnt: number }>(sql`
+      db.execute(sql`
         SELECT COUNT(*)::int AS cnt
+        FROM products
+        WHERE is_active = true
+      `),
+      db.execute(sql`
+        SELECT COUNT(DISTINCT ir.product_id)::int AS cnt
         FROM inventory_records ir
         JOIN products p ON p.id = ir.product_id
         WHERE ir.quantity      <= p.low_stock_threshold
           AND p.low_stock_threshold > 0
           AND p.is_active = true
       `),
+      db.execute(sql`
+        SELECT COALESCE(SUM(total), 0)::text AS total_cad
+        FROM orders
+        WHERE status IN ('shipped', 'delivered')
+      `),
+      db.execute(sql`
+        SELECT
+          (created_at AT TIME ZONE 'UTC')::date AS date,
+          COUNT(*)::int                          AS cnt,
+          COALESCE(SUM(total), 0)::text          AS revenue
+        FROM orders
+        WHERE created_at >= ${sevenDaysIso}
+        GROUP BY (created_at AT TIME ZONE 'UTC')::date
+        ORDER BY date
+      `),
+      db.execute(sql`
+        SELECT COUNT(*)::int AS cnt
+        FROM compounding_requests
+        WHERE status IN ('submitted', 'reviewing')
+      `),
+      db.execute(sql`
+        SELECT COUNT(*)::int AS cnt
+        FROM pharmacist_conversations
+        WHERE status = 'open'
+      `),
+      db.execute(sql`
+        SELECT COUNT(*)::int AS cnt
+        FROM appointments
+        WHERE status = 'scheduled'
+      `),
+      db.execute(sql`
+        SELECT COUNT(*)::int AS cnt
+        FROM prescription_requests
+        WHERE status IN ('submitted', 'under_review')
+      `),
     ]);
 
-    const rev   = Array.from(revenueRows)[0];
-    const pat   = Array.from(patientRows)[0];
-    const conv  = Array.from(convRows)[0];
-    const presc = Array.from(prescRows)[0];
-    const stock = Array.from(stockRows)[0];
+    type CntRow    = { cnt: number };
+    type RevRow    = { total_cad: string };
+    type StatusRow = { status: string; cnt: number };
+    type DayRow    = { date: unknown; cnt: number; revenue: string };
 
-    return {
-      asOf: now.toISOString(),
-      todayRevenue: rev?.revenue ?? '0.00',
-      todayOrderCount: rev?.cnt ?? 0,
-      newPatientsToday: pat?.cnt ?? 0,
-      openConversations: conv?.cnt ?? 0,
-      pendingPrescriptions: presc?.cnt ?? 0,
-      lowStockCount: stock?.cnt ?? 0,
-    };
+    return buildDashboardResult(
+      (Array.from(patientRows)      as CntRow[])[0]?.cnt       ?? 0,
+      (Array.from(patientTodayRows) as CntRow[])[0]?.cnt       ?? 0,
+      Array.from(orderStatusRows)   as StatusRow[],
+      (Array.from(orderTodayRows)   as CntRow[])[0]?.cnt       ?? 0,
+      (Array.from(productActiveRows)   as CntRow[])[0]?.cnt    ?? 0,
+      (Array.from(productLowStockRows) as CntRow[])[0]?.cnt    ?? 0,
+      (Array.from(revenueRows)      as RevRow[])[0]?.total_cad ?? '0.00',
+      Array.from(dailyOrderRows)    as DayRow[],
+      midnightUtc,
+      (Array.from(compoundingRows)  as CntRow[])[0]?.cnt       ?? 0,
+      (Array.from(convRows)         as CntRow[])[0]?.cnt       ?? 0,
+      (Array.from(appointmentRows)  as CntRow[])[0]?.cnt       ?? 0,
+      (Array.from(prescRows)        as CntRow[])[0]?.cnt       ?? 0,
+    );
+  };
+
+  // Super admin without facilityId → platform-wide via BYPASSRLS pool
+  if (auth.isSuperAdmin || !auth.facilityId) {
+    return runQueries(superAdminDb);
   }
 
-  // Facility-scoped query via tenant context (RLS enforced)
-  const facilityId = auth.facilityId;
-
-  return withTenantContext(facilityId, async (tx) => {
-    const [
-      revenueRows,
-      patientRows,
-      convRows,
-      prescRows,
-      stockRows,
-    ] = await Promise.all([
-      tx.execute<{ revenue: string; cnt: number }>(sql`
-        SELECT
-          COALESCE(SUM(total), 0)::text AS revenue,
-          COUNT(*)::int                 AS cnt
-        FROM orders
-        WHERE created_at >= ${midnightUtc}
-          AND status IN ('shipped', 'delivered')
-      `),
-      tx.execute<{ cnt: number }>(sql`
-        SELECT COUNT(*)::int AS cnt
-        FROM users u
-        JOIN facility_users fu ON fu.user_id = u.id
-        JOIN facility_roles  fr ON fr.id     = fu.role_id
-        WHERE fr.name = 'patient'
-          AND u.created_at >= ${midnightUtc}
-      `),
-      tx.execute<{ cnt: number }>(sql`
-        SELECT COUNT(*)::int AS cnt
-        FROM pharmacist_conversations
-        WHERE status = 'open'
-      `),
-      tx.execute<{ cnt: number }>(sql`
-        SELECT COUNT(*)::int AS cnt
-        FROM prescription_requests
-        WHERE status IN ('submitted', 'under_review')
-      `),
-      tx.execute<{ cnt: number }>(sql`
-        SELECT COUNT(*)::int AS cnt
-        FROM inventory_records ir
-        JOIN products p ON p.id = ir.product_id
-        WHERE ir.quantity      <= p.low_stock_threshold
-          AND p.low_stock_threshold > 0
-          AND p.is_active = true
-      `),
-    ]);
-
-    const rev   = Array.from(revenueRows)[0];
-    const pat   = Array.from(patientRows)[0];
-    const conv  = Array.from(convRows)[0];
-    const presc = Array.from(prescRows)[0];
-    const stock = Array.from(stockRows)[0];
-
-    return {
-      asOf: now.toISOString(),
-      todayRevenue: rev?.revenue ?? '0.00',
-      todayOrderCount: rev?.cnt ?? 0,
-      newPatientsToday: pat?.cnt ?? 0,
-      openConversations: conv?.cnt ?? 0,
-      pendingPrescriptions: presc?.cnt ?? 0,
-      lowStockCount: stock?.cnt ?? 0,
-    };
-  });
+  return withTenantContext(auth.facilityId, (tx) => runQueries(tx));
 }
 
 // ── getOrderReport ────────────────────────────────────────────────────────

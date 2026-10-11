@@ -2,14 +2,23 @@
 // all queries use superAdminDb (BYPASSRLS) — they read across all facilities
 // without tenant context. Phase 2 adds auth-specific helpers below.
 
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql, inArray } from 'drizzle-orm';
 import { superAdminDb, SuperAdminTransaction } from '@/db';
 import { sessions, users, facilities } from '@/db/schema/core';
 import {
   platformModules,
   planModules,
 } from '@/db/schema/plans';
-import { facilityModuleOverrides, facilityUsers, facilityRoles } from '@/db/schema/rbac';
+import {
+  facilityModuleOverrides,
+  facilityUsers,
+  facilityRoles,
+  healthProfessionals,
+  userRoles,
+  rolePermissions,
+  userPermissions,
+} from '@/db/schema/rbac';
+import { patients } from '@/db/schema/patient';
 import { redisSet, isRedisUnavailableError } from '@/lib/redis';
 import { createAuditEntry, AuditEntryParams } from '@/core/audit/audit.service';
 
@@ -378,6 +387,101 @@ export async function getFacilityRoleName(roleId: string): Promise<string | null
     .where(eq(facilityRoles.id, roleId))
     .limit(1);
   return role?.name ?? null;
+}
+
+export async function getFacilityByPrefix(prefix: string) {
+  const [facility] = await superAdminDb
+    .select()
+    .from(facilities)
+    .where(eq(facilities.prefix, prefix))
+    .limit(1);
+  return facility ?? null;
+}
+
+// ── Enterprise identity helpers ────────────────────────────────────────────────
+// Used by auth.service.ts after migration to resolve HP + roles + permissions
+// from vtech-core for facility_user accounts.
+
+export type ResolvedUserAuth = {
+  healthProfessionalId: string;
+  facilityId: string;
+  roles: string[];
+  permissions: string[];
+};
+
+export async function resolveHealthProfessionalAuth(
+  userId: string,
+): Promise<ResolvedUserAuth | null> {
+  const [hp] = await superAdminDb
+    .select()
+    .from(healthProfessionals)
+    .where(and(eq(healthProfessionals.userId, userId), eq(healthProfessionals.isActive, true)))
+    .limit(1);
+
+  if (!hp) return null;
+
+  const roleRows = await superAdminDb
+    .select({ role: userRoles.role })
+    .from(userRoles)
+    .where(and(eq(userRoles.healthProfessionalId, hp.id), eq(userRoles.isActive, true)));
+
+  const roles = roleRows.map((r) => r.role);
+
+  if (roles.length === 0) {
+    return { healthProfessionalId: hp.id, facilityId: hp.facilityId, roles: [], permissions: [] };
+  }
+
+  // facility_admin gets wildcard — they manage the entire facility
+  if (roles.includes('facility_admin')) {
+    return { healthProfessionalId: hp.id, facilityId: hp.facilityId, roles, permissions: ['*'] };
+  }
+
+  type FacilityRoleValue = 'facility_admin' | 'pharmacist' | 'pharmacy_technician' | 'staff';
+  const defaultPerms = await superAdminDb
+    .select({ permission: rolePermissions.permission })
+    .from(rolePermissions)
+    .where(inArray(rolePermissions.role, roles as FacilityRoleValue[]));
+
+  const basePermSet = new Set(defaultPerms.map((p) => p.permission));
+
+  const overrides = await superAdminDb
+    .select({ permission: userPermissions.permission, granted: userPermissions.granted })
+    .from(userPermissions)
+    .where(eq(userPermissions.healthProfessionalId, hp.id));
+
+  for (const { permission, granted } of overrides) {
+    if (granted) {
+      basePermSet.add(permission);
+    } else {
+      basePermSet.delete(permission);
+    }
+  }
+
+  return {
+    healthProfessionalId: hp.id,
+    facilityId: hp.facilityId,
+    roles,
+    permissions: Array.from(basePermSet),
+  };
+}
+
+export async function getPatientFacility(userId: string): Promise<string | null> {
+  const [patient] = await superAdminDb
+    .select({ facilityId: patients.facilityId })
+    .from(patients)
+    .where(and(eq(patients.userId, userId), eq(patients.isActive, true)))
+    .limit(1);
+  return patient?.facilityId ?? null;
+}
+
+export async function createPatientRecord(data: {
+  userId: string;
+  facilityId: string;
+}): Promise<void> {
+  await superAdminDb
+    .insert(patients)
+    .values(data)
+    .onConflictDoNothing();
 }
 
 // writeAuthAuditEntry — writes a single audit entry using a fresh superAdminDb

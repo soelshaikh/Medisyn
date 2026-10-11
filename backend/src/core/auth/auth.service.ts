@@ -2,34 +2,33 @@ import { randomBytes } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import * as argon2 from 'argon2';
 import * as jwt from 'jsonwebtoken';
-import { withTenantContext } from '@/lib/tenant-context';
 import {
   getFacilityBySlug,
-  getUserByEmail,
-  createUser,
-  createSession,
-  getSessionById,
-  revokeSession,
-  revokeSessionOnRotation,
-  revokeAllUserSessions,
-  incrementAuthVersion,
-  updateUserPasswordAndVersion,
-  setPasswordResetToken,
-  getUserByPasswordResetToken,
-  clearPasswordResetToken,
-  setEmailVerifyToken,
-  getUserByEmailVerifyToken,
-  clearEmailVerifyTokenAndMarkVerified,
-  updateLastLoginAt,
-  getFacilityUserByUserAndFacility,
-  getFacilityRoleName,
   writeAuthAuditEntry,
-  getUserById,
+  resolveHealthProfessionalAuth,
+  getPatientFacility,
+  createPatientRecord,
 } from '@/core/super-admin/auth-queries.service';
 import {
-  createFacilityPatientRole,
-  createFacilityUserLink,
-} from './auth-facility-helpers';
+  getIdentityUserByEmail,
+  getIdentityUserById,
+  getIdentityUserByPasswordResetToken,
+  getIdentityUserByEmailVerifyToken,
+  createIdentityUser,
+  updateIdentityLastLoginAt,
+  incrementIdentityAuthVersion,
+  updateIdentityUserPasswordAndVersion,
+  setIdentityPasswordResetToken,
+  clearIdentityPasswordResetToken,
+  setIdentityEmailVerifyToken,
+  clearIdentityEmailVerifyTokenAndMarkVerified,
+  createIdentitySession,
+  getIdentitySessionById,
+  revokeIdentitySession,
+  revokeIdentitySessionOnRotation,
+  revokeAllIdentityUserSessions,
+  resolveUniqueUsername,
+} from './identity-queries.service';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email.service';
 import { AppError, AuthError, ForbiddenError, ValidationError } from '@/lib/errors';
 import type {
@@ -42,7 +41,7 @@ import type {
   ResendVerificationBody,
 } from './auth.validator';
 
-// ── Internal helpers ──────────────────────────────────────────────────────
+// ── Internal helpers ──────────────────────────────────────────────────────────
 
 function addHours(date: Date, hours: number): Date {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
@@ -59,13 +58,17 @@ function addDays(date: Date, days: number): Date {
 const JWT_SECRET = process.env.JWT_SECRET!;
 const JWT_ACCESS_EXPIRES_IN = (process.env.JWT_ACCESS_EXPIRES_IN ?? '15m') as jwt.SignOptions['expiresIn'];
 
+// Internal JWT signing type — must match JwtPayload in parse-jwt.ts
 interface JwtPayload {
-  sub: string;
+  sub: string;                              // identityUsers.id
   sessionId: string;
+  accountType: 'super_admin' | 'facility_user' | 'patient';
+  healthProfessionalId: string | null;
   facilityId: string | null;
+  facilityPrefix: string | null;
   authVersion: number;
-  role: string;
-  isSuperAdmin: boolean;
+  roles: string[];
+  permissions: string[];
 }
 
 function signAccessToken(payload: JwtPayload): string {
@@ -80,11 +83,13 @@ function parseExpiredJwt(token: string): JwtPayload | null {
   }
 }
 
-// ── Auth Service ──────────────────────────────────────────────────────────
+// ── Auth Service ──────────────────────────────────────────────────────────────
 
 export const authService = {
 
-  // ── Register ────────────────────────────────────────────────────────────
+  // ── Patient Self-Registration ────────────────────────────────────────────
+  // Creates a patient account scoped to a specific facility.
+  // Route: POST /{facilitySlug}/register
   async register(
     dto: RegisterBody,
     ipAddress: string,
@@ -95,55 +100,63 @@ export const authService = {
     if (facility.status !== 'active')
       throw new ForbiddenError('FACILITY_INACTIVE', 'Facility is not accepting registrations');
 
-    const existingUser = await getUserByEmail(dto.email);
-    let userId: string;
-
-    if (existingUser) {
-      const existingLink = await getFacilityUserByUserAndFacility(existingUser.id, facility.id);
-      if (existingLink) {
-        throw new AppError('EMAIL_IN_USE', 'Email address is already registered at this pharmacy', 409);
-      }
-      const passwordMatch = await argon2.verify(existingUser.passwordHash, dto.password);
-      if (!passwordMatch) {
-        throw new AppError(
-          'ACCOUNT_EXISTS_LOGIN',
-          'An account with this email already exists on our platform. Please log in to link your account.',
-          409,
-        );
-      }
-      userId = existingUser.id;
-    } else {
-      const passwordHash = await argon2.hash(dto.password);
-      const newUser = await createUser({
-        email: dto.email,
-        passwordHash,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-      });
-      userId = newUser.id;
+    if (!facility.prefix) {
+      throw new AppError('SERVICE_UNAVAILABLE', 'Facility is not yet configured for registrations', 503);
     }
 
-    await withTenantContext(facility.id, async (tx) => {
-      const role = await createFacilityPatientRole(tx, facility.id);
-      await createFacilityUserLink(tx, { facilityId: facility.id, userId, roleId: role.id });
+    const existingUser = await getIdentityUserByEmail(dto.email);
+    if (existingUser) {
+      // Already exists in identity DB — check if they're already a patient of this facility
+      const existingFacilityId = await getPatientFacility(existingUser.id);
+      if (existingFacilityId === facility.id) {
+        throw new AppError('EMAIL_IN_USE', 'Email address is already registered at this pharmacy', 409);
+      }
+      // Existing user from a different facility is not allowed — one user = one facility
+      throw new AppError(
+        'ACCOUNT_EXISTS_LOGIN',
+        'An account with this email already exists. Please log in.',
+        409,
+      );
+    }
+
+    const passwordHash = await argon2.hash(dto.password);
+    const emailLocalPart = dto.email.split('@')[0] ?? dto.email;
+    const { username, normalizedUsername } = await resolveUniqueUsername(
+      emailLocalPart,
+      facility.prefix,
+    );
+
+    const newUser = await createIdentityUser({
+      email: dto.email,
+      username,
+      normalizedUsername,
+      passwordHash,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      accountType: 'patient',
+      facilityPrefix: facility.prefix,
     });
 
+    await createPatientRecord({ userId: newUser.id, facilityId: facility.id });
+
     const verifyToken = uuidv4();
-    await setEmailVerifyToken(userId, verifyToken, addHours(new Date(), 24));
+    await setIdentityEmailVerifyToken(newUser.id, verifyToken, addHours(new Date(), 24));
     void sendVerificationEmail(dto.email, dto.firstName, verifyToken, facility.name);
 
     await writeAuthAuditEntry({
       facilityId: facility.id,
-      actorId: userId,
+      actorId: newUser.id,
       action: 'auth.register',
       ipAddress,
       userAgent,
     });
 
-    return { userId };
+    return { userId: newUser.id };
   },
 
-  // ── Login ──────────────────────────────────────────────────────────────
+  // ── Facility Login ───────────────────────────────────────────────────────
+  // Handles both facility_user (staff) and patient logins.
+  // Route: POST /{facilitySlug}/login
   async login(
     dto: LoginBody,
     ipAddress: string,
@@ -157,8 +170,11 @@ export const authService = {
       firstName: string;
       lastName: string;
       emailVerified: boolean;
-      role: string;
+      accountType: string;
+      roles: string[];
+      permissions: string[];
       facilityId: string | null;
+      healthProfessionalId: string | null;
     };
   }> {
     if (!dto.facilitySlug) {
@@ -170,7 +186,7 @@ export const authService = {
     if (facility.status !== 'active')
       throw new ForbiddenError('FACILITY_INACTIVE', 'Facility is suspended');
 
-    const user = await getUserByEmail(dto.email);
+    const user = await getIdentityUserByEmail(dto.email);
     if (!user) {
       await writeAuthAuditEntry({
         facilityId: facility.id,
@@ -180,6 +196,15 @@ export const authService = {
         userAgent,
       });
       throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
+    }
+
+    // super_admin should not log in via facility route
+    if (user.accountType === 'super_admin') {
+      throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenError('ACCOUNT_INACTIVE', 'Your account has been deactivated');
     }
 
     const passwordMatch = await argon2.verify(user.passwordHash, dto.password);
@@ -195,21 +220,40 @@ export const authService = {
       throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
     }
 
-    const facilityUser = await getFacilityUserByUserAndFacility(user.id, facility.id);
-    if (!facilityUser || !facilityUser.isActive) {
-      throw new ForbiddenError('ACCOUNT_INACTIVE', 'Your account is inactive at this pharmacy');
-    }
+    // Resolve facility membership and permissions based on account type
+    let resolvedFacilityId: string | null = null;
+    let healthProfessionalId: string | null = null;
+    let roles: string[] = [];
+    let permissions: string[] = [];
 
-    const roleName = await getFacilityRoleName(facilityUser.roleId);
+    if (user.accountType === 'facility_user') {
+      const auth = await resolveHealthProfessionalAuth(user.id);
+      if (!auth || auth.facilityId !== facility.id) {
+        throw new ForbiddenError('ACCOUNT_INACTIVE', 'Your account is not active at this pharmacy');
+      }
+      resolvedFacilityId = auth.facilityId;
+      healthProfessionalId = auth.healthProfessionalId;
+      roles = auth.roles;
+      permissions = auth.permissions;
+    } else {
+      // patient
+      const patientFacilityId = await getPatientFacility(user.id);
+      if (!patientFacilityId || patientFacilityId !== facility.id) {
+        throw new ForbiddenError('ACCOUNT_INACTIVE', 'Your account is not registered at this pharmacy');
+      }
+      resolvedFacilityId = patientFacilityId;
+      roles = ['patient'];
+      permissions = [];
+    }
 
     const sessionId = uuidv4();
     const rawRefreshToken = randomBytes(32).toString('hex');
     const refreshTokenHash = await argon2.hash(rawRefreshToken);
 
-    await createSession({
+    await createIdentitySession({
       id: sessionId,
       userId: user.id,
-      facilityId: facility.id,
+      facilityId: resolvedFacilityId,
       refreshTokenHash,
       userAgent,
       ipAddress,
@@ -219,16 +263,19 @@ export const authService = {
     const accessToken = signAccessToken({
       sub: user.id,
       sessionId,
-      facilityId: facility.id,
+      accountType: user.accountType,
+      healthProfessionalId,
+      facilityId: resolvedFacilityId,
+      facilityPrefix: user.facilityPrefix ?? null,
       authVersion: user.authVersion,
-      role: roleName ?? 'patient',
-      isSuperAdmin: user.isPlatformSuperAdmin,
+      roles,
+      permissions,
     });
 
-    await updateLastLoginAt(user.id);
+    await updateIdentityLastLoginAt(user.id);
 
     await writeAuthAuditEntry({
-      facilityId: facility.id,
+      facilityId: resolvedFacilityId ?? undefined,
       actorId: user.id,
       action: 'auth.login',
       ipAddress,
@@ -239,18 +286,22 @@ export const authService = {
       accessToken,
       rawRefreshToken,
       user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        emailVerified: user.emailVerified,
-        role: roleName ?? 'patient',
-        facilityId: facility.id,
+        id:                  user.id,
+        email:               user.email,
+        firstName:           user.firstName,
+        lastName:            user.lastName,
+        emailVerified:       user.emailVerified,
+        accountType:         user.accountType,
+        roles,
+        permissions,
+        facilityId:          resolvedFacilityId,
+        facilityName:        facility.name,
+        healthProfessionalId,
       },
     };
   },
 
-  // ── Refresh Token ──────────────────────────────────────────────────────
+  // ── Refresh Token ────────────────────────────────────────────────────────
   async refreshToken(
     expiredAccessToken: string | undefined,
     rawRefreshToken: string | undefined,
@@ -269,14 +320,14 @@ export const authService = {
       throw new AuthError('REFRESH_TOKEN_INVALID', 'Invalid access token');
     }
 
-    const session = await getSessionById(claims.sessionId);
+    const session = await getIdentitySessionById(claims.sessionId);
     if (!session) {
       throw new AuthError('REFRESH_TOKEN_INVALID', 'Session not found');
     }
 
     // Theft detection: old (rotated) token reuse
     if (session.revokedAt && session.revokedReason === 'rotated') {
-      await revokeAllUserSessions(session.userId, 'admin_revoked');
+      await revokeAllIdentityUserSessions(session.userId, 'admin_revoked');
       await writeAuthAuditEntry({
         facilityId: session.facilityId ?? undefined,
         actorId: session.userId,
@@ -305,7 +356,7 @@ export const authService = {
     const newRawRefreshToken = randomBytes(32).toString('hex');
     const newRefreshTokenHash = await argon2.hash(newRawRefreshToken);
 
-    await createSession({
+    await createIdentitySession({
       id: newSessionId,
       userId: session.userId,
       facilityId: session.facilityId ?? null,
@@ -314,15 +365,19 @@ export const authService = {
       ipAddress,
       expiresAt: addDays(new Date(), 30),
     });
-    await revokeSessionOnRotation(claims.sessionId);
+    await revokeIdentitySessionOnRotation(claims.sessionId);
 
+    // Carry forward existing claims — role changes are signalled via authVersion bump
     const newAccessToken = signAccessToken({
       sub: session.userId,
       sessionId: newSessionId,
+      accountType: claims.accountType,
+      healthProfessionalId: claims.healthProfessionalId ?? null,
       facilityId: session.facilityId ?? null,
+      facilityPrefix: claims.facilityPrefix ?? null,
       authVersion: claims.authVersion,
-      role: claims.role,
-      isSuperAdmin: claims.isSuperAdmin,
+      roles: claims.roles ?? [],
+      permissions: claims.permissions ?? [],
     });
 
     await writeAuthAuditEntry({
@@ -336,7 +391,7 @@ export const authService = {
     return { accessToken: newAccessToken, rawRefreshToken: newRawRefreshToken };
   },
 
-  // ── Logout ─────────────────────────────────────────────────────────────
+  // ── Logout ───────────────────────────────────────────────────────────────
   async logout(
     sessionId: string,
     userId: string,
@@ -344,7 +399,7 @@ export const authService = {
     ipAddress: string,
     userAgent: string,
   ): Promise<void> {
-    await revokeSession(sessionId, 'user_logout');
+    await revokeIdentitySession(sessionId, 'user_logout');
 
     await writeAuthAuditEntry({
       facilityId: facilityId ?? undefined,
@@ -355,15 +410,15 @@ export const authService = {
     });
   },
 
-  // ── Logout All ─────────────────────────────────────────────────────────
+  // ── Logout All ───────────────────────────────────────────────────────────
   async logoutAll(
     userId: string,
     facilityId: string | null,
     ipAddress: string,
     userAgent: string,
   ): Promise<void> {
-    await revokeAllUserSessions(userId, 'user_logout');
-    await incrementAuthVersion(userId);
+    await revokeAllIdentityUserSessions(userId, 'user_logout');
+    await incrementIdentityAuthVersion(userId);
 
     await writeAuthAuditEntry({
       facilityId: facilityId ?? undefined,
@@ -374,30 +429,18 @@ export const authService = {
     });
   },
 
-  // ── Forgot Password ────────────────────────────────────────────────────
+  // ── Forgot Password ──────────────────────────────────────────────────────
   async forgotPassword(
     dto: ForgotPasswordBody,
     ipAddress: string,
     userAgent: string,
   ): Promise<void> {
-    const GENERIC_RESPONSE = undefined; // void — always returns the same way
-
-    const user = await getUserByEmail(dto.email);
-    if (!user) return GENERIC_RESPONSE;
+    const user = await getIdentityUserByEmail(dto.email);
+    if (!user) return; // generic response — don't reveal email existence
 
     const resetToken = uuidv4();
-    await setPasswordResetToken(user.id, resetToken, addMinutes(new Date(), 30));
-
-    // Get facility name for email (best-effort)
-    let facilityName = 'MediSyn';
-    try {
-      const link = await getFacilityUserByUserAndFacility(user.id, '');
-      void link; // unused — we just want a fallback name
-    } catch {
-      // ignore
-    }
-
-    void sendPasswordResetEmail(user.email, user.firstName, resetToken, facilityName);
+    await setIdentityPasswordResetToken(user.id, resetToken, addMinutes(new Date(), 30));
+    void sendPasswordResetEmail(user.email, user.firstName, resetToken, 'MediSyn');
 
     await writeAuthAuditEntry({
       actorId: user.id,
@@ -407,22 +450,22 @@ export const authService = {
     });
   },
 
-  // ── Reset Password ─────────────────────────────────────────────────────
+  // ── Reset Password ───────────────────────────────────────────────────────
   async resetPassword(
     dto: ResetPasswordBody,
     ipAddress: string,
     userAgent: string,
   ): Promise<void> {
-    const user = await getUserByPasswordResetToken(dto.token);
+    const user = await getIdentityUserByPasswordResetToken(dto.token);
 
     if (!user || !user.passwordResetExpiresAt || user.passwordResetExpiresAt < new Date()) {
       throw new AppError('RESET_TOKEN_INVALID', 'Password reset link is invalid or has expired', 400);
     }
 
     const newHash = await argon2.hash(dto.password);
-    await updateUserPasswordAndVersion(user.id, newHash);
-    await clearPasswordResetToken(user.id);
-    await revokeAllUserSessions(user.id, 'password_changed');
+    await updateIdentityUserPasswordAndVersion(user.id, newHash);
+    await clearIdentityPasswordResetToken(user.id);
+    await revokeAllIdentityUserSessions(user.id, 'password_changed');
 
     await writeAuthAuditEntry({
       actorId: user.id,
@@ -432,26 +475,21 @@ export const authService = {
     });
   },
 
-  // ── Verify Email ───────────────────────────────────────────────────────
-  async verifyEmail(
-    dto: VerifyEmailBody,
-  ): Promise<void> {
-    const user = await getUserByEmailVerifyToken(dto.token);
+  // ── Verify Email ─────────────────────────────────────────────────────────
+  async verifyEmail(dto: VerifyEmailBody): Promise<void> {
+    const user = await getIdentityUserByEmailVerifyToken(dto.token);
 
     if (!user) {
       throw new AppError('VERIFY_TOKEN_INVALID', 'Email verification link is invalid or has expired', 400);
     }
 
-    // Idempotent: already verified
-    if (user.emailVerified) {
-      return;
-    }
+    if (user.emailVerified) return; // idempotent
 
     if (!user.emailVerifyExpiresAt || user.emailVerifyExpiresAt < new Date()) {
       throw new AppError('VERIFY_TOKEN_INVALID', 'Email verification link has expired', 400);
     }
 
-    await clearEmailVerifyTokenAndMarkVerified(user.id);
+    await clearIdentityEmailVerifyTokenAndMarkVerified(user.id);
 
     await writeAuthAuditEntry({
       actorId: user.id,
@@ -459,7 +497,7 @@ export const authService = {
     });
   },
 
-  // ── Super Admin Login ──────────────────────────────────────────────────
+  // ── Super Admin Login ────────────────────────────────────────────────────
   async superAdminLogin(
     dto: SuperAdminLoginBody,
     ipAddress: string,
@@ -472,14 +510,13 @@ export const authService = {
       email: string;
       firstName: string;
       lastName: string;
+      isSuperAdmin: boolean;
+      roles: string[];
+      permissions: string[];
     };
   }> {
-    const user = await getUserByEmail(dto.email);
-    if (!user) {
-      throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
-    }
-
-    if (!user.isPlatformSuperAdmin) {
+    const user = await getIdentityUserByEmail(dto.email);
+    if (!user || user.accountType !== 'super_admin') {
       throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
     }
 
@@ -499,14 +536,27 @@ export const authService = {
       throw new AppError('EMAIL_NOT_VERIFIED', 'Please verify your email before logging in', 403);
     }
 
+    // Optional facility context for scoped super-admin work
+    let resolvedFacilityId: string | null = null;
+    if (dto.facilitySlug) {
+      const facility = await getFacilityBySlug(dto.facilitySlug);
+      if (!facility) {
+        throw new AppError('FACILITY_NOT_FOUND', `Facility '${dto.facilitySlug}' not found`, 404);
+      }
+      if (facility.status === 'suspended' || facility.status === 'deactivated') {
+        throw new AppError('FACILITY_SUSPENDED', 'That facility is currently suspended', 403);
+      }
+      resolvedFacilityId = facility.id;
+    }
+
     const sessionId = uuidv4();
     const rawRefreshToken = randomBytes(32).toString('hex');
     const refreshTokenHash = await argon2.hash(rawRefreshToken);
 
-    await createSession({
+    await createIdentitySession({
       id: sessionId,
       userId: user.id,
-      facilityId: null,
+      facilityId: resolvedFacilityId,
       refreshTokenHash,
       userAgent,
       ipAddress,
@@ -516,17 +566,21 @@ export const authService = {
     const accessToken = signAccessToken({
       sub: user.id,
       sessionId,
-      facilityId: null,
+      accountType: 'super_admin',
+      healthProfessionalId: null,
+      facilityId: resolvedFacilityId,
+      facilityPrefix: null,
       authVersion: user.authVersion,
-      role: 'super_admin',
-      isSuperAdmin: true,
+      roles: ['super_admin'],
+      permissions: ['*'],
     });
 
-    await updateLastLoginAt(user.id);
+    await updateIdentityLastLoginAt(user.id);
 
     await writeAuthAuditEntry({
       actorId: user.id,
       action: 'auth.super_admin_login',
+      facilityId: resolvedFacilityId ?? undefined,
       ipAddress,
       userAgent,
     });
@@ -535,57 +589,76 @@ export const authService = {
       accessToken,
       rawRefreshToken,
       user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        id:           user.id,
+        email:        user.email,
+        firstName:    user.firstName,
+        lastName:     user.lastName,
+        isSuperAdmin: true,
+        roles:        ['super_admin'],
+        permissions:  ['*'],
       },
     };
   },
 
-  // ── Get Me ────────────────────────────────────────────────────────────
-  async getMe(userId: string, facilityId: string | null): Promise<{
+  // ── Get Me ───────────────────────────────────────────────────────────────
+  async getMe(userId: string, facilityId: string | null, accountType: string): Promise<{
     id: string;
     email: string;
     firstName: string;
     lastName: string;
     emailVerified: boolean;
-    role: string | null;
+    accountType: string;
     facilityId: string | null;
+    healthProfessionalId: string | null;
+    roles: string[];
+    permissions: string[];
   }> {
-    const user = await getUserById(userId);
+    const user = await getIdentityUserById(userId);
     if (!user) throw new AppError('NOT_FOUND', 'User not found', 404);
 
-    let role: string | null = null;
-    if (facilityId) {
-      const facilityUser = await getFacilityUserByUserAndFacility(userId, facilityId);
-      if (facilityUser) {
-        role = await getFacilityRoleName(facilityUser.roleId);
+    let healthProfessionalId: string | null = null;
+    let roles: string[] = [];
+    let permissions: string[] = [];
+
+    if (accountType === 'super_admin') {
+      roles = ['super_admin'];
+      permissions = ['*'];
+    } else if (accountType === 'facility_user') {
+      const auth = await resolveHealthProfessionalAuth(userId);
+      if (auth) {
+        healthProfessionalId = auth.healthProfessionalId;
+        roles = auth.roles;
+        permissions = auth.permissions;
       }
+    } else if (accountType === 'patient') {
+      roles = ['patient'];
     }
 
     return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      emailVerified: user.emailVerified,
-      role,
+      id:                  user.id,
+      email:               user.email,
+      firstName:           user.firstName,
+      lastName:            user.lastName,
+      emailVerified:       user.emailVerified,
+      accountType:         user.accountType,
       facilityId,
+      healthProfessionalId,
+      roles,
+      permissions,
     };
   },
 
-  // ── Resend Verification ────────────────────────────────────────────────
+  // ── Resend Verification ──────────────────────────────────────────────────
   async resendVerification(
     dto: ResendVerificationBody,
     ipAddress: string,
     userAgent: string,
   ): Promise<void> {
-    const user = await getUserByEmail(dto.email);
+    const user = await getIdentityUserByEmail(dto.email);
     if (!user || user.emailVerified) return;
 
     const newToken = uuidv4();
-    await setEmailVerifyToken(user.id, newToken, addHours(new Date(), 24));
+    await setIdentityEmailVerifyToken(user.id, newToken, addHours(new Date(), 24));
     void sendVerificationEmail(user.email, user.firstName, newToken, 'MediSyn');
 
     await writeAuthAuditEntry({

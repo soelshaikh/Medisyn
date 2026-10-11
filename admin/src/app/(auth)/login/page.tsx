@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, User, X } from "lucide-react";
 import apiClient from "@/lib/apiClient";
@@ -26,11 +26,13 @@ function saveToDisk(accounts: SavedAccount[]) {
 }
 
 export default function AdminLoginPage() {
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
   const { setAuth, clearAuth, isAuthenticated, _hasHydrated } = useAdminAuthStore();
 
   const [email,          setEmail]          = useState("");
   const [password,       setPassword]       = useState("");
+  const [facilitySlug,   setFacilitySlug]   = useState(() => searchParams.get("facility") ?? "");
   const [showPassword,   setShowPassword]   = useState(false);
   const [rememberMe,     setRememberMe]     = useState(false);
   const [error,          setError]          = useState("");
@@ -68,10 +70,13 @@ export default function AdminLoginPage() {
     if (!_hasHydrated) return;
     if (isAuthenticated) {
       const token = sessionStorage.getItem("access_token");
-      if (token) { router.replace("/dashboard"); }
-      else        { clearAuth(); }
+      if (!token) { clearAuth(); return; }
+      const dest = useAdminAuthStore.getState().user?.isSuperAdmin && !facilitySlug.trim()
+        ? "/platform/dashboard"
+        : "/dashboard";
+      router.replace(dest);
     }
-  }, [_hasHydrated, isAuthenticated, router, clearAuth]);
+  }, [_hasHydrated, isAuthenticated, router, clearAuth, facilitySlug]);
 
   function selectAccount(acc: SavedAccount) {
     setEmail(acc.email);
@@ -106,8 +111,16 @@ export default function AdminLoginPage() {
 
   const login = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post("/auth/super-admin/login", { email, password });
-      return res.data.data;
+      const slug = facilitySlug.trim();
+      if (slug) {
+        // Facility staff login
+        const res = await apiClient.post("/auth/login", { email, password, facilitySlug: slug });
+        return { ...res.data.data, _loginType: "facility" as const };
+      } else {
+        // Platform super admin login
+        const res = await apiClient.post("/auth/super-admin/login", { email, password });
+        return { ...res.data.data, _loginType: "super_admin" as const };
+      }
     },
     onSuccess: (data) => {
       /* Persist credentials if "Remember me" is checked */
@@ -119,17 +132,24 @@ export default function AdminLoginPage() {
         saveToDisk(updated);
       }
 
+      const isSA = data._loginType === "super_admin" || (data.user.isSuperAdmin ?? false);
+
       setAuth(
         {
-          id:          data.user.id,
-          email:       data.user.email,
-          fullName:    `${data.user.firstName ?? ''} ${data.user.lastName ?? ''}`.trim(),
-          roles:       data.user.roles ?? [],
-          permissions: data.user.permissions ?? [],
+          id:           data.user.id,
+          email:        data.user.email,
+          fullName:     `${data.user.firstName ?? ""} ${data.user.lastName ?? ""}`.trim(),
+          roles:        data.user.roles ?? [],
+          permissions:  data.user.permissions ?? [],
+          isSuperAdmin: isSA,
+          facilityName: data.user.facilityName ?? undefined,
         },
         data.accessToken,
       );
-      router.replace("/dashboard");
+
+      // Super admin with no facility slug → platform dashboard
+      // Everyone else → facility dashboard
+      router.replace(isSA && !facilitySlug.trim() ? "/platform/dashboard" : "/dashboard");
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -233,6 +253,21 @@ export default function AdminLoginPage() {
               </button>
             }
           />
+
+          {/* Facility slug (optional) */}
+          <div>
+            <Input
+              label="Facility slug (optional)"
+              type="text"
+              value={facilitySlug}
+              onChange={(e) => setFacilitySlug(e.target.value)}
+              placeholder="e.g. test-pharmacy"
+              autoComplete="off"
+            />
+            <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
+              Leave blank to log in without a facility context
+            </p>
+          </div>
 
           {/* Remember me */}
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
